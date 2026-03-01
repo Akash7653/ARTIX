@@ -501,7 +501,6 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
     res.status(500).json({ error: 'Failed to verify entry' });
   }
 });
-});
 
 // 5. Admin Approval (with password)
 app.post('/api/admin/approve-entry', async (req, res) => {
