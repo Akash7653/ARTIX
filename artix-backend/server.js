@@ -35,6 +35,14 @@ async function connectDB() {
     paymentsCollection = db.collection('payments');
     teamMembersCollection = db.collection('team_members');
     
+    // Drop old verification_id index if it exists (without sparse option)
+    try {
+      await registrationsCollection.dropIndex('verification_id_1');
+      console.log('✓ Dropped old verification_id index');
+    } catch (e) {
+      // Index doesn't exist, that's fine
+    }
+    
     // Create indexes
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
