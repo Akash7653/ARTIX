@@ -1,0 +1,28 @@
+{
+  "name": "artix-backend",
+  "version": "1.0.0",
+  "description": "ARTIX 2K26 Event Registration Backend",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "init-db": "node initDb.js",
+    "quick-start": "node quickStart.js",
+    "test": "node testAPI.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "qrcode": "^1.5.4",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "form-data": "^4.0.0"
+  }
+}
