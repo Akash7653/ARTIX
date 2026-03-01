@@ -6,6 +6,8 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
+import twilio from 'twilio';
 
 dotenv.config();
 
@@ -814,6 +816,112 @@ app.get('/api/admin/registrations', async (req, res) => {
   }
 });
 
+// Email Service - Send email notifications
+async function sendEmailNotification(email, fullName, verificationId) {
+  try {
+    // Check if email credentials are configured
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.log('⚠️ Email credentials not configured. Skipping email send.');
+      return { success: false, reason: 'Email credentials not configured' };
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+      }
+    });
+
+    const emailContent = `
+<html>
+  <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+      <h1 style="color: #2563eb; text-align: center; margin-top: 0;">🎉 Registration Approved</h1>
+      
+      <p style="font-size: 16px; color: #333;">Hi <strong>${fullName}</strong>,</p>
+      
+      <p style="font-size: 16px; color: #333; line-height: 1.6;">
+        Congratulations! Your registration for <strong>ARTIX 2K26</strong> has been approved. 
+        Below is your unique Verification ID that you will need to show at the event entrance.
+      </p>
+      
+      <div style="background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Your Verification ID:</p>
+        <p style="background-color: #fff; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 18px; color: #2563eb; font-weight: bold; margin: 0; letter-spacing: 2px; text-align: center;">
+          ${verificationId}
+        </p>
+      </div>
+      
+      <p style="font-size: 14px; color: #666; line-height: 1.6;">
+        <strong>Important:</strong> Please save or screenshot this ID. You must present this ID at the event entrance for verification.
+      </p>
+      
+      <p style="font-size: 14px; color: #666; line-height: 1.6;">
+        If you have any questions or issues, please reply to this email or contact us through the registration portal.
+      </p>
+      
+      <div style="background-color: #f9fafb; padding: 20px; margin-top: 30px; border-radius: 5px; border-top: 1px solid #e5e7eb;">
+        <p style="color: #999; font-size: 12px; margin: 0;">
+          🎯 <strong>ARTIX 2K26 Event Management</strong><br>
+          Event Portal: <a href="${process.env.FRONTEND_URL}" style="color: #2563eb; text-decoration: none;">${process.env.FRONTEND_URL}</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
+    `;
+
+    const mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: '🎉 ARTIX 2K26 - Registration Approved | Verification ID',
+      html: emailContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', info.response);
+    return { success: true, messageId: info.messageId };
+
+  } catch (err) {
+    console.error('❌ Email sending error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// WhatsApp Service - Send WhatsApp notifications
+async function sendWhatsAppNotification(phone, fullName, verificationId) {
+  try {
+    // Check if Twilio credentials are configured
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
+      console.log('⚠️ Twilio credentials not configured. Skipping WhatsApp send.');
+      return { success: false, reason: 'Twilio credentials not configured' };
+    }
+
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    // Format phone number - ensure it's in E.164 format (+country code + number)
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('91')) {
+      formattedPhone = '91' + formattedPhone; // Assume India if no country code
+    }
+    const phoneWithCountry = 'whatsapp:+' + formattedPhone;
+
+    const message = await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      to: phoneWithCountry,
+      body: `Hi ${fullName},\n\nCongratulations! Your registration for ARTIX 2K26 has been approved. 🎉\n\nYour Verification ID:\n${verificationId}\n\nPlease save this ID. You must present it at the event entrance.\n\nThank you!`
+    });
+
+    console.log('✅ WhatsApp sent successfully:', message.sid);
+    return { success: true, messageSid: message.sid };
+
+  } catch (err) {
+    console.error('❌ WhatsApp sending error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 // 10. Send Email & WhatsApp Notifications
 app.post('/api/admin/send-notification', async (req, res) => {
   try {
@@ -833,37 +941,18 @@ app.post('/api/admin/send-notification', async (req, res) => {
     }
 
     const { full_name, email, phone, verification_id } = registration;
-    let emailSent = false, whatsappSent = false;
+    let emailResult = { success: false }, whatsappResult = { success: false };
 
-    // Send Email (Placeholder - would use nodemailer/SendGrid in production)
+    // Send Email
     if (method === 'email' || method === 'both') {
-      console.log(`📧 [PLACEHOLDER] Sending email to ${email}`);
-      console.log(`📧 Recipient: ${full_name}`);
-      console.log(`📧 Verification ID: ${verification_id}`);
-      // TODO: Implement actual email sending
-      // const emailContent = `
-      // Your registration for ARTIX 2K26 has been approved!
-      // Your Verification ID: ${verification_id}
-      // Please show this ID at the event entrance.
-      // `;
-      // await sendEmail(email, 'ARTIX 2K26 - Registration Approved', emailContent);
-      emailSent = true;
+      console.log(`📧 Sending email to ${email}...`);
+      emailResult = await sendEmailNotification(email, full_name, verification_id);
     }
 
-    // Send WhatsApp (Placeholder - would use Twilio/WhatsApp API in production)
+    // Send WhatsApp
     if (method === 'whatsapp' || method === 'both') {
-      console.log(`💬 [PLACEHOLDER] Sending WhatsApp to ${phone}`);
-      console.log(`💬 Recipient: ${full_name}`);
-      console.log(`💬 Verification ID: ${verification_id}`);
-      // TODO: Implement actual WhatsApp sending
-      // const whatsappMessage = `
-      // Hi ${full_name},
-      // Your registration for ARTIX 2K26 has been approved!
-      // Your Verification ID: ${verification_id}
-      // Please show this ID at the event entrance.
-      // `;
-      // await sendWhatsAppMessage(phone, whatsappMessage);
-      whatsappSent = true;
+      console.log(`💬 Sending WhatsApp to ${phone}...`);
+      whatsappResult = await sendWhatsAppNotification(phone, full_name, verification_id);
     }
 
     // Update registration to mark notification as sent
@@ -873,18 +962,28 @@ app.post('/api/admin/send-notification', async (req, res) => {
         $set: {
           notification_sent: true,
           notification_sent_at: new Date(),
-          notification_method: method
+          notification_method: method,
+          email_sent: emailResult.success,
+          whatsapp_sent: whatsappResult.success
         }
       }
     );
 
-    console.log(`✅ Notifications sent for ${registrationId}`);
+    console.log(`✅ Notification processing completed for ${registrationId}`);
 
     res.json({
       success: true,
-      message: `Notifications sent via ${method}`,
-      emailSent,
-      whatsappSent,
+      message: `Notification processing completed for ${method}`,
+      email: {
+        sent: emailResult.success,
+        status: emailResult.success ? 'Email sent successfully' : (emailResult.reason || emailResult.error || 'Failed to send email'),
+        details: emailResult
+      },
+      whatsapp: {
+        sent: whatsappResult.success,
+        status: whatsappResult.success ? 'WhatsApp sent successfully' : (whatsappResult.reason || whatsappResult.error || 'Failed to send WhatsApp'),
+        details: whatsappResult
+      },
       registration: {
         registration_id: registrationId,
         verification_id,
