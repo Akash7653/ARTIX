@@ -24,7 +24,7 @@ export function AdminScanner() {
 
   // Menu Screen
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo/Title */}
         <div className="text-center mb-12">

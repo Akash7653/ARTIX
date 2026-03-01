@@ -222,7 +222,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-gray-800/40 backdrop-blur-md border border-gray-700/50 rounded-2xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
