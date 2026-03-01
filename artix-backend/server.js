@@ -108,6 +108,26 @@ function generateVerificationId() {
 
 // Routes
 
+// Health Check Endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: '✅ ARTIX Backend is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Health Check with API prefix
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'ARTIX Backend API',
+    database: db ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Error handler for multer upload errors
 const handleUploadError = (err, req, res, next) => {
   if (err) {
