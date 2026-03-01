@@ -1188,6 +1188,23 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
+    // Check Twilio credentials immediately
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      console.error('❌ Twilio credentials NOT configured!');
+      return res.status(500).json({ 
+        error: 'Twilio credentials not configured on server',
+        details: 'TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be set as environment variables on Vercel'
+      });
+    }
+
+    if (!process.env.TWILIO_WHATSAPP_NUMBER) {
+      console.error('❌ Twilio WhatsApp number NOT configured!');
+      return res.status(500).json({ 
+        error: 'Twilio WhatsApp number not configured on server',
+        details: 'TWILIO_WHATSAPP_NUMBER must be set as environment variable'
+      });
+    }
+
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
@@ -1207,6 +1224,14 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
     console.log(`📱 Sending detailed WhatsApp to participant: ${registration.phone}`);
     const whatsappResult = await sendDetailedWhatsAppNotification(registration.phone, registration);
 
+    if (!whatsappResult.success) {
+      console.error('❌ WhatsApp send failed:', whatsappResult.error);
+      return res.status(500).json({ 
+        error: 'Failed to send WhatsApp message',
+        details: whatsappResult.error || whatsappResult.reason || 'Unknown error'
+      });
+    }
+
     // Update notification_sent flag in database
     await registrationsCollection.updateOne(
       { _id: registration._id },
@@ -1222,13 +1247,19 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
     );
 
     res.json({
-      success: whatsappResult.success,
-      message: whatsappResult.success ? '✅ WhatsApp message sent to participant successfully!' : 'Failed to send WhatsApp',
-      details: whatsappResult
+      success: true,
+      message: '✅ WhatsApp message sent to participant successfully!',
+      details: {
+        phone: registration.phone,
+        messageSid: whatsappResult.messageSid
+      }
     });
   } catch (err) {
     console.error('❌ Error in send-whatsapp-to-participant endpoint:', err);
-    res.status(500).json({ error: 'Failed to send WhatsApp message', details: err.message });
+    res.status(500).json({ 
+      error: 'Failed to send WhatsApp message', 
+      details: err.message 
+    });
   }
 });
 

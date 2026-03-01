@@ -286,6 +286,8 @@ export function AdminDashboard({ onLogout }: Props) {
       setSendingNotification(reg.registration_id);
       
       const baseUrl = import.meta.env.VITE_API_URL;
+      console.log(`📱 Sending WhatsApp to ${reg.phone} via API: ${baseUrl}/admin/send-whatsapp-to-participant`);
+      
       const response = await fetch(`${baseUrl}/admin/send-whatsapp-to-participant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -293,17 +295,20 @@ export function AdminDashboard({ onLogout }: Props) {
       });
 
       const data = await response.json();
+      console.log('📱 WhatsApp API Response:', data);
 
       if (response.ok && data.success) {
         alert('✅ WhatsApp message sent successfully to ' + reg.phone + '!');
         // Reload data to update notification status
-        setTimeout(loadData, 1000);
+        setTimeout(loadData, 1500);
       } else {
-        alert('❌ Failed to send WhatsApp: ' + (data.error || data.message || 'Unknown error'));
+        const errorMsg = data.error || data.message || 'Unknown error occurred';
+        console.error('❌ WhatsApp Error:', errorMsg);
+        alert('❌ Failed to send WhatsApp:\n\n' + errorMsg);
       }
     } catch (err) {
       console.error('❌ Error sending WhatsApp:', err);
-      alert('❌ Error: Failed to send WhatsApp message');
+      alert('❌ Error: ' + (err instanceof Error ? err.message : 'Failed to send WhatsApp message'));
     } finally {
       setSendingNotification(null);
     }
