@@ -38,6 +38,8 @@ async function connectDB() {
     // Create indexes
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+    // Sparse index for verification_id - allows multiple null values
+    await registrationsCollection.createIndex({ verification_id: 1 }, { sparse: true, unique: true });
     
     console.log('✅ Connected to MongoDB');
   } catch (err) {
@@ -305,6 +307,7 @@ async function registerHandler(req, res) {
       approval_status: 'pending',
       selected_for_event: null,
       entry_verified_at: null,
+      notification_sent: false,
       created_at: new Date(),
       team_members: parsedTeamMembers.length > 0 ? parsedTeamMembers : null
     };
@@ -1368,6 +1371,8 @@ app.post('/api/admin/clear-database', async (req, res) => {
     registrationsCollection = db.collection('registrations');
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+    // Sparse index for verification_id - allows multiple null values
+    await registrationsCollection.createIndex({ verification_id: 1 }, { sparse: true, unique: true });
     console.log('✅ Recreated registrations collection with indexes');
 
     await db.createCollection('payments');

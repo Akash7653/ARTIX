@@ -250,8 +250,26 @@ export function AdminDashboard({ onLogout }: Props) {
     return lines.join('\n');
   };
 
+  const handleSendNotification = async (registrationId: string, method: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${baseUrl}/admin/confirm-and-notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId, method })
+      });
+
+      if (response.ok) {
+        console.log(`✅ Notification marked as sent for ${registrationId}`);
+        setTimeout(loadData, 1000); // Reload data to update notification status
+      }
+    } catch (err) {
+      console.error('Failed to mark notification as sent:', err);
+    }
+  };
+
   const handleSendWhatsAppDirect = (reg: Registration) => {
-    const adminPhone = '9398176430';
+    const adminPhone = '8919068236';
     const message = generateWhatsAppMessage(reg);
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodedMessage}`;
@@ -769,17 +787,26 @@ export function AdminDashboard({ onLogout }: Props) {
                       <h3 className="text-lg font-bold text-gray-200 mb-4">Send via WhatsApp</h3>
                       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
                         <p className="text-green-300 text-sm mb-2">Verification ID: <span className="font-mono font-bold text-green-400">{reg.verification_id}</span></p>
-                        <p className="text-green-300 text-xs">Admin WhatsApp: +91 9398176430</p>
+                        <p className="text-green-300 text-xs">Admin WhatsApp: +91 8919068236</p>
                         <p className="text-green-300 text-xs mt-2">Message will include all participant details and event information</p>
                       </div>
-                      <button
-                        onClick={() => handleSendWhatsAppDirect(reg)}
-                        disabled={sendingNotification === reg.registration_id}
-                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition font-semibold disabled:opacity-50 w-full justify-center"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        Open WhatsApp & Send Details
-                      </button>
+                      <div className="flex gap-4 flex-wrap items-center">
+                        <button
+                          onClick={() => handleSendWhatsAppDirect(reg)}
+                          disabled={sendingNotification === reg.registration_id}
+                          className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition font-semibold disabled:opacity-50"
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                          Open WhatsApp & Send
+                        </button>
+                        <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                          reg.notification_sent 
+                            ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
+                            : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                        }`}>
+                          📤 Notification: {reg.notification_sent ? '✅ Sent' : '⏳ Not Sent'}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
