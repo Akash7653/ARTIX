@@ -231,22 +231,34 @@ export function AdminDashboard({ onLogout }: Props) {
       '',
       '*👤 Participant Information:*',
       `Name: ${reg.full_name}`,
-      `College: ${reg.college_name}`,
+      `College: ${reg.college_name || 'N/A'}`,
       `Branch: ${reg.branch}`,
       `Year: ${reg.year_of_study}`,
       `Phone: ${reg.phone}`,
-      '',
-      '*🎯 Event Details:*',
-      `Events: ${reg.selected_events.join(', ')}`,
-      `Total Amount: ₹${reg.total_amount}`,
-      `Registration ID: ${reg.registration_id}`,
-      '',
-      '*🔐 Verification Instructions:*',
-      'Use your Verification ID at the event registration desk for quick entry verification.',
-      '',
-      '---',
-      'For assistance, contact ARTIX Admin Team'
+      ''
     ];
+
+    // Add team members if they exist
+    if (reg.team_members && reg.team_members.length > 0) {
+      lines.push('*👥 Team Members:*');
+      reg.team_members.forEach((member) => {
+        lines.push(`• ${member.member_name}`);
+        lines.push(`  Branch: ${member.member_branch}`);
+        lines.push(`  Phone: ${member.member_phone}`);
+      });
+      lines.push('');
+    }
+
+    lines.push('*🎯 Event Details:*');
+    lines.push(`Events: ${reg.selected_events.join(', ')}`);
+    lines.push(`Total Amount: ₹${reg.total_amount}`);
+    lines.push(`Registration ID: ${reg.registration_id}`);
+    lines.push('');
+    lines.push('*🔐 Verification Instructions:*');
+    lines.push('Use your Verification ID at the event registration desk for quick entry verification.');
+    lines.push('');
+    lines.push('---');
+    lines.push('For assistance, contact ARTIX Admin Team');
     
     return lines.join('\n');
   };
@@ -270,10 +282,16 @@ export function AdminDashboard({ onLogout }: Props) {
   };
 
   const handleSendWhatsAppDirect = (reg: Registration) => {
-    const adminPhone = '8919068236';
+    // Send message to PARTICIPANT'S phone number, not admin's phone
+    const participantPhone = reg.phone.replace(/[^0-9]/g, ''); // Remove any non-numeric characters
+    const countryCode = '91'; // India country code
+    const phoneNumber = participantPhone.length === 10 ? countryCode + participantPhone : participantPhone;
+    
     const message = generateWhatsAppMessage(reg);
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    
+    // Open WhatsApp with the pre-filled message
     window.open(whatsappUrl, '_blank');
     
     // Mark as notification sent in backend
@@ -975,8 +993,8 @@ export function AdminDashboard({ onLogout }: Props) {
                           : 'bg-green-100 border-green-300'
                       }`}>
                         <p className={`text-sm mb-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Verification ID: <span className={`font-mono font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>{reg.verification_id}</span></p>
-                        <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Admin WhatsApp: +91 8919068236</p>
-                        <p className={`text-xs mt-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Message will include all participant details and event information</p>
+                        <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-800'}`}>📱 Sending to: +91 {reg.phone}</p>
+                        <p className={`text-xs mt-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Message includes verification ID, participant details, team members (if any), and event information</p>
                       </div>
                       <div className="flex gap-4 flex-wrap items-center">
                         <button
@@ -989,7 +1007,7 @@ export function AdminDashboard({ onLogout }: Props) {
                           }`}
                         >
                           <MessageCircle className="w-5 h-5" />
-                          Open WhatsApp & Send
+                          Send to Participant WhatsApp
                         </button>
                         <div className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
                           reg.notification_sent 
