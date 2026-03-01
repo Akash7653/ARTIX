@@ -1312,6 +1312,42 @@ app.post('/api/admin/verify-entry', async (req, res) => {
   }
 });
 
+// 13. CLEAR DATABASE (Admin Only - Testing Purpose)
+app.post('/api/admin/clear-database', async (req, res) => {
+  try {
+    const { adminPassword } = req.body;
+    const ADMIN_PASSWORD = '23J41A69A3';
+
+    if (adminPassword !== ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Invalid admin password' });
+    }
+
+    console.log('🗑️  CLEARING DATABASE - All collections will be deleted!');
+
+    // Clear all collections
+    await registrationsCollection.deleteMany({});
+    console.log('✅ Cleared: registrations');
+
+    await paymentsCollection.deleteMany({});
+    console.log('✅ Cleared: payments');
+
+    await teamMembersCollection.deleteMany({});
+    console.log('✅ Cleared: team_members');
+
+    console.log('🗑️  DATABASE CLEARED SUCCESSFULLY');
+
+    res.json({
+      success: true,
+      message: '✅ Database cleared successfully. All registrations, payments, and team members have been deleted.',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (err) {
+    console.error('❌ Database clear error:', err);
+    res.status(500).json({ error: 'Failed to clear database', details: err.message });
+  }
+});
+
 // Start Server
 async function startServer() {
   try {

@@ -482,6 +482,43 @@ export function AdminDashboard({ onLogout }: Props) {
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
+
+          <button
+            onClick={async () => {
+              if (!window.confirm('⚠️ WARNING: This will DELETE ALL registrations, payments, and team members!\n\nAre you absolutely sure? This cannot be undone.')) {
+                return;
+              }
+
+              if (!window.confirm('🗑️ FINAL CONFIRMATION: Delete all data?')) {
+                return;
+              }
+
+              try {
+                const baseUrl = import.meta.env.VITE_API_URL;
+                const response = await fetch(`${baseUrl}/admin/clear-database`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ adminPassword: '23J41A69A3' })
+                });
+
+                if (!response.ok) throw new Error('Failed to clear database');
+
+                setMessage('✅ Database cleared successfully! All data has been removed.');
+                setMessageType('success');
+                setTimeout(() => {
+                  loadData();
+                  setMessage('');
+                }, 1000);
+              } catch (err) {
+                setMessage('❌ Failed to clear database');
+                setMessageType('error');
+                setTimeout(() => setMessage(''), 3000);
+              }
+            }}
+            className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-3 rounded-lg hover:bg-red-500/30 transition font-semibold"
+          >
+            🗑️ Clear Database
+          </button>
         </div>
 
         {/* Event Entry Verification Section */}
