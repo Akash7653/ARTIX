@@ -1093,6 +1093,145 @@ async function sendWhatsAppNotification(phone, fullName, verificationId) {
   }
 }
 
+// Comprehensive WhatsApp notification with full registration details
+async function sendDetailedWhatsAppNotification(phone, registration) {
+  try {
+    console.log(`\n💬 === DETAILED WHATSAPP SENDING START ===`);
+    console.log(`Phone: ${phone}`);
+    console.log(`Registration ID: ${registration.registration_id}`);
+    
+    // Check if Twilio credentials are configured
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
+      console.error('❌ Twilio credentials NOT configured!');
+      return { success: false, reason: 'Twilio credentials not configured' };
+    }
+
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    // Format phone number - ensure it's in E.164 format (+country code + number)
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('91')) {
+      formattedPhone = '91' + formattedPhone; // Assume India if no country code
+    }
+    const phoneWithCountry = 'whatsapp:+' + formattedPhone;
+
+    console.log(`Formatted Phone: ${phoneWithCountry}`);
+    
+    // Build comprehensive message
+    const messageLines = [
+      '🎉 *ARTIX 2026 - REGISTRATION APPROVED* 🎉',
+      '',
+      '✅ Your registration has been approved!',
+      '',
+      '*📋 Verification Details:*',
+      `Verification ID: *${registration.verification_id}*`,
+      '',
+      '*👤 Participant Information:*',
+      `Name: ${registration.full_name}`,
+      `College: ${registration.college_name || 'N/A'}`,
+      `Branch: ${registration.branch}`,
+      `Year: ${registration.year_of_study}`,
+      `Phone: ${registration.phone}`,
+      ''
+    ];
+
+    // Add team members if they exist
+    if (registration.team_members && registration.team_members.length > 0) {
+      messageLines.push('*👥 Team Members:*');
+      registration.team_members.forEach((member) => {
+        messageLines.push(`• ${member.member_name}`);
+        messageLines.push(`  Branch: ${member.member_branch}`);
+        messageLines.push(`  Phone: ${member.member_phone}`);
+      });
+      messageLines.push('');
+    }
+
+    messageLines.push('*🎯 Event Details:*');
+    messageLines.push(`Events: ${registration.selected_events.join(', ')}`);
+    messageLines.push(`Total Amount: ₹${registration.total_amount}`);
+    messageLines.push(`Registration ID: ${registration.registration_id}`);
+    messageLines.push('');
+    messageLines.push('*🔐 Verification Instructions:*');
+    messageLines.push('Use your Verification ID at the event registration desk for quick entry verification.');
+    messageLines.push('');
+    messageLines.push('---');
+    messageLines.push('For assistance, contact ARTIX Admin Team');
+
+    const messageBody = messageLines.join('\n');
+
+    const message = await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      to: phoneWithCountry,
+      body: messageBody
+    });
+
+    console.log('✅ Detailed WhatsApp sent successfully!');
+    console.log('Message SID:', message.sid);
+    console.log(`💬 === DETAILED WHATSAPP SENDING END ===\n`);
+    return { success: true, messageSid: message.sid };
+
+  } catch (err) {
+    console.error('\n❌ === DETAILED WHATSAPP SENDING FAILED ===');
+    console.error('Error:', err.message);
+    console.error('Full Error:', err);
+    console.error(`❌ === WHATSAPP ERROR END ===\n`);
+    return { success: false, error: err.message };
+  }
+}
+
+// API Endpoint: Send Detailed WhatsApp to Participant
+app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
+  try {
+    const { registrationId } = req.body;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (!registration.verification_id) {
+      return res.status(400).json({ error: 'Verification ID must be set first' });
+    }
+
+    if (!registration.phone) {
+      return res.status(400).json({ error: 'Participant phone number not found' });
+    }
+
+    console.log(`📱 Sending detailed WhatsApp to participant: ${registration.phone}`);
+    const whatsappResult = await sendDetailedWhatsAppNotification(registration.phone, registration);
+
+    // Update notification_sent flag in database
+    await registrationsCollection.updateOne(
+      { _id: registration._id },
+      {
+        $set: {
+          notification_sent: true,
+          notification_sent_at: new Date(),
+          notification_method: 'whatsapp',
+          whatsapp_sent: whatsappResult.success,
+          whatsapp_message_sid: whatsappResult.messageSid || null
+        }
+      }
+    );
+
+    res.json({
+      success: whatsappResult.success,
+      message: whatsappResult.success ? '✅ WhatsApp message sent to participant successfully!' : 'Failed to send WhatsApp',
+      details: whatsappResult
+    });
+  } catch (err) {
+    console.error('❌ Error in send-whatsapp-to-participant endpoint:', err);
+    res.status(500).json({ error: 'Failed to send WhatsApp message', details: err.message });
+  }
+});
+
 // 10. Send Email & WhatsApp Notifications
 app.post('/api/admin/send-notification', async (req, res) => {
   try {

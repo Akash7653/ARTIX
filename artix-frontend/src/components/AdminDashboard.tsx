@@ -281,21 +281,32 @@ export function AdminDashboard({ onLogout }: Props) {
     }
   };
 
-  const handleSendWhatsAppDirect = (reg: Registration) => {
-    // Send message to PARTICIPANT'S phone number, not admin's phone
-    const participantPhone = reg.phone.replace(/[^0-9]/g, ''); // Remove any non-numeric characters
-    const countryCode = '91'; // India country code
-    const phoneNumber = participantPhone.length === 10 ? countryCode + participantPhone : participantPhone;
-    
-    const message = generateWhatsAppMessage(reg);
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    
-    // Open WhatsApp with the pre-filled message
-    window.open(whatsappUrl, '_blank');
-    
-    // Mark as notification sent in backend
-    handleSendNotification(reg.registration_id, 'whatsapp');
+  const handleSendWhatsAppDirect = async (reg: Registration) => {
+    try {
+      setSendingNotification(reg.registration_id);
+      
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${baseUrl}/admin/send-whatsapp-to-participant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: reg.registration_id })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('✅ WhatsApp message sent successfully to ' + reg.phone + '!');
+        // Reload data to update notification status
+        setTimeout(loadData, 1000);
+      } else {
+        alert('❌ Failed to send WhatsApp: ' + (data.error || data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('❌ Error sending WhatsApp:', err);
+      alert('❌ Error: Failed to send WhatsApp message');
+    } finally {
+      setSendingNotification(null);
+    }
   };
 
   const handleExportToExcel = () => {
