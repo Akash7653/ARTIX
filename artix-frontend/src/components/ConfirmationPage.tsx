@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { CheckCircle, Copy, CheckCheck, Clock } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import type { RegistrationFormData } from '../types/registration';
 
 interface Props {
@@ -8,14 +7,6 @@ interface Props {
 }
 
 export function ConfirmationPage({ registrationId, formData }: Props) {
-  const [copied, setCopied] = useState(false);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(registrationId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const darkMode = true;
 
   return (
@@ -40,67 +31,6 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
             darkMode ? 'text-gray-300' : 'text-gray-700'
           }`}>Your registration for ARTIX 2K26 is confirmed</p>
         </div>
-
-        {/* Registration ID - Always Shown */}
-        <div className={`rounded-xl p-6 md:p-10 mb-8 border-3 text-center ${
-          darkMode
-            ? 'bg-gradient-to-br from-blue-500/15 to-cyan-500/15 border-blue-500/40'
-            : 'bg-gradient-to-br from-blue-400/15 to-cyan-400/15 border-blue-400/40'
-        }`}>
-          <p className={`text-sm uppercase tracking-widest font-bold mb-4 ${
-            darkMode ? 'text-blue-400' : 'text-blue-600'
-          }`}>📝 Your Registration ID</p>
-          
-          <div className={`inline-block p-6 md:p-8 rounded-lg border-2 mb-6 ${
-            darkMode
-              ? 'bg-gray-900 border-blue-400'
-              : 'bg-white border-blue-500'
-          }`}>
-            <p className={`text-3xl md:text-4xl lg:text-5xl font-mono font-bold tracking-widest break-all ${
-              darkMode ? 'text-blue-400' : 'text-blue-600'
-            }`}>
-              {registrationId}
-            </p>
-          </div>
-
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(registrationId);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className={`inline-flex items-center gap-2 md:gap-3 px-8 md:px-10 py-4 md:py-5 rounded-lg font-bold text-base md:text-lg transition-all ${
-              copied
-                ? darkMode
-                  ? 'bg-green-500/30 text-green-400 border border-green-500'
-                  : 'bg-green-100 text-green-700 border border-green-400'
-                : darkMode
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/50'
-                  : 'bg-gradient-to-r from-blue-600 to-cyan-700 text-white hover:shadow-lg'
-            }`}
-          >
-            {copied ? (
-              <>
-                <CheckCheck className="w-5 h-5" /> Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-5 h-5" /> Copy ID
-              </>
-            )}
-          </button>
-
-          <p className={`mt-6 text-sm md:text-base ${
-            darkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            Keep this ID safe - you'll need it to track your application status
-          </p>
-        </div>
-
-        {/* Verification ID - Removed: Only admin can generate these */}
-        {false && (
-          <div className="hidden"></div>
-        )}
 
         {/* Awaiting Approval Message - Always Shown */}
         <div className={`p-6 md:p-10 border-3 rounded-xl mb-8 text-center ${
