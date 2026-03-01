@@ -95,24 +95,34 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
         throw new Error('Please upload payment screenshot with Transaction ID and UTR ID written in it');
       }
 
+      if (!transactionId.trim()) {
+        throw new Error('Please enter Transaction ID');
+      }
+
+      if (!utrId.trim()) {
+        throw new Error('Please enter UTR ID');
+      }
+
       if (totalAmount === 0) {
         throw new Error('Please select at least one event');
       }
 
-      // Prepare form data with normalized email
+      // Prepare form data with normalized email and transaction/UTR IDs
       const registrationData = {
         ...formData,
         email: formData.email.toLowerCase().trim(),
         fullName: formData.fullName.trim(),
         selectedIndividualEvents: formData.selectedIndividualEvents,
         totalAmount,
+        transactionId: transactionId.trim(),
+        utrId: utrId.trim()
       };
 
       // Call API
       const response = await api.register(registrationData);
 
       if (response.success) {
-        onSubmitSuccess(response.registrationId, response.verificationId);
+        onSubmitSuccess(response.registrationId, response.verificationId || null);
       }
     } catch (err) {
       console.error('Registration error:', err);

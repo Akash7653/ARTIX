@@ -14,6 +14,8 @@ export const api = {
     form.append('selectedCombo', formData.selectedCombo);
     form.append('teamMembers', JSON.stringify(formData.teamMembers));
     form.append('totalAmount', formData.totalAmount.toString());
+    form.append('transactionId', formData.transactionId || '');
+    form.append('utrId', formData.utrId || '');
     
     if (formData.paymentScreenshot) {
       form.append('paymentScreenshot', formData.paymentScreenshot);

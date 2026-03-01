@@ -30,6 +30,8 @@ export interface RegistrationFormData {
   teamSize: number;
   teamMembers: TeamMember[];
   paymentScreenshot: File | null;
+  transactionId?: string;
+  utrId?: string;
 }
 
 export const INDIVIDUAL_EVENTS: IndividualEvent[] = [

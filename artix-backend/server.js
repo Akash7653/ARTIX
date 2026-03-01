@@ -107,6 +107,19 @@ function generateRegistrationId() {
   return `ARTIX2026-${randomNum}`;
 }
 
+function generateVerificationId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = 'VER-';
+  for (let i = 0; i < 3; i++) {
+    let segment = '';
+    for (let j = 0; j < 4; j++) {
+      segment += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    id += segment + (i < 2 ? '-' : '');
+  }
+  return id;
+}
+
 // Routes
 
 // Health Check Endpoint
@@ -409,9 +422,17 @@ app.get('/api/registration/:registrationId', async (req, res) => {
 app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { selectedForEvent } = req.body; // true = selected, false = rejected
+    const { approved, rejected } = req.body; // approved=true for accept, rejected=true for reject
 
-    console.log(`✅ Approving entry: ${registrationId}, Selected: ${selectedForEvent}`);
+    console.log(`✅ Processing entry: ${registrationId}, Approved: ${approved}, Rejected: ${rejected}`);
+
+    if (!approved && !rejected) {
+      return res.status(400).json({ error: 'Please specify approved or rejected status' });
+    }
+
+    if (approved && rejected) {
+      return res.status(400).json({ error: 'Cannot approve and reject simultaneously' });
+    }
 
     // Find registration by registration_id
     const registration = await registrationsCollection.findOne({
@@ -424,37 +445,60 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
     }
 
     if (registration.approval_status === 'approved') {
-      return res.status(400).json({ error: 'This entry has already been approved' });
+      return res.status(400).json({ error: 'This entry has already been reviewed' });
+    }
+
+    // Generate unique verification ID ONLY when admin approves
+    let verificationId = null;
+    if (approved) {
+      verificationId = generateVerificationId();
+      console.log(`🆔 Generated verification ID: ${verificationId}`);
     }
 
     // Update approval status
     const approvalDate = new Date();
+    const updateDoc = {
+      $set: {
+        approval_status: 'approved',
+        entry_verified_at: approvalDate
+      }
+    };
+
+    if (approved) {
+      updateDoc.$set.selected_for_event = true;
+      updateDoc.$set.verification_id = verificationId;
+    } else if (rejected) {
+      updateDoc.$set.selected_for_event = false;
+    }
+
     await registrationsCollection.updateOne(
       { _id: registration._id },
-      {
-        $set: {
-          approval_status: 'approved',
-          selected_for_event: selectedForEvent,
-          entry_verified_at: approvalDate
-        }
-      }
+      updateDoc
     );
 
-    console.log(`✅ Entry approved: ${registration.registration_id}`);
+    console.log(`✅ Entry processed: ${registration.registration_id}`);
+
+    // Send notification if approved (email/SMS would go here)
+    if (approved && verificationId) {
+      console.log(`📧 [NOTIFICATION] Sending verification ID to ${registration.email}: ${verificationId}`);
+      // TODO: Implement email/SMS sending
+      // await sendVerificationIdToParticipant(registration.email, registration.full_name, verificationId);
+    }
 
     res.json({
       success: true,
-      message: `Participant ${selectedForEvent ? 'SELECTED' : 'REJECTED'} for the event`,
+      message: approved ? `✅ Participant APPROVED. Verification ID generated and notification sent.` : `❌ Participant REJECTED`,
       registration: {
         registration_id: registrationId,
         approval_status: 'approved',
-        selected_for_event: selectedForEvent
+        selected_for_event: approved,
+        verification_id: approved ? verificationId : null
       }
     });
 
   } catch (err) {
     console.error('❌ Approval error:', err);
-    res.status(500).json({ error: 'Failed to approve entry' });
+    res.status(500).json({ error: 'Failed to process approval' });
   }
 });
 
@@ -594,23 +638,66 @@ app.get('/api/admin/stats', async (req, res) => {
     const totalRegistrations = await registrationsCollection.countDocuments();
     console.log(`✅ Total Registrations: ${totalRegistrations}`);
     
-    const verifiedEntries = await registrationsCollection.countDocuments({ entry_status: 'verified' });
-    console.log(`✅ Verified Entries: ${verifiedEntries}`);
+    const approvedEntries = await registrationsCollection.countDocuments({ 
+      approval_status: 'approved',
+      selected_for_event: true
+    });
+    console.log(`✅ Approved Entries (Selected): ${approvedEntries}`);
+
+    const rejectedEntries = await registrationsCollection.countDocuments({ 
+      approval_status: 'approved',
+      selected_for_event: false
+    });
+    console.log(`✅ Rejected Entries: ${rejectedEntries}`);
     
-    const pendingEntries = await registrationsCollection.countDocuments({ entry_status: 'pending' });
+    const pendingEntries = await registrationsCollection.countDocuments({ 
+      approval_status: 'pending'
+    });
     console.log(`✅ Pending Entries: ${pendingEntries}`);
     
-    const totalRevenueResult = await registrationsCollection.aggregate([
-      { $group: { _id: null, total: { $sum: '$total_amount' } } }
+    // Revenue ONLY from approved and selected entries
+    const approvedRevenueResult = await registrationsCollection.aggregate([
+      {
+        $match: {
+          approval_status: 'approved',
+          selected_for_event: true
+        }
+      },
+      { 
+        $group: { 
+          _id: null, 
+          total: { $sum: '$total_amount' } 
+        } 
+      }
     ]).toArray();
-    const totalRevenue = totalRevenueResult[0]?.total || 0;
-    console.log(`✅ Total Revenue: ₹${totalRevenue}`);
+    const approvedRevenue = approvedRevenueResult[0]?.total || 0;
+    console.log(`✅ Approved Revenue: ₹${approvedRevenue}`);
+
+    // Total pending revenue (not yet confirmed)
+    const pendingRevenueResult = await registrationsCollection.aggregate([
+      {
+        $match: {
+          approval_status: 'pending'
+        }
+      },
+      { 
+        $group: { 
+          _id: null, 
+          total: { $sum: '$total_amount' } 
+        } 
+      }
+    ]).toArray();
+    const pendingRevenue = pendingRevenueResult[0]?.total || 0;
+    console.log(`✅ Pending Revenue: ₹${pendingRevenue}`);
 
     res.json({
       totalRegistrations,
-      verifiedEntries,
+      approvedEntries,
+      rejectedEntries,
       pendingEntries,
-      totalRevenue: totalRevenue,
+      approvedRevenue,
+      pendingRevenue,
+      totalRevenue: approvedRevenue + pendingRevenue,
       timestamp: new Date().toISOString()
     });
 
@@ -639,6 +726,7 @@ app.get('/api/admin/export', async (req, res) => {
     // Transform data for Excel export
     const exportData = registrations.map(reg => ({
       'Registration ID': reg.registration_id,
+      'Verification ID': reg.verification_id || 'NOT YET GENERATED',
       'Full Name': reg.full_name,
       'Email': reg.email,
       'Phone': reg.phone,
