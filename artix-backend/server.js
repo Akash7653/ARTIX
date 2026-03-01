@@ -1101,12 +1101,22 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
     console.log(`Registration ID: ${registration.registration_id}`);
     
     // Check if Twilio credentials are configured
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
-      console.error('❌ Twilio credentials NOT configured!');
-      return { success: false, reason: 'Twilio credentials not configured' };
+    console.log('\n📋 Checking Twilio credentials...');
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER;
+    
+    console.log(`TWILIO_ACCOUNT_SID: ${accountSid ? '✅ SET (' + accountSid.substring(0, 4) + '...)' : '❌ MISSING'}`);
+    console.log(`TWILIO_AUTH_TOKEN: ${authToken ? '✅ SET' : '❌ MISSING'}`);
+    console.log(`TWILIO_WHATSAPP_NUMBER: ${whatsappFrom ? '✅ SET (' + whatsappFrom + ')' : '❌ MISSING'}`);
+    
+    if (!accountSid || !authToken || !whatsappFrom) {
+      console.error('❌ Twilio credentials NOT fully configured!');
+      return { success: false, reason: 'Twilio credentials not configured', reason_detail: 'Missing: ' + [!accountSid ? 'ACCOUNT_SID' : '', !authToken ? 'AUTH_TOKEN' : '', !whatsappFrom ? 'WHATSAPP_NUMBER' : ''].filter(Boolean).join(', ') };
     }
 
-    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log('✅ All credentials found. Initializing Twilio client...');
+    const client = twilio(accountSid, authToken);
 
     // Format phone number - ensure it's in E.164 format (+country code + number)
     let formattedPhone = phone.replace(/\D/g, '');
@@ -1116,6 +1126,7 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
     const phoneWithCountry = 'whatsapp:+' + formattedPhone;
 
     console.log(`Formatted Phone: ${phoneWithCountry}`);
+    console.log(`Sending from: ${whatsappFrom}`);
     
     // Build comprehensive message
     const messageLines = [
@@ -1158,24 +1169,28 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
     messageLines.push('For assistance, contact ARTIX Admin Team');
 
     const messageBody = messageLines.join('\n');
+    console.log(`\n📝 Message length: ${messageBody.length} characters`);
 
+    console.log('\n📤 Sending WhatsApp message via Twilio...');
     const message = await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_NUMBER,
+      from: whatsappFrom,
       to: phoneWithCountry,
       body: messageBody
     });
 
     console.log('✅ Detailed WhatsApp sent successfully!');
-    console.log('Message SID:', message.sid);
+    console.log('📨 Message SID:', message.sid);
     console.log(`💬 === DETAILED WHATSAPP SENDING END ===\n`);
     return { success: true, messageSid: message.sid };
 
   } catch (err) {
     console.error('\n❌ === DETAILED WHATSAPP SENDING FAILED ===');
-    console.error('Error:', err.message);
+    console.error('Error Type:', err.constructor.name);
+    console.error('Error Message:', err.message);
+    console.error('Error Code:', err.code);
     console.error('Full Error:', err);
     console.error(`❌ === WHATSAPP ERROR END ===\n`);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message, errorCode: err.code };
   }
 }
 
@@ -1258,6 +1273,42 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
     console.error('❌ Error in send-whatsapp-to-participant endpoint:', err);
     res.status(500).json({ 
       error: 'Failed to send WhatsApp message', 
+      details: err.message 
+    });
+  }
+});
+
+// Diagnostic endpoint: Check Twilio configuration
+app.get('/api/admin/twilio-status', (req, res) => {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const whatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
+
+    const status = {
+      twilio_configured: false,
+      account_sid_set: !!accountSid,
+      auth_token_set: !!authToken,
+      whatsapp_number_set: !!whatsappNumber,
+      account_sid_preview: accountSid ? accountSid.substring(0, 4) + '****' + accountSid.substring(accountSid.length - 4) : 'NOT SET',
+      whatsapp_number: whatsappNumber,
+      all_credentials_valid: !!(accountSid && authToken && whatsappNumber)
+    };
+
+    if (status.all_credentials_valid) {
+      status.twilio_configured = true;
+      status.message = '✅ Twilio WhatsApp is configured and ready!';
+    } else {
+      status.message = '❌ Twilio WhatsApp is NOT properly configured. Missing: ' + 
+        [!accountSid ? 'TWILIO_ACCOUNT_SID' : '', 
+         !authToken ? 'TWILIO_AUTH_TOKEN' : '', 
+         !whatsappNumber ? 'TWILIO_WHATSAPP_NUMBER' : ''].filter(Boolean).join(', ');
+    }
+
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ 
+      error: 'Failed to check Twilio status', 
       details: err.message 
     });
   }
