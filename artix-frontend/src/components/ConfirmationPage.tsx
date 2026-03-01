@@ -105,19 +105,19 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
         {/* Awaiting Approval Message - Always Shown */}
         <div className={`p-6 md:p-10 border-3 rounded-xl mb-8 text-center ${
           darkMode
-            ? 'bg-gradient-to-br from-yellow-500/15 to-orange-500/15 border-yellow-500/40'
-            : 'bg-gradient-to-br from-yellow-400/15 to-orange-400/15 border-yellow-400/40'
+            ? 'bg-gradient-to-br from-green-500/15 to-emerald-500/15 border-green-500/40'
+            : 'bg-gradient-to-br from-green-400/15 to-emerald-400/15 border-green-400/40'
         }`}>
           <div className="inline-flex items-center gap-3 mb-4">
-            <Clock className={`w-8 h-8 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} animate-spin`} />
+            <CheckCircle className={`w-8 h-8 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
             <p className={`text-lg md:text-2xl font-bold ${
-              darkMode ? 'text-yellow-400' : 'text-yellow-600'
-            }`}>Payment Under Review</p>
+              darkMode ? 'text-green-400' : 'text-green-600'
+            }`}>Details Submitted Successfully! ✅</p>
           </div>
           <p className={`text-base md:text-lg ${
-            darkMode ? 'text-yellow-300' : 'text-yellow-700'
+            darkMode ? 'text-green-300' : 'text-green-700'
           }`}>
-            The admin is reviewing your payment details. Once approved, you will receive your Unique Verification ID via WhatsApp.
+            Your details have been successfully submitted. If you are approved, you will receive your entry ID to your WhatsApp number. Stay tuned! 🎉
           </p>
         </div>
 
@@ -169,8 +169,8 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
             <li><strong>Admin Review:</strong> The event admin will verify your payment using the Transaction ID and UTR ID you provided in the screenshot.</li>
             <li><strong>Payment Verification:</strong> They will check that the payment amount matches the event fee (₹{formData.totalAmount || 0}).</li>
             <li><strong>Approval Decision:</strong> Admin will approve or reject your registration based on payment verification.</li>
-            <li><strong>Verification ID Generation:</strong> If approved, a unique Verification ID will be generated and sent to your email.</li>
-            <li><strong>Event Entry:</strong> Show your Verification ID at the event entrance for verification.</li>
+            <li><strong>Entry ID Delivery:</strong> If approved, your unique Entry ID will be generated and sent to your <strong>WhatsApp number</strong>.</li>
+            <li><strong>Event Entry:</strong> Show your Entry ID from WhatsApp at the event entrance for verification.</li>
           </ol>
         </div>
       </div>

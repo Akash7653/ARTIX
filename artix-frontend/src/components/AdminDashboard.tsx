@@ -64,6 +64,7 @@ export function AdminDashboard({ onLogout }: Props) {
   const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,7 +393,11 @@ export function AdminDashboard({ onLogout }: Props) {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4 md:p-8">
+    <div className={`h-screen overflow-y-auto transition-colors duration-300 p-4 md:p-8 ${
+      darkMode
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
+        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+    }`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
@@ -400,18 +405,30 @@ export function AdminDashboard({ onLogout }: Props) {
             <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
               Admin Dashboard
             </h1>
-            <p className="text-gray-400">ARTIX 2K26 Registration Management</p>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Registration Management</p>
           </div>
-          <button
-            onClick={() => {
-              setIsAuthenticated(false);
-              onLogout();
-            }}
-            className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 text-red-300 px-4 md:px-6 py-3 rounded-lg hover:bg-red-500/30 transition font-semibold"
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-lg transition font-semibold border ${
+                darkMode
+                  ? 'bg-gray-700/40 border-gray-600/50 text-yellow-300 hover:bg-gray-600/40'
+                  : 'bg-gray-200/40 border-gray-300/50 text-gray-800 hover:bg-gray-300/40'
+              }`}
+            >
+              {darkMode ? '☀️ Light' : '🌙 Dark'}
+            </button>
+            <button
+              onClick={() => {
+                setIsAuthenticated(false);
+                onLogout();
+              }}
+              className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 text-red-300 px-4 md:px-6 py-3 rounded-lg hover:bg-red-500/30 transition font-semibold"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Message */}
@@ -428,63 +445,87 @@ export function AdminDashboard({ onLogout }: Props) {
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Total Registered</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stats.totalRegistrations}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Registered</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stats.totalRegistrations}</p>
                 </div>
-                <BarChart3 className="w-12 h-12 text-blue-400 opacity-30" />
+                <BarChart3 className={`w-12 h-12 opacity-30 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
               </div>
             </div>
 
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Approved</p>
-                  <p className="text-3xl font-bold text-green-400 mt-2">{stats.approvedEntries}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Approved</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{stats.approvedEntries}</p>
                 </div>
-                <CheckCircle2 className="w-12 h-12 text-green-400 opacity-30" />
+                <CheckCircle2 className={`w-12 h-12 opacity-30 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
               </div>
             </div>
 
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Rejected</p>
-                  <p className="text-3xl font-bold text-red-400 mt-2">{stats.rejectedEntries}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Rejected</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{stats.rejectedEntries}</p>
                 </div>
-                <XCircle className="w-12 h-12 text-red-400 opacity-30" />
+                <XCircle className={`w-12 h-12 opacity-30 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
               </div>
             </div>
 
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.pendingEntries}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Pending</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>{stats.pendingEntries}</p>
                 </div>
-                <Clock className="w-12 h-12 text-yellow-400 opacity-30" />
+                <Clock className={`w-12 h-12 opacity-30 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
               </div>
             </div>
 
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Entry Verified</p>
-                  <p className="text-3xl font-bold text-cyan-400 mt-2">{stats.verifiedEntries}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Entry Verified</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>{stats.verifiedEntries}</p>
                 </div>
-                <CheckCircle2 className="w-12 h-12 text-cyan-400 opacity-30" />
+                <CheckCircle2 className={`w-12 h-12 opacity-30 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
               </div>
             </div>
 
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+            <div className={`rounded-xl p-6 border transition-all ${
+              darkMode
+                ? 'bg-gray-800/40 border-gray-700/50'
+                : 'bg-white/40 border-gray-300/50'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Approved Revenue</p>
-                  <p className="text-3xl font-bold text-purple-400 mt-2">₹{stats.approvedRevenue?.toLocaleString()}</p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Approved Revenue</p>
+                  <p className={`text-3xl font-bold mt-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>₹{stats.approvedRevenue?.toLocaleString()}</p>
                 </div>
-                <Mail className="w-12 h-12 text-purple-400 opacity-30" />
+                <Mail className={`w-12 h-12 opacity-30 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
               </div>
             </div>
           </div>
