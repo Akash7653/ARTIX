@@ -174,7 +174,7 @@ export default function ApprovedParticipants({ onLogout }: Props) {
   const uniqueBranches = Array.from(new Set(participants.map(p => p.branch.toUpperCase())));
 
   return (
-    <div className={`${baseStyles.container} overflow-y-auto`}>
+    <div className={`h-screen overflow-y-auto ${isDarkMode ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-black text-white' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900'}`}>
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

@@ -276,7 +276,7 @@ export function AdminDashboard({ onLogout }: Props) {
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4 md:p-8">
+    <div className="h-screen overflow-y-auto bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
