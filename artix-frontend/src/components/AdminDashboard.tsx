@@ -59,6 +59,8 @@ export function AdminDashboard({ onLogout }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
+  const [verificationIdInput, setVerificationIdInput] = useState<{ [key: string]: string }>({});
+  const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,13 +106,14 @@ export function AdminDashboard({ onLogout }: Props) {
       if (!response.ok) throw new Error('Approval failed');
       
       const result = await response.json();
-      setMessage(`✅ Approved! Verification ID: ${result.registration?.verification_id}`);
+      setMessage(`✅ Approved! Now enter the Verification ID.`);
       setMessageType('success');
       setTimeout(loadData, 500);
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
       setMessage('❌ Failed to approve');
       setMessageType('error');
+      console.error(err);
       setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -134,6 +137,42 @@ export function AdminDashboard({ onLogout }: Props) {
       setMessage('❌ Failed to reject');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleSetVerificationId = async (registrationId: string) => {
+    const verificationId = verificationIdInput[registrationId]?.trim();
+    
+    if (!verificationId) {
+      setMessage('❌ Please enter a verification ID');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setSettingVerificationId(registrationId);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${baseUrl}/admin/set-verification-id`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId, verificationId })
+      });
+
+      if (!response.ok) throw new Error('Failed to set verification ID');
+      
+      setMessage(`✅ Verification ID set successfully!`);
+      setMessageType('success');
+      setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
+      setTimeout(loadData, 500);
+      setTimeout(() => setMessage(''), 4000);
+    } catch (err) {
+      setMessage('❌ Failed to set verification ID');
+      setMessageType('error');
+      console.error(err);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setSettingVerificationId(null);
     }
   };
 
@@ -553,6 +592,35 @@ export function AdminDashboard({ onLogout }: Props) {
                         >
                           <XCircle className="w-5 h-5" />
                           Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Entry Verification Section - Set Verification ID */}
+                  {reg.approval_status === 'approved' && !reg.verification_id && (
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-200 mb-4">Entry Verification Details</h3>
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-300 text-sm">⚠️ Enter the Verification ID that the participant will use at event entry</p>
+                      </div>
+                      <div className="flex gap-4 flex-wrap items-end">
+                        <div className="flex-1 min-w-64">
+                          <label className="block text-gray-300 text-sm font-semibold mb-2">Verification ID</label>
+                          <input
+                            type="text"
+                            value={verificationIdInput[reg.registration_id] || ''}
+                            onChange={(e) => setVerificationIdInput({ ...verificationIdInput, [reg.registration_id]: e.target.value })}
+                            placeholder="e.g., VER001, ARTIX-12345, etc."
+                            className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleSetVerificationId(reg.registration_id)}
+                          disabled={settingVerificationId === reg.registration_id}
+                          className="px-6 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition font-semibold disabled:opacity-50"
+                        >
+                          {settingVerificationId === reg.registration_id ? 'Setting...' : 'Set ID'}
                         </button>
                       </div>
                     </div>

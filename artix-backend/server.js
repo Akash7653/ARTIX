@@ -420,15 +420,16 @@ app.get('/api/registration/:registrationId', async (req, res) => {
   }
 });
 
-// 3. Verify/Approve Entry (Admin reviews payment and selects/rejects participant)
+// 3. Approve/Reject Registration (NO AUTO CODE GENERATION)
 app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { approved, rejected } = req.body; // approved=true for accept, rejected=true for reject
+    const { approved, rejected } = req.body;
 
-    console.log(`✅ Processing entry: ${registrationId}, Approved: ${approved}, Rejected: ${rejected}`);
+    console.log(`📋 Approval Request:`, { registrationId, approved, rejected, body: req.body });
 
-    if (!approved && !rejected) {
+    if (approved === undefined && rejected === undefined) {
+      console.error('❌ Missing both approved and rejected in body');
       return res.status(400).json({ error: 'Please specify approved or rejected status' });
     }
 
@@ -436,13 +437,11 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
       return res.status(400).json({ error: 'Cannot approve and reject simultaneously' });
     }
 
-    // Find registration by registration_id
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
 
     if (!registration) {
-      console.log(`❌ Registration not found: ${registrationId}`);
       return res.status(404).json({ error: 'Registration not found' });
     }
 
@@ -450,62 +449,174 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
       return res.status(400).json({ error: 'This entry has already been reviewed' });
     }
 
-    // Generate unique verification ID ONLY when admin approves
-    let verificationId = null;
-    if (approved) {
-      verificationId = generateVerificationId();
-      console.log(`🆔 Generated verification ID: ${verificationId}`);
-    }
-
-    // Update approval status
+    // Update approval status - DO NOT generate verification ID yet
     const approvalDate = new Date();
     const updateDoc = {
       $set: {
-        approval_status: 'approved',
-        entry_verified_at: approvalDate
+        approval_status: approved ? 'approved' : 'rejected',
+        approval_date: approvalDate,
+        selected_for_event: approved
       }
     };
-
-    if (approved) {
-      updateDoc.$set.selected_for_event = true;
-      updateDoc.$set.verification_id = verificationId;
-    } else if (rejected) {
-      updateDoc.$set.selected_for_event = false;
-    }
 
     await registrationsCollection.updateOne(
       { _id: registration._id },
       updateDoc
     );
 
-    console.log(`✅ Entry processed: ${registration.registration_id}`);
-
-    // Send notification if approved (email/SMS would go here)
-    if (approved && verificationId) {
-      console.log(`📧 [NOTIFICATION] Sending verification ID to ${registration.email}: ${verificationId}`);
-      // TODO: Implement email/SMS sending
-      // await sendVerificationIdToParticipant(registration.email, registration.full_name, verificationId);
-    }
+    console.log(`✅ ${approved ? 'Approved' : 'Rejected'}: ${registrationId}`);
 
     res.json({
       success: true,
-      message: approved ? `✅ Participant APPROVED. Verification ID generated and notification sent.` : `❌ Participant REJECTED`,
+      message: approved ? '✅ Participant APPROVED. Now set verification ID.' : '❌ Participant REJECTED',
       registration: {
         registration_id: registrationId,
-        approval_status: 'approved',
+        approval_status: approved ? 'approved' : 'rejected',
         selected_for_event: approved,
-        verification_id: approved ? verificationId : null
+        verification_id: null
       }
     });
 
   } catch (err) {
     console.error('❌ Approval error:', err);
-    res.status(500).json({ error: 'Failed to process approval' });
+    res.status(500).json({ error: 'Failed to process approval', details: err.message });
   }
 });
 
-// 5. Admin Approval (with password)
-app.post('/api/admin/approve-entry', async (req, res) => {
+// 4. Set Verification ID MANUALLY (Admin inputs verification ID)
+app.post('/api/admin/set-verification-id', async (req, res) => {
+  try {
+    const { registrationId, verificationId } = req.body;
+
+    if (!registrationId || !verificationId) {
+      return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (registration.approval_status !== 'approved') {
+      return res.status(400).json({ error: 'Registration must be approved first' });
+    }
+
+    if (registration.verification_id) {
+      return res.status(400).json({ error: 'Verification ID already assigned' });
+    }
+
+    // Set the verification ID
+    await registrationsCollection.updateOne(
+      { _id: registration._id },
+      {
+        $set: {
+          verification_id: verificationId.trim(),
+          verification_id_set_at: new Date()
+        }
+      }
+    );
+
+    console.log(`✅ Verification ID set for ${registrationId}: ${verificationId}`);
+
+    res.json({
+      success: true,
+      message: 'Verification ID set successfully',
+      registration: {
+        registration_id: registrationId,
+        verification_id: verificationId.trim()
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Set Verification ID error:', err);
+    res.status(500).json({ error: 'Failed to set verification ID' });
+  }
+});
+
+// 5. Confirm and Send Notifications (After verification ID is set)
+app.post('/api/admin/confirm-and-notify', async (req, res) => {
+  try {
+    const { registrationId, method } = req.body; // method: 'email', 'whatsapp', 'both'
+
+    if (!registrationId || !method) {
+      return res.status(400).json({ error: 'Registration ID and notification method are required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (!registration.verification_id) {
+      return res.status(400).json({ error: 'Verification ID must be set first' });
+    }
+
+    const { full_name, email, phone, verification_id } = registration;
+    let emailResult = { success: false };
+    let whatsappResult = { success: false };
+
+    // Send Email
+    if ((method === 'email' || method === 'both') && email) {
+      console.log(`📧 Sending email to ${email}...`);
+      emailResult = await sendEmailNotification(email, full_name, verification_id);
+    }
+
+    // Send WhatsApp
+    if ((method === 'whatsapp' || method === 'both') && phone) {
+      console.log(`💬 Sending WhatsApp to ${phone}...`);
+      whatsappResult = await sendWhatsAppNotification(phone, full_name, verification_id);
+    }
+
+    // Mark notification as sent
+    await registrationsCollection.updateOne(
+      { _id: registration._id },
+      {
+        $set: {
+          notification_sent: true,
+          notification_sent_at: new Date(),
+          notification_method: method,
+          email_sent: emailResult.success,
+          whatsapp_sent: whatsappResult.success
+        }
+      }
+    );
+
+    console.log(`✅ Notifications sent for ${registrationId} via ${method}`);
+
+    res.json({
+      success: true,
+      message: `Notifications sent successfully via ${method}`,
+      email: {
+        sent: emailResult.success,
+        status: emailResult.success ? 'Email sent' : (emailResult.reason || 'Failed'),
+        details: emailResult
+      },
+      whatsapp: {
+        sent: whatsappResult.success,
+        status: whatsappResult.success ? 'WhatsApp sent' : (whatsappResult.reason || 'Failed'),
+        details: whatsappResult
+      },
+      registration: {
+        registration_id: registrationId,
+        verification_id,
+        notification_method: method
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Confirm and notify error:', err);
+    res.status(500).json({ error: 'Failed to send notifications', details: err.message });
+  }
+});
+
+// 6. Previous endpoint: Admin Entry Approval (for payment verification) - DEPRECATED
+app.post('/api/admin/approve-entry-old', async (req, res) => {
   try {
     const { registrationId, adminPassword, transactionId, utrId } = req.body;
     const VALID_ADMIN_PASSWORD = '23J41A69A3';
