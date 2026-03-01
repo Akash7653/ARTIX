@@ -55,15 +55,20 @@ export function AdminDashboard({ onLogout }: Props) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log('🔄 Fetching fresh stats...');
         const data = await api.getAdminStats();
+        console.log('✅ Fresh data received:', data);
         setStats(data);
       } catch (err) {
-        console.error('Failed to fetch stats:', err);
+        console.error('❌ Failed to fetch stats:', err);
       }
     };
 
+    // Fetch immediately on mount
     fetchStats();
-    const interval = setInterval(fetchStats, 5000); // Refresh every 5 seconds
+    
+    // Refresh every 3 seconds (faster for real-time updates)
+    const interval = setInterval(fetchStats, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -181,6 +186,19 @@ export function AdminDashboard({ onLogout }: Props) {
           </div>
           
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Refresh Stats Button */}
+            <button
+              onClick={refreshStats}
+              className={`p-2 md:p-3 rounded-xl transition-all duration-300 ${
+                isDarkMode
+                  ? 'bg-slate-800 hover:bg-slate-700 text-cyan-400'
+                  : 'bg-slate-200 hover:bg-slate-300 text-cyan-600'
+              }`}
+              title="Refresh statistics"
+            >
+              <BarChart3 className="w-5 h-5 md:w-6 md:h-6 animate-spin-slow" />
+            </button>
+
             {/* Theme Toggle */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}

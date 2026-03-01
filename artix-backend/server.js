@@ -599,23 +599,45 @@ app.get('/api/health', (req, res) => {
 // 7. Get Statistics (for admin)
 app.get('/api/admin/stats', async (req, res) => {
   try {
+    // Disable caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    console.log('📊 Fetching statistics...');
+    
+    if (!registrationsCollection) {
+      console.error('❌ Registrations collection not initialized');
+      return res.status(500).json({ error: 'Database not initialized' });
+    }
+
     const totalRegistrations = await registrationsCollection.countDocuments();
+    console.log(`✅ Total Registrations: ${totalRegistrations}`);
+    
     const verifiedEntries = await registrationsCollection.countDocuments({ entry_status: 'verified' });
+    console.log(`✅ Verified Entries: ${verifiedEntries}`);
+    
     const pendingEntries = await registrationsCollection.countDocuments({ entry_status: 'pending' });
-    const totalRevenue = await registrationsCollection.aggregate([
+    console.log(`✅ Pending Entries: ${pendingEntries}`);
+    
+    const totalRevenueResult = await registrationsCollection.aggregate([
       { $group: { _id: null, total: { $sum: '$total_amount' } } }
     ]).toArray();
+    const totalRevenue = totalRevenueResult[0]?.total || 0;
+    console.log(`✅ Total Revenue: ₹${totalRevenue}`);
 
     res.json({
       totalRegistrations,
       verifiedEntries,
       pendingEntries,
-      totalRevenue: totalRevenue[0]?.total || 0
+      totalRevenue: totalRevenue,
+      timestamp: new Date().toISOString()
     });
 
   } catch (err) {
-    console.error('Stats error:', err);
-    res.status(500).json({ error: 'Failed to fetch statistics' });
+    console.error('❌ Stats error:', err);
+    console.error('Error details:', err.message);
+    res.status(500).json({ error: 'Failed to fetch statistics', details: err.message });
   }
 });
 

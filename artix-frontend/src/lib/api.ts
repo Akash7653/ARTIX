@@ -83,7 +83,15 @@ export const api = {
   },
 
   getAdminStats: async () => {
-    const response = await fetch(`${API_BASE_URL}/admin/stats`);
+    // Add timestamp to force fresh data (cache-busting)
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${API_BASE_URL}/admin/stats?t=${timestamp}`, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
 
     if (!response.ok) {
       const error = await response.json();
