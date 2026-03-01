@@ -477,6 +477,8 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
   try {
     const { registrationId, verificationId } = req.body;
 
+    console.log(`🔐 Setting verification ID for registration: ${registrationId}`);
+
     if (!registrationId || !verificationId) {
       return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
     }
@@ -489,33 +491,45 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       return res.status(404).json({ error: 'Registration not found' });
     }
 
+    console.log(`✅ Found registration for ${registrationId}, approval_status: ${registration.approval_status}`);
+
     if (registration.approval_status !== 'approved') {
       return res.status(400).json({ error: 'Registration must be approved first' });
     }
 
     if (registration.verification_id) {
+      console.log(`⚠️ Verification ID already exists for ${registrationId}: ${registration.verification_id}`);
       return res.status(400).json({ error: 'Verification ID already assigned' });
     }
 
+    const trimmedVerifId = verificationId.trim();
+    console.log(`💾 Saving verification_id="${trimmedVerifId}" for registration_id="${registrationId}"`);
+
     // Set the verification ID
-    await registrationsCollection.updateOne(
+    const updateResult = await registrationsCollection.updateOne(
       { _id: registration._id },
       {
         $set: {
-          verification_id: verificationId.trim(),
+          verification_id: trimmedVerifId,
           verification_id_set_at: new Date()
         }
       }
     );
 
-    console.log(`✅ Verification ID set for ${registrationId}: ${verificationId}`);
+    console.log(`✅ Update result: matchedCount=${updateResult.matchedCount}, modifiedCount=${updateResult.modifiedCount}`);
+
+    // Verify it was saved
+    const updatedReg = await registrationsCollection.findOne({ _id: registration._id });
+    console.log(`✅ Verified: verification_id now = "${updatedReg?.verification_id}"`);
+
+    console.log(`✅ Verification ID set for ${registrationId}: ${trimmedVerifId}`);
 
     res.json({
       success: true,
       message: 'Verification ID set successfully',
       registration: {
         registration_id: registrationId,
-        verification_id: verificationId.trim()
+        verification_id: trimmedVerifId
       }
     });
 
@@ -1196,15 +1210,40 @@ app.post('/api/admin/verify-entry', async (req, res) => {
       return res.status(400).json({ error: 'Verification ID is required' });
     }
 
+    const trimmedId = verification_id.trim();
+    console.log(`🔍 Searching for verification ID: "${trimmedId}"`);
+
+    // First check how many documents have verification_id set
+    const allWithVerifId = await registrationsCollection.find({ verification_id: { $exists: true, $ne: null } }).toArray();
+    console.log(`📊 Total registrations with verification_id set: ${allWithVerifId.length}`);
+    if (allWithVerifId.length > 0) {
+      console.log(`📋 Sample verification IDs in DB:`, allWithVerifId.slice(0, 3).map(r => ({ id: r.verification_id, regId: r.registration_id, status: r.approval_status })));
+    }
+
     const registration = await registrationsCollection.findOne({ 
-      verification_id: verification_id.trim(),
+      verification_id: trimmedId,
       approval_status: 'approved',
       selected_for_event: true
     });
 
     if (!registration) {
+      console.log(`❌ No registration found with: verification_id="${trimmedId}", approval_status="approved", selected_for_event=true`);
+      
+      // Check without all conditions to debug
+      const anyMatch = await registrationsCollection.findOne({ verification_id: trimmedId });
+      if (anyMatch) {
+        console.log(`⚠️ Found registration with verification_id but conditions not met:`, { 
+          approval_status: anyMatch.approval_status, 
+          selected_for_event: anyMatch.selected_for_event 
+        });
+      } else {
+        console.log(`⚠️ No registration found with this verification_id at all`);
+      }
+      
       return res.status(404).json({ error: 'No approved entry found for this Verification ID' });
     }
+
+    console.log(`✅ Found approved registration: ${registration.registration_id}`);
 
     // Check if already verified
     if (registration.entry_verified_at) {
