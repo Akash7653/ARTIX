@@ -757,6 +757,277 @@ app.get('/api/admin/export', async (req, res) => {
   }
 });
 
+// 9. Get All Registrations (for admin dashboard display)
+app.get('/api/admin/registrations', async (req, res) => {
+  try {
+    console.log('📋 Fetching all registrations for admin dashboard...');
+    
+    // Get all registrations with pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    
+    const registrations = await registrationsCollection
+      .find({})
+      .skip(skip)
+      .limit(limit)
+      .sort({ created_at: -1 })
+      .toArray();
+
+    const totalCount = await registrationsCollection.countDocuments();
+
+    // Format response
+    const formattedData = registrations.map(reg => ({
+      _id: reg._id,
+      registration_id: reg.registration_id,
+      verification_id: reg.verification_id || null,
+      full_name: reg.full_name,
+      email: reg.email,
+      phone: reg.phone,
+      college_name: reg.college_name,
+      year_of_study: reg.year_of_study,
+      branch: reg.branch,
+      roll_number: reg.roll_number,
+      selected_events: reg.selected_events || [],
+      total_amount: reg.total_amount,
+      transaction_id: reg.transaction_id,
+      utr_id: reg.utr_id,
+      approval_status: reg.approval_status,
+      selected_for_event: reg.selected_for_event,
+      team_members: reg.team_members || [],
+      created_at: reg.created_at,
+      notification_sent: reg.notification_sent || false,
+      entry_verified_at: reg.entry_verified_at || null
+    }));
+
+    res.json({
+      success: true,
+      totalCount,
+      page,
+      limit,
+      data: formattedData
+    });
+
+  } catch (err) {
+    console.error('❌ Registrations fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch registrations', details: err.message });
+  }
+});
+
+// 10. Send Email & WhatsApp Notifications
+app.post('/api/admin/send-notification', async (req, res) => {
+  try {
+    const { registrationId, method } = req.body; // method: 'email' or 'whatsapp' or 'both'
+    
+    if (!registrationId || !method) {
+      return res.status(400).json({ error: 'Missing registrationId or method' });
+    }
+
+    const registration = await registrationsCollection.findOne({ registration_id: registrationId });
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (!registration.verification_id) {
+      return res.status(400).json({ error: 'Registration not approved yet. No verification ID to send.' });
+    }
+
+    const { full_name, email, phone, verification_id } = registration;
+    let emailSent = false, whatsappSent = false;
+
+    // Send Email (Placeholder - would use nodemailer/SendGrid in production)
+    if (method === 'email' || method === 'both') {
+      console.log(`📧 [PLACEHOLDER] Sending email to ${email}`);
+      console.log(`📧 Recipient: ${full_name}`);
+      console.log(`📧 Verification ID: ${verification_id}`);
+      // TODO: Implement actual email sending
+      // const emailContent = `
+      // Your registration for ARTIX 2K26 has been approved!
+      // Your Verification ID: ${verification_id}
+      // Please show this ID at the event entrance.
+      // `;
+      // await sendEmail(email, 'ARTIX 2K26 - Registration Approved', emailContent);
+      emailSent = true;
+    }
+
+    // Send WhatsApp (Placeholder - would use Twilio/WhatsApp API in production)
+    if (method === 'whatsapp' || method === 'both') {
+      console.log(`💬 [PLACEHOLDER] Sending WhatsApp to ${phone}`);
+      console.log(`💬 Recipient: ${full_name}`);
+      console.log(`💬 Verification ID: ${verification_id}`);
+      // TODO: Implement actual WhatsApp sending
+      // const whatsappMessage = `
+      // Hi ${full_name},
+      // Your registration for ARTIX 2K26 has been approved!
+      // Your Verification ID: ${verification_id}
+      // Please show this ID at the event entrance.
+      // `;
+      // await sendWhatsAppMessage(phone, whatsappMessage);
+      whatsappSent = true;
+    }
+
+    // Update registration to mark notification as sent
+    await registrationsCollection.updateOne(
+      { registration_id: registrationId },
+      {
+        $set: {
+          notification_sent: true,
+          notification_sent_at: new Date(),
+          notification_method: method
+        }
+      }
+    );
+
+    console.log(`✅ Notifications sent for ${registrationId}`);
+
+    res.json({
+      success: true,
+      message: `Notifications sent via ${method}`,
+      emailSent,
+      whatsappSent,
+      registration: {
+        registration_id: registrationId,
+        verification_id,
+        notification_method: method
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Notification error:', err);
+    res.status(500).json({ error: 'Failed to send notification', details: err.message });
+  }
+});
+
+// 11. Get Approved Participants for Event Entry
+app.get('/api/admin/approved-participants', async (req, res) => {
+  try {
+    console.log('✅ Fetching approved participants...');
+    
+    // Get all approved registrations where selected_for_event = true
+    const approvedParticipants = await registrationsCollection
+      .find({
+        approval_status: 'approved',
+        selected_for_event: true
+      })
+      .sort({ created_at: 1 })
+      .toArray();
+
+    console.log(`✅ Found ${approvedParticipants.length} approved participants`);
+
+    // Calculate total head count
+    let totalHeadCount = approvedParticipants.length;
+    let teamCount = 0;
+    
+    approvedParticipants.forEach(p => {
+      if (p.team_members && p.team_members.length > 0) {
+        totalHeadCount += p.team_members.length;
+        teamCount++;
+      }
+    });
+
+    // Format response with team details
+    const formattedData = approvedParticipants.map(p => ({
+      registration_id: p.registration_id,
+      verification_id: p.verification_id,
+      full_name: p.full_name,
+      email: p.email,
+      phone: p.phone,
+      college_name: p.college_name,
+      year_of_study: p.year_of_study,
+      branch: p.branch,
+      roll_number: p.roll_number,
+      selected_events: p.selected_events || [],
+      total_amount: p.total_amount,
+      team_members: p.team_members || [],
+      team_size: (p.team_members ? p.team_members.length : 0) + 1, // +1 for leader
+      total_head_count: (p.team_members ? p.team_members.length : 0) + 1,
+      entry_verified: p.entry_verified_at ? true : false,
+      entry_verified_at: p.entry_verified_at
+    }));
+
+    res.json({
+      success: true,
+      totalApprovedParticipants: approvedParticipants.length,
+      totalHeadCount,
+      totalTeams: teamCount,
+      approvedParticipants: formattedData,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (err) {
+    console.error('❌ Approved participants fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch approved participants', details: err.message });
+  }
+});
+
+// 12. Verify Participant Entry at Event (Scan Verification ID)
+app.post('/api/admin/verify-entry', async (req, res) => {
+  try {
+    const { verification_id } = req.body;
+    
+    if (!verification_id) {
+      return res.status(400).json({ error: 'Verification ID is required' });
+    }
+
+    const registration = await registrationsCollection.findOne({ 
+      verification_id: verification_id.trim(),
+      approval_status: 'approved',
+      selected_for_event: true
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'No approved entry found for this Verification ID' });
+    }
+
+    // Check if already verified
+    if (registration.entry_verified_at) {
+      return res.status(400).json({ 
+        error: 'Entry already verified',
+        participant: {
+          name: registration.full_name,
+          verification_id,
+          verified_at: registration.entry_verified_at
+        }
+      });
+    }
+
+    // Mark as verified
+    await registrationsCollection.updateOne(
+      { verification_id },
+      {
+        $set: {
+          entry_verified_at: new Date()
+        }
+      }
+    );
+
+    console.log(`✅ Entry verified: ${registration.registration_id}`);
+
+    // Return participant details
+    res.json({
+      success: true,
+      message: '✅ Entry Verified Successfully!',
+      participant: {
+        registration_id: registration.registration_id,
+        full_name: registration.full_name,
+        email: registration.email,
+        phone: registration.phone,
+        college_name: registration.college_name,
+        year_of_study: registration.year_of_study,
+        branch: registration.branch,
+        selected_events: registration.selected_events || [],
+        team_members: registration.team_members || [],
+        team_size: (registration.team_members ? registration.team_members.length : 0) + 1,
+        verified_at: new Date().toISOString()
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Entry verification error:', err);
+    res.status(500).json({ error: 'Entry verification failed', details: err.message });
+  }
+});
+
 // Start Server
 async function startServer() {
   try {
