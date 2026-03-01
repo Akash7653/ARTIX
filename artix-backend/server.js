@@ -224,8 +224,14 @@ async function registerHandler(req, res) {
     // Check for duplicate email (case-insensitive)
     const existingUser = await registrationsCollection.findOne({ email: normalizedEmail });
     if (existingUser) {
-      console.warn(`⚠️ Duplicate email attempt: ${normalizedEmail}`);
-      return res.status(409).json({ error: 'Email already registered. Each email can only register once.' });
+      console.warn(`⚠️ DUPLICATE EMAIL: ${normalizedEmail}`);
+      console.warn(`   Existing registration: ${existingUser.registration_id}`);
+      console.warn(`   Existing email in DB: "${existingUser.email}"`);
+      console.warn(`   Trying to register: "${normalizedEmail}"`);
+      return res.status(409).json({ 
+        error: 'Email already registered. Each email can only register once.',
+        hint: `The email "${normalizedEmail}" was already registered. Please use a different email address.`
+      });
     }
 
     // Generate registration ID ONLY (no verification ID)
@@ -343,8 +349,9 @@ async function registerHandler(req, res) {
 
   } catch (err) {
     console.error('❌ Registration error:', err);
-    console.error('Error stack:', err.stack);
+    console.error('Error code:', err.code);
     console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
     
     if (req.file) {
       try {
@@ -358,7 +365,14 @@ async function registerHandler(req, res) {
     let errorMessage = 'Registration failed';
     let statusCode = 500;
     
-    if (err.message && err.message.includes('duplicate')) {
+    // Check for MongoDB duplicate key error (code 11000)
+    if (err.code === 11000) {
+      console.error('🔴 DUPLICATE KEY ERROR - Check if database was properly cleared');
+      const field = Object.keys(err.keyPattern || {})[0] || 'email';
+      const value = err.keyValue ? err.keyValue[field] : 'unknown';
+      errorMessage = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered: ${value}`;
+      statusCode = 409;
+    } else if (err.message && err.message.includes('duplicate')) {
       errorMessage = 'Email address is already registered';
       statusCode = 409;
     } else if (err.message && err.message.includes('base64')) {
@@ -1322,23 +1336,55 @@ app.post('/api/admin/clear-database', async (req, res) => {
       return res.status(401).json({ error: 'Invalid admin password' });
     }
 
-    console.log('🗑️  CLEARING DATABASE - All collections will be deleted!');
+    console.log('🗑️  CLEARING DATABASE - All collections will be dropped and recreated!');
 
-    // Clear all collections
-    await registrationsCollection.deleteMany({});
-    console.log('✅ Cleared: registrations');
+    // Drop collections (more thorough than deleteMany)
+    try {
+      await db.collection('registrations').drop();
+      console.log('✅ Dropped collection: registrations');
+    } catch (e) {
+      console.log('⚠️ registrations collection already dropped or doesn\'t exist');
+    }
 
-    await paymentsCollection.deleteMany({});
-    console.log('✅ Cleared: payments');
+    try {
+      await db.collection('payments').drop();
+      console.log('✅ Dropped collection: payments');
+    } catch (e) {
+      console.log('⚠️ payments collection already dropped or doesn\'t exist');
+    }
 
-    await teamMembersCollection.deleteMany({});
-    console.log('✅ Cleared: team_members');
+    try {
+      await db.collection('team_members').drop();
+      console.log('✅ Dropped collection: team_members');
+    } catch (e) {
+      console.log('⚠️ team_members collection already dropped or doesn\'t exist');
+    }
 
-    console.log('🗑️  DATABASE CLEARED SUCCESSFULLY');
+    // Recreate collections and indexes
+    console.log('📝 Recreating collections with fresh indexes...');
+
+    // Recreate and assign to global variables
+    await db.createCollection('registrations');
+    registrationsCollection = db.collection('registrations');
+    await registrationsCollection.createIndex({ email: 1 }, { unique: true });
+    await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+    console.log('✅ Recreated registrations collection with indexes');
+
+    await db.createCollection('payments');
+    paymentsCollection = db.collection('payments');
+    await paymentsCollection.createIndex({ registration_id: 1 });
+    console.log('✅ Recreated payments collection with indexes');
+
+    await db.createCollection('team_members');
+    teamMembersCollection = db.collection('team_members');
+    await teamMembersCollection.createIndex({ registration_id: 1 });
+    console.log('✅ Recreated team_members collection with indexes');
+
+    console.log('🗑️  DATABASE CLEARED AND RECREATED SUCCESSFULLY');
 
     res.json({
       success: true,
-      message: '✅ Database cleared successfully. All registrations, payments, and team members have been deleted.',
+      message: '✅ Database cleared and recreated successfully! All registrations, payments, and team members have been deleted. Collections are ready for fresh data.',
       timestamp: new Date().toISOString()
     });
 
