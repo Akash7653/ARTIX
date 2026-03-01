@@ -49,13 +49,13 @@ ADMIN_EMAIL=admin@example.com
 ## Post-Deployment (5 minutes)
 
 ### Step 5: Verify Backend
-- [ ] Test health endpoint: `curl https://artix-backend.onrender.com/`
+- [ ] Test health endpoint: `curl https://artix-2yda.onrender.com/`
 - [ ] Check logs in Render dashboard
 - [ ] Test API endpoints if needed
 
 ### Step 6: Update Frontend
-- [ ] Update `artix-frontend/src/lib/api.ts` with Render URL
-- [ ] Commit and push changes
+- [x] API already configured in `artix-frontend/src/lib/api.ts`
+- [ ] Rebuild and commit changes
 - [ ] Deploy frontend
 
 ### Step 7: Test Full Workflow
@@ -98,9 +98,9 @@ ADMIN_EMAIL=admin@example.com
 
 ## Deployed URLs After Completion
 
-- **Backend**: https://artix-backend.onrender.com
+- **Backend**: https://artix-2yda.onrender.com ✅
 - **Frontend**: (your-frontend-url)
-- **Admin Dashboard**: https://artix-backend.onrender.com/admin
+- **API**: https://artix-2yda.onrender.com/api
 
 ## Quick Links
 
@@ -111,6 +111,7 @@ ADMIN_EMAIL=admin@example.com
 
 ---
 
-**Status**: ⏳ Ready to deploy  
+**Status**: ✅ Backend Deployed!
+**Backend URL**: https://artix-2yda.onrender.com  
 **Time Estimate**: 20-30 minutes total  
 **Difficulty**: ⭐ Easy

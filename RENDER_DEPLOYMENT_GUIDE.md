@@ -85,10 +85,10 @@ Once deployed, test these endpoints:
 
 ```bash
 # Health Check
-curl https://artix-backend.onrender.com/
+curl https://artix-2yda.onrender.com/
 
 # Register Participant
-curl -X POST https://artix-backend.onrender.com/api/register \
+curl -X POST https://artix-2yda.onrender.com/api/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Test User",
@@ -109,10 +109,12 @@ curl -X POST https://artix-backend.onrender.com/api/register \
 
 After backend is deployed, update the frontend:
 
-1. In `artix-frontend/src/lib/api.ts`, change the API URL from `http://localhost:5000` to your Render URL:
+1. In `artix-frontend/src/lib/api.ts`, the API URL is now configured:
 ```typescript
-const BASE_URL = 'https://artix-backend.onrender.com';
+const API_BASE_URL = 'https://artix-2yda.onrender.com/api';
 ```
+
+✅ **Already updated!**
 
 2. Commit and push to GitHub
 3. Your frontend deployment will auto-rebuild

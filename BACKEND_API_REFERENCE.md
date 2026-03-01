@@ -1,6 +1,6 @@
 # ARTIX Backend API Reference
 
-**Base URL**: `https://artix-backend.onrender.com`
+**Base URL**: `https://artix-2yda.onrender.com`
 
 ## Authentication
 
