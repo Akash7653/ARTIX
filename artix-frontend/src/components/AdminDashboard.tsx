@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw } from 'lucide-react';
+import { exportToExcel } from '../utils/excelExport';
 
 interface TeamMember {
   member_name: string;
@@ -159,6 +160,52 @@ export function AdminDashboard({ onLogout }: Props) {
       setTimeout(() => setMessage(''), 3000);
     } finally {
       setSendingNotification(null);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    try {
+      // Transform registrations data for export
+      const exportData = registrations.map(reg => ({
+        registration_id: reg.registration_id,
+        verification_id: reg.verification_id || '',
+        full_name: reg.full_name,
+        email: reg.email,
+        phone: reg.phone,
+        college: reg.college_name,
+        branch: reg.branch,
+        year: reg.year_of_study,
+        selected_events: reg.selected_events,
+        total_amount: reg.total_amount,
+        transaction_id: reg.transaction_id,
+        utr_id: reg.utr_id,
+        approval_status: reg.approval_status,
+        entry_status: reg.selected_for_event,
+        team_members: reg.team_members.map(m => ({
+          name: m.member_name,
+          email: '',
+          phone: m.member_phone,
+          branch: m.member_branch,
+          year: ''
+        })),
+        created_at: reg.created_at,
+        notification_sent: reg.notification_sent
+      }));
+
+      const result = exportToExcel(exportData, 'ARTIX-AdminDashboard');
+      if (result.success) {
+        setMessage('✅ Excel file exported successfully');
+        setMessageType('success');
+      } else {
+        setMessage(`❌ Export failed: ${result.error}`);
+        setMessageType('error');
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Export error:', err);
+      setMessage('❌ Failed to export to Excel');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
@@ -329,9 +376,9 @@ export function AdminDashboard({ onLogout }: Props) {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
+        {/* Search & Export */}
+        <div className="mb-6 flex gap-4 flex-col md:flex-row">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
             <input
               type="text"
@@ -341,6 +388,13 @@ export function AdminDashboard({ onLogout }: Props) {
               className="w-full pl-12 pr-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none transition"
             />
           </div>
+          <button
+            onClick={handleExportToExcel}
+            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-lg transition flex items-center gap-2 whitespace-nowrap"
+          >
+            <Download className="w-5 h-5" />
+            Export Excel
+          </button>
         </div>
 
         {/* Registrations Table */}
