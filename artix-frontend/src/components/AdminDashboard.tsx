@@ -695,7 +695,6 @@ export function AdminDashboard({ onLogout }: Props) {
                   : 'bg-white/40 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
               }`}
             />
-            />
           </div>
           <button
             onClick={handleExportToExcel}
