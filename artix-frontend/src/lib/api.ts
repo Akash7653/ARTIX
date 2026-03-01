@@ -80,5 +80,31 @@ export const api = {
     } catch {
       return false;
     }
+  },
+
+  getAdminStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch stats');
+    }
+
+    return await response.json();
+  },
+
+  verifyEntry: async (registrationId: string, transactionId: string, utrId: string) => {
+    const response = await fetch(`${API_BASE_URL}/registrations/${registrationId}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactionId, utrId })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to verify entry');
+    }
+
+    return await response.json();
   }
 };

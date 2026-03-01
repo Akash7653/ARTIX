@@ -55,11 +55,8 @@ export function AdminDashboard({ onLogout }: Props) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/stats');
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
+        const data = await api.getAdminStats();
+        setStats(data);
       } catch (err) {
         console.error('Failed to fetch stats:', err);
       }
@@ -73,12 +70,9 @@ export function AdminDashboard({ onLogout }: Props) {
   // Refresh stats function
   const refreshStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-        console.log('✅ Stats refreshed:', data);
-      }
+      const data = await api.getAdminStats();
+      setStats(data);
+      console.log('✅ Stats refreshed:', data);
     } catch (err) {
       console.error('Failed to refresh stats:', err);
     }
@@ -134,39 +128,28 @@ export function AdminDashboard({ onLogout }: Props) {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/registrations/${scanResult.registration.registration_id}/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          transactionId,
-          utrId
-        })
-      });
+      const data = await api.verifyEntry(
+        scanResult.registration.registration_id,
+        transactionId,
+        utrId
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        setConfirmedEntry({
-          ...scanResult.registration,
-          verification_id: data.verificationId,
-          verified_at: new Date().toISOString()
-        });
-        
-        // Reset state
-        setScanResult(null);
-        setSearchId('');
-        setTransactionId('');
-        setUtrId('');
-        
-        // Refresh stats
-        await refreshStats();
-        
-        setError('');
-      } else {
-        const err = await response.json();
-        setError(err.message || 'Failed to confirm entry');
-      }
+      setConfirmedEntry({
+        ...scanResult.registration,
+        verification_id: data.verificationId || scanResult.registration.verification_id,
+        verified_at: new Date().toISOString()
+      });
+      
+      // Reset state
+      setScanResult(null);
+      setSearchId('');
+      setTransactionId('');
+      setUtrId('');
+      
+      // Refresh stats
+      await refreshStats();
+      
+      setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to confirm entry');
     } finally {
