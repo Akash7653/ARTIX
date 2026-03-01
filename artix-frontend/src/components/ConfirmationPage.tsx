@@ -99,7 +99,7 @@ export function ConfirmationPage({ registrationId, formData, verificationId }: P
         </div>
 
         {/* Verification ID - Shown Only if Approved by Admin */}
-        {verificationId && (
+        {verificationId ? (
           <div className={`rounded-xl p-6 md:p-10 mb-8 border-3 text-center animate-pulse ${
             darkMode
               ? 'bg-gradient-to-br from-green-500/15 to-emerald-500/15 border-green-500/40'

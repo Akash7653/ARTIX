@@ -7,7 +7,7 @@ import { INDIVIDUAL_EVENTS, COMBO_OPTIONS, type RegistrationFormData } from '../
 interface Props {
   formData: RegistrationFormData;
   updateFormData: (updates: Partial<RegistrationFormData>) => void;
-  onSubmitSuccess: (registrationId: string, verificationId: string) => void;
+  onSubmitSuccess: (registrationId: string, verificationId: string | null) => void;
   darkMode?: boolean;
 }
 
