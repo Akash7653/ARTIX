@@ -35,19 +35,17 @@ async function connectDB() {
     paymentsCollection = db.collection('payments');
     teamMembersCollection = db.collection('team_members');
     
-    // Drop old verification_id index if it exists (without sparse option)
-    try {
-      await registrationsCollection.dropIndex('verification_id_1');
-      console.log('✓ Dropped old verification_id index');
-    } catch (e) {
-      // Index doesn't exist, that's fine
-    }
-    
     // Create indexes
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
-    // Sparse index for verification_id - allows multiple null values
-    await registrationsCollection.createIndex({ verification_id: 1 }, { sparse: true, unique: true });
+    
+    // Drop verification_id index if exists (to prevent null duplicate errors)
+    try {
+      await registrationsCollection.dropIndex({ verification_id: 1 });
+      console.log('✓ Dropped verification_id unique index');
+    } catch (e) {
+      // Index might not exist, that's fine
+    }
     
     console.log('✅ Connected to MongoDB');
   } catch (err) {
@@ -1379,8 +1377,7 @@ app.post('/api/admin/clear-database', async (req, res) => {
     registrationsCollection = db.collection('registrations');
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
-    // Sparse index for verification_id - allows multiple null values
-    await registrationsCollection.createIndex({ verification_id: 1 }, { sparse: true, unique: true });
+    // No unique index on verification_id to avoid null duplicate errors
     console.log('✅ Recreated registrations collection with indexes');
 
     await db.createCollection('payments');
