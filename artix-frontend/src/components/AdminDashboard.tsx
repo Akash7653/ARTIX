@@ -37,6 +37,7 @@ interface Stats {
   approvedEntries: number;
   rejectedEntries: number;
   pendingEntries: number;
+  verifiedEntries: number;
   approvedRevenue: number;
   pendingRevenue: number;
 }
@@ -408,7 +409,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
             <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -446,6 +447,16 @@ export function AdminDashboard({ onLogout }: Props) {
                   <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.pendingEntries}</p>
                 </div>
                 <Clock className="w-12 h-12 text-yellow-400 opacity-30" />
+              </div>
+            </div>
+
+            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Entry Verified</p>
+                  <p className="text-3xl font-bold text-cyan-400 mt-2">{stats.verifiedEntries}</p>
+                </div>
+                <CheckCircle2 className="w-12 h-12 text-cyan-400 opacity-30" />
               </div>
             </div>
 

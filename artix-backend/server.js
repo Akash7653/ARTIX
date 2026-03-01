@@ -805,11 +805,18 @@ app.get('/api/admin/stats', async (req, res) => {
     const pendingRevenue = pendingRevenueResult[0]?.total || 0;
     console.log(`✅ Pending Revenue: ₹${pendingRevenue}`);
 
+    // Count verified entries (entry_verified_at is not null)
+    const verifiedEntries = await registrationsCollection.countDocuments({
+      entry_verified_at: { $exists: true, $ne: null }
+    });
+    console.log(`✅ Verified Entries: ${verifiedEntries}`);
+
     res.json({
       totalRegistrations,
       approvedEntries,
       rejectedEntries,
       pendingEntries,
+      verifiedEntries,
       approvedRevenue,
       pendingRevenue,
       totalRevenue: approvedRevenue + pendingRevenue,

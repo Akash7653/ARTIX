@@ -222,9 +222,22 @@ export function EventEntryVerification({ onLogout }: { onLogout: () => void }) {
                 setParticipantDetails(null);
                 setVerificationId('');
               }}
-              className="w-full mt-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition"
             >
               ← Verify Another
+            </button>
+            
+            <button
+              onClick={() => {
+                setMessage(`✅ Entry Confirmed for ${participantDetails.full_name}! Participant can proceed.`);
+                setMessageType('success');
+                setParticipantDetails(null);
+                setVerificationId('');
+                setTimeout(() => setMessage(''), 3000);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-lg transition ml-4"
+            >
+              ✓ Confirm Entry
             </button>
           </div>
         )}
