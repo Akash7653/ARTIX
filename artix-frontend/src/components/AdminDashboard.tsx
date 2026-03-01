@@ -61,6 +61,8 @@ export function AdminDashboard({ onLogout }: Props) {
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
   const [verificationIdInput, setVerificationIdInput] = useState<{ [key: string]: string }>({});
   const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
+  const [entryVerificationId, setEntryVerificationId] = useState('');
+  const [verifyingEntry, setVerifyingEntry] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,6 +175,46 @@ export function AdminDashboard({ onLogout }: Props) {
       setTimeout(() => setMessage(''), 3000);
     } finally {
       setSettingVerificationId(null);
+    }
+  };
+
+  const handleVerifyEntry = async () => {
+    const verificationId = entryVerificationId.trim();
+    
+    if (!verificationId) {
+      setMessage('❌ Please enter a verification ID to verify');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setVerifyingEntry(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${baseUrl}/admin/verify-entry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_id: verificationId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Verification failed');
+      }
+      
+      const result = await response.json();
+      setMessage(`✅ Entry Verified! ${result.participant.full_name} from ${result.participant.college_name}`);
+      setMessageType('success');
+      setEntryVerificationId('');
+      setTimeout(loadData, 500);
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      setMessage(`❌ ${err.message || 'Failed to verify entry'}`);
+      setMessageType('error');
+      console.error(err);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setVerifyingEntry(false);
     }
   };
 
@@ -413,6 +455,37 @@ export function AdminDashboard({ onLogout }: Props) {
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
+        </div>
+
+        {/* Event Entry Verification Section */}
+        <div className="mb-6 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <CheckCircle2 className="w-6 h-6 text-indigo-400" />
+            <h3 className="text-lg font-bold text-gray-200">Event Entry Verification</h3>
+          </div>
+          <p className="text-indigo-300 text-sm mb-4">Verify participant entry at the event by scanning or entering their verification ID</p>
+          <div className="flex gap-4 flex-wrap items-end">
+            <div className="flex-1 min-w-72">
+              <label className="block text-gray-300 text-sm font-semibold mb-2">Enter Verification ID</label>
+              <input
+                type="text"
+                value={entryVerificationId}
+                onChange={(e) => setEntryVerificationId(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleVerifyEntry()}
+                placeholder="Scan or type verification ID here..."
+                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none transition text-lg font-mono"
+                autoFocus
+              />
+            </div>
+            <button
+              onClick={handleVerifyEntry}
+              disabled={verifyingEntry}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              {verifyingEntry ? 'Verifying...' : 'Verify Entry'}
+            </button>
+          </div>
         </div>
 
         {/* Search & Export */}

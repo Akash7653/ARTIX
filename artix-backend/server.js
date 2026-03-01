@@ -109,18 +109,7 @@ function generateRegistrationId() {
   return `ARTIX2026-${randomNum}`;
 }
 
-function generateVerificationId() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let id = 'VER-';
-  for (let i = 0; i < 3; i++) {
-    let segment = '';
-    for (let j = 0; j < 4; j++) {
-      segment += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    id += segment + (i < 2 ? '-' : '');
-  }
-  return id;
-}
+// NOTE: Verification ID generation REMOVED - Admin manually sets via dashboard only
 
 // Routes
 
@@ -930,9 +919,16 @@ app.get('/api/admin/registrations', async (req, res) => {
 // Email Service - Send email notifications
 async function sendEmailNotification(email, fullName, verificationId) {
   try {
+    console.log(`\n📧 === EMAIL SENDING START ===`);
+    console.log(`To: ${email}`);
+    console.log(`Name: ${fullName}`);
+    console.log(`Verification ID: ${verificationId}`);
+    
     // Check if email credentials are configured
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      console.log('⚠️ Email credentials not configured. Skipping email send.');
+      console.error('❌ Email credentials NOT configured!');
+      console.log(`GMAIL_USER: ${process.env.GMAIL_USER ? '✅ SET' : '❌ MISSING'}`);
+      console.log(`GMAIL_APP_PASSWORD: ${process.env.GMAIL_APP_PASSWORD ? '✅ SET' : '❌ MISSING'}`);
       return { success: false, reason: 'Email credentials not configured' };
     }
 
@@ -991,11 +987,17 @@ async function sendEmailNotification(email, fullName, verificationId) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', info.response);
+    console.log('✅ Email sent successfully!');
+    console.log('Response:', info.response);
+    console.log('Message ID:', info.messageId);
+    console.log(`📧 === EMAIL SENDING END ===\n`);
     return { success: true, messageId: info.messageId };
 
   } catch (err) {
-    console.error('❌ Email sending error:', err.message);
+    console.error('\n❌ === EMAIL SENDING FAILED ===');
+    console.error('Error:', err.message);
+    console.error('Full Error:', err);
+    console.error(`❌ === EMAIL ERROR END ===\n`);
     return { success: false, error: err.message };
   }
 }
@@ -1003,9 +1005,17 @@ async function sendEmailNotification(email, fullName, verificationId) {
 // WhatsApp Service - Send WhatsApp notifications
 async function sendWhatsAppNotification(phone, fullName, verificationId) {
   try {
+    console.log(`\n💬 === WHATSAPP SENDING START ===`);
+    console.log(`Phone: ${phone}`);
+    console.log(`Name: ${fullName}`);
+    console.log(`Verification ID: ${verificationId}`);
+    
     // Check if Twilio credentials are configured
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
-      console.log('⚠️ Twilio credentials not configured. Skipping WhatsApp send.');
+      console.error('❌ Twilio credentials NOT configured!');
+      console.log(`TWILIO_ACCOUNT_SID: ${process.env.TWILIO_ACCOUNT_SID ? '✅ SET' : '❌ MISSING'}`);
+      console.log(`TWILIO_AUTH_TOKEN: ${process.env.TWILIO_AUTH_TOKEN ? '✅ SET' : '❌ MISSING'}`);
+      console.log(`TWILIO_WHATSAPP_NUMBER: ${process.env.TWILIO_WHATSAPP_NUMBER ? '✅ SET' : '❌ MISSING'}`);
       return { success: false, reason: 'Twilio credentials not configured' };
     }
 
@@ -1018,17 +1028,24 @@ async function sendWhatsAppNotification(phone, fullName, verificationId) {
     }
     const phoneWithCountry = 'whatsapp:+' + formattedPhone;
 
+    console.log(`Formatted Phone: ${phoneWithCountry}`);
+    
     const message = await client.messages.create({
       from: process.env.TWILIO_WHATSAPP_NUMBER,
       to: phoneWithCountry,
       body: `Hi ${fullName},\n\nCongratulations! Your registration for ARTIX 2K26 has been approved. 🎉\n\nYour Verification ID:\n${verificationId}\n\nPlease save this ID. You must present it at the event entrance.\n\nThank you!`
     });
 
-    console.log('✅ WhatsApp sent successfully:', message.sid);
+    console.log('✅ WhatsApp sent successfully!');
+    console.log('Message SID:', message.sid);
+    console.log(`💬 === WHATSAPP SENDING END ===\n`);
     return { success: true, messageSid: message.sid };
 
   } catch (err) {
-    console.error('❌ WhatsApp sending error:', err.message);
+    console.error('\n❌ === WHATSAPP SENDING FAILED ===');
+    console.error('Error:', err.message);
+    console.error('Full Error:', err);
+    console.error(`❌ === WHATSAPP ERROR END ===\n`);
     return { success: false, error: err.message };
   }
 }
