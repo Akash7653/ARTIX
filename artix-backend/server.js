@@ -378,15 +378,27 @@ async function registerHandler(req, res) {
   }
 }
 
-// 2. Get Registration by ID
+// 2. Get Registration by ID (search by verification_id or registration_id)
 app.get('/api/registration/:registrationId', async (req, res) => {
   try {
     const { registrationId } = req.params;
+    
+    console.log(`🔍 Searching for registration/verification ID: ${registrationId}`);
 
-    const registration = await registrationsCollection.findOne({ registration_id: registrationId });
+    // Search by either verification_id or registration_id
+    const registration = await registrationsCollection.findOne({
+      $or: [
+        { registration_id: registrationId },
+        { verification_id: registrationId }
+      ]
+    });
+    
     if (!registration) {
+      console.log(`❌ No registration found for: ${registrationId}`);
       return res.status(404).json({ error: 'Registration not found' });
     }
+
+    console.log(`✅ Found registration: ${registration.registration_id}`);
 
     // Get team members if any
     const teamMembers = registration.team_members || [];
@@ -397,7 +409,7 @@ app.get('/api/registration/:registrationId', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Fetch error:', err);
+    console.error('❌ Fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch registration' });
   }
 });
@@ -409,6 +421,8 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
     const { registrationId } = req.params;
     const { transactionId, utrId } = req.body;
 
+    console.log(`✅ Verifying entry: ${registrationId}`);
+
     // Validate input
     if (!transactionId || !transactionId.trim()) {
       return res.status(400).json({ error: 'Transaction ID is required' });
@@ -418,8 +432,16 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
       return res.status(400).json({ error: 'UTR ID is required' });
     }
 
-    const registration = await registrationsCollection.findOne({ registration_id: registrationId });
+    // Find by either verification_id or registration_id
+    const registration = await registrationsCollection.findOne({
+      $or: [
+        { registration_id: registrationId },
+        { verification_id: registrationId }
+      ]
+    });
+
     if (!registration) {
+      console.log(`❌ Registration not found: ${registrationId}`);
       return res.status(404).json({ error: 'Registration not found' });
     }
 
@@ -430,7 +452,7 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
     // Update status with transaction and UTR details
     const verificationDate = new Date();
     const updateResult = await registrationsCollection.updateOne(
-      { registration_id: registrationId },
+      { _id: registration._id },
       {
         $set: {
           entry_status: 'verified',
@@ -442,9 +464,11 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
       }
     );
 
+    console.log(`✅ Entry verified: ${registration.registration_id}`);
+
     // Also update payment status in payments collection
     await paymentsCollection.updateOne(
-      { registration_id: registrationId },
+      { registration_id: registration.registration_id },
       {
         $set: {
           status: 'verified',
@@ -457,14 +481,14 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
     );
 
     // Get the updated registration to get verification_id
-    const updatedRegistration = await registrationsCollection.findOne({ registration_id: registrationId });
+    const updatedRegistration = await registrationsCollection.findOne({ _id: registration._id });
 
     res.json({
       success: true,
       message: 'Entry verified successfully',
       verificationId: updatedRegistration.verification_id,
       registration: {
-        registration_id: registrationId,
+        registration_id: updatedRegistration.registration_id,
         verification_id: updatedRegistration.verification_id,
         status: 'verified',
         transaction_id: transactionId.trim(),
@@ -473,9 +497,10 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Verification error:', err);
+    console.error('❌ Verification error:', err);
     res.status(500).json({ error: 'Failed to verify entry' });
   }
+});
 });
 
 // 5. Admin Approval (with password)
