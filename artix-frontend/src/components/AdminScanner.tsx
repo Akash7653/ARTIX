@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { AdminDashboard } from './AdminDashboard';
 import { EventEntryVerification } from './EventEntryVerification';
+import ApprovedParticipants from './ApprovedParticipants';
 
 export function AdminScanner() {
-  const [mode, setMode] = useState<'menu' | 'dashboard' | 'entry-verify'>('menu');
+  const [mode, setMode] = useState<'menu' | 'dashboard' | 'entry-verify' | 'approved-participants'>('menu');
 
   const handleLogout = () => {
     setMode('menu');
@@ -15,6 +16,10 @@ export function AdminScanner() {
 
   if (mode === 'entry-verify') {
     return <EventEntryVerification onLogout={handleLogout} />;
+  }
+
+  if (mode === 'approved-participants') {
+    return <ApprovedParticipants onLogout={handleLogout} />;
   }
 
   // Menu Screen
@@ -67,7 +72,7 @@ export function AdminScanner() {
 
           {/* Approved Participants List Button */}
           <button
-            onClick={() => setMode('entry-verify')}
+            onClick={() => setMode('approved-participants')}
             className="w-full group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-600 to-pink-700 hover:from-purple-700 hover:to-pink-800 transition transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 group-hover:animate-pulse" />
