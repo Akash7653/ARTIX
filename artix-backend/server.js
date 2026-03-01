@@ -36,7 +36,6 @@ async function connectDB() {
     // Create indexes
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
-    await registrationsCollection.createIndex({ verification_id: 1 }, { unique: true });
     
     console.log('✅ Connected to MongoDB');
   } catch (err) {
@@ -108,20 +107,6 @@ function generateRegistrationId() {
   return `ARTIX2026-${randomNum}`;
 }
 
-function generateVerificationId() {
-  // Generate a unique verification ID in format: VER-XXXX-XXXX-XXXX
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let id = 'VER-';
-  for (let i = 0; i < 3; i++) {
-    let segment = '';
-    for (let j = 0; j < 4; j++) {
-      segment += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    id += segment + (i < 2 ? '-' : '');
-  }
-  return id;
-}
-
 // Routes
 
 // Health Check Endpoint
@@ -190,7 +175,9 @@ async function registerHandler(req, res) {
       selectedIndividualEvents,
       selectedCombo,
       teamMembers,
-      totalAmount
+      totalAmount,
+      transactionId,
+      utrId
     } = req.body;
 
     // Validation - Check required fields
@@ -206,6 +193,14 @@ async function registerHandler(req, res) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
+    if (!transactionId || !transactionId.trim()) {
+      return res.status(400).json({ error: 'Transaction ID is required' });
+    }
+
+    if (!utrId || !utrId.trim()) {
+      return res.status(400).json({ error: 'UTR ID is required' });
+    }
+
     // Normalize email (lowercase and trim)
     const normalizedEmail = email.toLowerCase().trim();
     
@@ -219,7 +214,7 @@ async function registerHandler(req, res) {
     }
 
     if (!req.file) {
-      return res.status(400).json({ error: 'Payment screenshot is required. Include Transaction ID and UTR ID in the image.' });
+      return res.status(400).json({ error: 'Payment screenshot is required' });
     }
 
     // Check for duplicate email (case-insensitive)
@@ -229,9 +224,8 @@ async function registerHandler(req, res) {
       return res.status(409).json({ error: 'Email already registered. Each email can only register once.' });
     }
 
-    // Generate registration ID and verification ID
+    // Generate registration ID ONLY (no verification ID)
     const registrationId = generateRegistrationId();
-    const verificationId = generateVerificationId();
     console.log(`📝 Processing registration: ${registrationId} for ${normalizedEmail}`);
 
     // Parse team members if they're a string
@@ -280,10 +274,9 @@ async function registerHandler(req, res) {
 
     console.log(`🎯 Selected events:`, selectedEventsArray);
 
-    // Create registration document with base64 image
+    // Create registration document WITHOUT verification_id
     const registrationDoc = {
       registration_id: registrationId,
-      verification_id: verificationId,
       full_name: fullName.trim(),
       email: normalizedEmail,
       phone,
@@ -297,9 +290,11 @@ async function registerHandler(req, res) {
       payment_screenshot_base64: paymentImageBase64,
       payment_screenshot_mimetype: paymentImageMimeType,
       payment_screenshot_filename: req.file.filename,
-      entry_status: 'pending',
-      payment_status: 'pending',
-      entry_approved_at: null,
+      transaction_id: transactionId.trim(),
+      utr_id: utrId.trim(),
+      approval_status: 'pending',
+      selected_for_event: null,
+      entry_verified_at: null,
       created_at: new Date(),
       team_members: parsedTeamMembers.length > 0 ? parsedTeamMembers : null
     };
@@ -339,8 +334,7 @@ async function registerHandler(req, res) {
     res.status(201).json({
       success: true,
       registrationId,
-      verificationId,
-      message: 'Registration successful'
+      message: 'Registration submitted successfully. Your application is under review. Check back for confirmation.'
     });
 
   } catch (err) {
@@ -378,19 +372,16 @@ async function registerHandler(req, res) {
   }
 }
 
-// 2. Get Registration by ID (search by verification_id or registration_id)
+// 2. Get Registration by ID (search by registration_id)
 app.get('/api/registration/:registrationId', async (req, res) => {
   try {
     const { registrationId } = req.params;
     
-    console.log(`🔍 Searching for registration/verification ID: ${registrationId}`);
+    console.log(`🔍 Searching for registration: ${registrationId}`);
 
-    // Search by either verification_id or registration_id
+    // Search by registration_id only
     const registration = await registrationsCollection.findOne({
-      $or: [
-        { registration_id: registrationId },
-        { verification_id: registrationId }
-      ]
+      registration_id: registrationId
     });
     
     if (!registration) {
@@ -414,30 +405,17 @@ app.get('/api/registration/:registrationId', async (req, res) => {
   }
 });
 
-// 3. Verify QR Code / Get Entry Details
-// 4. Verify Entry with Transaction Details (Admin Dashboard)
-app.post('/api/registrations/:registrationId/verify', async (req, res) => {
+// 3. Verify/Approve Entry (Admin reviews payment and selects/rejects participant)
+app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { transactionId, utrId } = req.body;
+    const { selectedForEvent } = req.body; // true = selected, false = rejected
 
-    console.log(`✅ Verifying entry: ${registrationId}`);
+    console.log(`✅ Approving entry: ${registrationId}, Selected: ${selectedForEvent}`);
 
-    // Validate input
-    if (!transactionId || !transactionId.trim()) {
-      return res.status(400).json({ error: 'Transaction ID is required' });
-    }
-
-    if (!utrId || !utrId.trim()) {
-      return res.status(400).json({ error: 'UTR ID is required' });
-    }
-
-    // Find by either verification_id or registration_id
+    // Find registration by registration_id
     const registration = await registrationsCollection.findOne({
-      $or: [
-        { registration_id: registrationId },
-        { verification_id: registrationId }
-      ]
+      registration_id: registrationId
     });
 
     if (!registration) {
@@ -445,60 +423,38 @@ app.post('/api/registrations/:registrationId/verify', async (req, res) => {
       return res.status(404).json({ error: 'Registration not found' });
     }
 
-    if (registration.entry_status === 'verified') {
-      return res.status(400).json({ error: 'Entry already verified for this registration' });
+    if (registration.approval_status === 'approved') {
+      return res.status(400).json({ error: 'This entry has already been approved' });
     }
 
-    // Update status with transaction and UTR details
-    const verificationDate = new Date();
-    const updateResult = await registrationsCollection.updateOne(
+    // Update approval status
+    const approvalDate = new Date();
+    await registrationsCollection.updateOne(
       { _id: registration._id },
       {
         $set: {
-          entry_status: 'verified',
-          payment_status: 'verified',
-          entry_verified_at: verificationDate,
-          transaction_id: transactionId.trim(),
-          utr_id: utrId.trim()
+          approval_status: 'approved',
+          selected_for_event: selectedForEvent,
+          entry_verified_at: approvalDate
         }
       }
     );
 
-    console.log(`✅ Entry verified: ${registration.registration_id}`);
-
-    // Also update payment status in payments collection
-    await paymentsCollection.updateOne(
-      { registration_id: registration.registration_id },
-      {
-        $set: {
-          status: 'verified',
-          verified_at: verificationDate,
-          transaction_id: transactionId.trim(),
-          utr_id: utrId.trim()
-        }
-      },
-      { upsert: true }
-    );
-
-    // Get the updated registration to get verification_id
-    const updatedRegistration = await registrationsCollection.findOne({ _id: registration._id });
+    console.log(`✅ Entry approved: ${registration.registration_id}`);
 
     res.json({
       success: true,
-      message: 'Entry verified successfully',
-      verificationId: updatedRegistration.verification_id,
+      message: `Participant ${selectedForEvent ? 'SELECTED' : 'REJECTED'} for the event`,
       registration: {
-        registration_id: updatedRegistration.registration_id,
-        verification_id: updatedRegistration.verification_id,
-        status: 'verified',
-        transaction_id: transactionId.trim(),
-        utr_id: utrId.trim()
+        registration_id: registrationId,
+        approval_status: 'approved',
+        selected_for_event: selectedForEvent
       }
     });
 
   } catch (err) {
-    console.error('❌ Verification error:', err);
-    res.status(500).json({ error: 'Failed to verify entry' });
+    console.error('❌ Approval error:', err);
+    res.status(500).json({ error: 'Failed to approve entry' });
   }
 });
 
@@ -662,6 +618,54 @@ app.get('/api/admin/stats', async (req, res) => {
     console.error('❌ Stats error:', err);
     console.error('Error details:', err.message);
     res.status(500).json({ error: 'Failed to fetch statistics', details: err.message });
+  }
+});
+
+// 8. Export All Registrations as JSON (for Excel conversion on frontend)
+app.get('/api/admin/export', async (req, res) => {
+  try {
+    console.log('📥 Exporting all registrations...');
+    
+    // Get all registrations without the base64 image data (too large for export)
+    const registrations = await registrationsCollection.find({})
+      .project({
+        payment_screenshot_base64: 0,
+        payment_screenshot_mimetype: 0
+      })
+      .toArray();
+
+    console.log(`✅ Exporting ${registrations.length} registrations`);
+
+    // Transform data for Excel export
+    const exportData = registrations.map(reg => ({
+      'Registration ID': reg.registration_id,
+      'Full Name': reg.full_name,
+      'Email': reg.email,
+      'Phone': reg.phone,
+      'College Name': reg.college_name,
+      'Year of Study': reg.year_of_study,
+      'Branch': reg.branch,
+      'Roll Number': reg.roll_number,
+      'Selected Events': (reg.selected_events || []).join(', '),
+      'Total Amount': reg.total_amount,
+      'Transaction ID': reg.transaction_id || '',
+      'UTR ID': reg.utr_id || '',
+      'Approval Status': reg.approval_status || 'pending',
+      'Selected For Event': reg.selected_for_event === true ? 'YES' : (reg.selected_for_event === false ? 'NO' : 'PENDING'),
+      'Registration Date': reg.created_at ? new Date(reg.created_at).toLocaleString('en-IN') : '',
+      'Team Members': reg.team_members ? reg.team_members.map(m => m.member_name).join('; ') : ''
+    }));
+
+    res.json({
+      success: true,
+      totalCount: exportData.length,
+      data: exportData,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (err) {
+    console.error('❌ Export error:', err);
+    res.status(500).json({ error: 'Failed to export registrations', details: err.message });
   }
 });
 
