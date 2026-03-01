@@ -1128,16 +1128,16 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
     console.log(`Formatted Phone: ${phoneWithCountry}`);
     console.log(`Sending from: ${whatsappFrom}`);
     
-    // Build comprehensive message
+    // Build comprehensive message - Plain text only, no links
     const messageLines = [
-      '🎉 *ARTIX 2026 - REGISTRATION APPROVED* 🎉',
+      'ARTIX 2026 - REGISTRATION APPROVED',
       '',
-      '✅ Your registration has been approved!',
+      'Your registration has been approved!',
       '',
-      '*📋 Verification Details:*',
-      `Verification ID: *${registration.verification_id}*`,
+      'Verification Details:',
+      `Verification ID: ${registration.verification_id}`,
       '',
-      '*👤 Participant Information:*',
+      'Participant Information:',
       `Name: ${registration.full_name}`,
       `College: ${registration.college_name || 'N/A'}`,
       `Branch: ${registration.branch}`,
@@ -1148,24 +1148,21 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
 
     // Add team members if they exist
     if (registration.team_members && registration.team_members.length > 0) {
-      messageLines.push('*👥 Team Members:*');
+      messageLines.push('Team Members:');
       registration.team_members.forEach((member) => {
-        messageLines.push(`• ${member.member_name}`);
-        messageLines.push(`  Branch: ${member.member_branch}`);
-        messageLines.push(`  Phone: ${member.member_phone}`);
+        messageLines.push(`${member.member_name} - ${member.member_branch} - ${member.member_phone}`);
       });
       messageLines.push('');
     }
 
-    messageLines.push('*🎯 Event Details:*');
+    messageLines.push('Event Details:');
     messageLines.push(`Events: ${registration.selected_events.join(', ')}`);
-    messageLines.push(`Total Amount: ₹${registration.total_amount}`);
+    messageLines.push(`Total Amount: Rs ${registration.total_amount}`);
     messageLines.push(`Registration ID: ${registration.registration_id}`);
     messageLines.push('');
-    messageLines.push('*🔐 Verification Instructions:*');
+    messageLines.push('Verification Instructions:');
     messageLines.push('Use your Verification ID at the event registration desk for quick entry verification.');
     messageLines.push('');
-    messageLines.push('---');
     messageLines.push('For assistance, contact ARTIX Admin Team');
 
     const messageBody = messageLines.join('\n');

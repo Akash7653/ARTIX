@@ -222,14 +222,14 @@ export function AdminDashboard({ onLogout }: Props) {
 
   const generateWhatsAppMessage = (reg: Registration): string => {
     const lines = [
-      '🎉 *ARTIX 2026 - REGISTRATION APPROVED* 🎉',
+      'ARTIX 2026 - REGISTRATION APPROVED',
       '',
-      '✅ Your registration has been approved!',
+      'Your registration has been approved!',
       '',
-      '*📋 Verification Details:*',
-      `Verification ID: *${reg.verification_id}*`,
+      'Verification Details:',
+      `Verification ID: ${reg.verification_id}`,
       '',
-      '*👤 Participant Information:*',
+      'Participant Information:',
       `Name: ${reg.full_name}`,
       `College: ${reg.college_name || 'N/A'}`,
       `Branch: ${reg.branch}`,
@@ -240,24 +240,21 @@ export function AdminDashboard({ onLogout }: Props) {
 
     // Add team members if they exist
     if (reg.team_members && reg.team_members.length > 0) {
-      lines.push('*👥 Team Members:*');
+      lines.push('Team Members:');
       reg.team_members.forEach((member) => {
-        lines.push(`• ${member.member_name}`);
-        lines.push(`  Branch: ${member.member_branch}`);
-        lines.push(`  Phone: ${member.member_phone}`);
+        lines.push(`${member.member_name} - ${member.member_branch} - ${member.member_phone}`);
       });
       lines.push('');
     }
 
-    lines.push('*🎯 Event Details:*');
+    lines.push('Event Details:');
     lines.push(`Events: ${reg.selected_events.join(', ')}`);
-    lines.push(`Total Amount: ₹${reg.total_amount}`);
+    lines.push(`Total Amount: Rs ${reg.total_amount}`);
     lines.push(`Registration ID: ${reg.registration_id}`);
     lines.push('');
-    lines.push('*🔐 Verification Instructions:*');
+    lines.push('Verification Instructions:');
     lines.push('Use your Verification ID at the event registration desk for quick entry verification.');
     lines.push('');
-    lines.push('---');
     lines.push('For assistance, contact ARTIX Admin Team');
     
     return lines.join('\n');
