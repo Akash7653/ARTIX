@@ -1220,27 +1220,39 @@ app.post('/api/admin/verify-entry', async (req, res) => {
       console.log(`📋 Sample verification IDs in DB:`, allWithVerifId.slice(0, 3).map(r => ({ id: r.verification_id, regId: r.registration_id, status: r.approval_status })));
     }
 
-    const registration = await registrationsCollection.findOne({ 
+    // Try exact match first
+    let registration = await registrationsCollection.findOne({ 
       verification_id: trimmedId,
       approval_status: 'approved',
       selected_for_event: true
     });
 
     if (!registration) {
-      console.log(`❌ No registration found with: verification_id="${trimmedId}", approval_status="approved", selected_for_event=true`);
+      console.log(`❌ Search 1 failed: verification_id="${trimmedId}", approval_status="approved", selected_for_event=true`);
       
-      // Check without all conditions to debug
-      const anyMatch = await registrationsCollection.findOne({ verification_id: trimmedId });
-      if (anyMatch) {
-        console.log(`⚠️ Found registration with verification_id but conditions not met:`, { 
-          approval_status: anyMatch.approval_status, 
-          selected_for_event: anyMatch.selected_for_event 
-        });
+      // Try without selected_for_event condition (it might be null or missing)
+      registration = await registrationsCollection.findOne({ 
+        verification_id: trimmedId,
+        approval_status: 'approved'
+      });
+      
+      if (registration) {
+        console.log(`⚠️ Search 2 succeeded: found registration but selected_for_event="${registration.selected_for_event}"`);
       } else {
-        console.log(`⚠️ No registration found with this verification_id at all`);
+        console.log(`❌ Search 2 failed: verification_id="${trimmedId}", approval_status="approved"`);
+        
+        // Try just the verification_id
+        const anyMatch = await registrationsCollection.findOne({ verification_id: trimmedId });
+        if (anyMatch) {
+          console.log(`⚠️ Verification ID exists but conditions not met:`, { 
+            approval_status: anyMatch.approval_status, 
+            selected_for_event: anyMatch.selected_for_event 
+          });
+          return res.status(400).json({ error: `Participant not approved or not selected for event. Status: ${anyMatch.approval_status}` });
+        } else {
+          return res.status(404).json({ error: 'No approved entry found for this Verification ID' });
+        }
       }
-      
-      return res.status(404).json({ error: 'No approved entry found for this Verification ID' });
     }
 
     console.log(`✅ Found approved registration: ${registration.registration_id}`);
@@ -1251,7 +1263,7 @@ app.post('/api/admin/verify-entry', async (req, res) => {
         error: 'Entry already verified',
         participant: {
           name: registration.full_name,
-          verification_id,
+          verification_id: registration.verification_id,
           verified_at: registration.entry_verified_at
         }
       });
@@ -1259,7 +1271,7 @@ app.post('/api/admin/verify-entry', async (req, res) => {
 
     // Mark as verified
     await registrationsCollection.updateOne(
-      { verification_id },
+      { verification_id: trimmedId },
       {
         $set: {
           entry_verified_at: new Date()

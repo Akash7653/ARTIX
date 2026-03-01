@@ -218,30 +218,46 @@ export function AdminDashboard({ onLogout }: Props) {
     }
   };
 
-  const handleSendNotification = async (registrationId: string, method: 'email' | 'whatsapp' | 'both') => {
-    setSendingNotification(registrationId);
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${baseUrl}/admin/send-notification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationId, method })
-      });
+  const generateWhatsAppMessage = (reg: Registration): string => {
+    const lines = [
+      '🎉 *ARTIX 2026 - REGISTRATION APPROVED* 🎉',
+      '',
+      '✅ Your registration has been approved!',
+      '',
+      '*📋 Verification Details:*',
+      `Verification ID: *${reg.verification_id}*`,
+      '',
+      '*👤 Participant Information:*',
+      `Name: ${reg.full_name}`,
+      `College: ${reg.college_name}`,
+      `Branch: ${reg.branch}`,
+      `Year: ${reg.year_of_study}`,
+      `Phone: ${reg.phone}`,
+      '',
+      '*🎯 Event Details:*',
+      `Events: ${reg.selected_events.join(', ')}`,
+      `Total Amount: ₹${reg.total_amount}`,
+      `Registration ID: ${reg.registration_id}`,
+      '',
+      '*🔐 Verification Instructions:*',
+      'Use your Verification ID at the event registration desk for quick entry verification.',
+      '',
+      '---',
+      'For assistance, contact ARTIX Admin Team'
+    ];
+    
+    return lines.join('\n');
+  };
 
-      if (!response.ok) throw new Error('Notification failed');
-      
-      const methodName = method === 'both' ? 'Email & WhatsApp' : method === 'email' ? 'Email' : 'WhatsApp';
-      setMessage(`✅ ${methodName} notification sent!`);
-      setMessageType('success');
-      setTimeout(loadData, 500);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage(`❌ Failed to send ${method} notification`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
-    } finally {
-      setSendingNotification(null);
-    }
+  const handleSendWhatsAppDirect = (reg: Registration) => {
+    const adminPhone = '9398176430';
+    const message = generateWhatsAppMessage(reg);
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+    
+    // Mark as notification sent in backend
+    handleSendNotification(reg.registration_id, 'whatsapp');
   };
 
   const handleExportToExcel = () => {
@@ -702,38 +718,20 @@ export function AdminDashboard({ onLogout }: Props) {
                   {/* Notification Section */}
                   {reg.approval_status === 'approved' && reg.verification_id && (
                     <div>
-                      <h3 className="text-lg font-bold text-gray-200 mb-4">Send Notification</h3>
-                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
-                        <p className="text-blue-300 text-sm mb-2">Verification ID: <span className="font-mono font-bold text-blue-400">{reg.verification_id}</span></p>
-                        <p className="text-blue-300 text-xs">Notification sent: {reg.notification_sent ? '✅ Yes' : '❌ No'}</p>
+                      <h3 className="text-lg font-bold text-gray-200 mb-4">Send via WhatsApp</h3>
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
+                        <p className="text-green-300 text-sm mb-2">Verification ID: <span className="font-mono font-bold text-green-400">{reg.verification_id}</span></p>
+                        <p className="text-green-300 text-xs">Admin WhatsApp: +91 9398176430</p>
+                        <p className="text-green-300 text-xs mt-2">Message will include all participant details and event information</p>
                       </div>
-                      <div className="flex gap-4 flex-wrap">
-                        <button
-                          onClick={() => handleSendNotification(reg.registration_id, 'email')}
-                          disabled={sendingNotification === reg.registration_id}
-                          className="flex items-center gap-2 px-6 py-3 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition font-semibold disabled:opacity-50"
-                        >
-                          <Mail className="w-5 h-5" />
-                          Send Email
-                        </button>
-                        <button
-                          onClick={() => handleSendNotification(reg.registration_id, 'whatsapp')}
-                          disabled={sendingNotification === reg.registration_id}
-                          className="flex items-center gap-2 px-6 py-3 bg-green-500/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition font-semibold disabled:opacity-50"
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                          Send WhatsApp
-                        </button>
-                        <button
-                          onClick={() => handleSendNotification(reg.registration_id, 'both')}
-                          disabled={sendingNotification === reg.registration_id}
-                          className="flex items-center gap-2 px-6 py-3 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-500/30 transition font-semibold disabled:opacity-50"
-                        >
-                          <Mail className="w-4 h-4" />
-                          <MessageCircle className="w-4 h-4" />
-                          Send Both
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleSendWhatsAppDirect(reg)}
+                        disabled={sendingNotification === reg.registration_id}
+                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition font-semibold disabled:opacity-50 w-full justify-center"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        Open WhatsApp & Send Details
+                      </button>
                     </div>
                   )}
                 </div>
