@@ -761,8 +761,7 @@ app.get('/api/admin/stats', async (req, res) => {
     console.log(`✅ Approved Entries (Selected): ${approvedEntries}`);
 
     const rejectedEntries = await registrationsCollection.countDocuments({ 
-      approval_status: 'approved',
-      selected_for_event: false
+      approval_status: 'rejected'
     });
     console.log(`✅ Rejected Entries: ${rejectedEntries}`);
     

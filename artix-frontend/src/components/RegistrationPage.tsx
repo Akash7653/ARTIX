@@ -29,7 +29,6 @@ export function RegistrationPage() {
   });
 
   const [registrationId, setRegistrationId] = useState<string>('');
-  const [verificationId, setVerificationId] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   const updateFormData = (updates: Partial<RegistrationFormData>) => {
@@ -41,7 +40,6 @@ export function RegistrationPage() {
       <ConfirmationPage
         registrationId={registrationId}
         formData={formData}
-        verificationId={verificationId}
       />
     );
   }
@@ -153,9 +151,8 @@ export function RegistrationPage() {
             formData={formData}
             updateFormData={updateFormData}
             darkMode={darkMode}
-            onSubmitSuccess={(regId, verificationId) => {
+            onSubmitSuccess={(regId) => {
               setRegistrationId(regId);
-              setVerificationId(verificationId);
               setShowConfirmation(true);
             }}
           />

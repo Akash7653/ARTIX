@@ -7,7 +7,7 @@ import { INDIVIDUAL_EVENTS, COMBO_OPTIONS, type RegistrationFormData } from '../
 interface Props {
   formData: RegistrationFormData;
   updateFormData: (updates: Partial<RegistrationFormData>) => void;
-  onSubmitSuccess: (registrationId: string, verificationId: string | null) => void;
+  onSubmitSuccess: (registrationId: string) => void;
   darkMode?: boolean;
 }
 
@@ -122,7 +122,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       const response = await api.register(registrationData);
 
       if (response.success) {
-        onSubmitSuccess(response.registrationId, response.verificationId || null);
+        onSubmitSuccess(response.registrationId, null);
       }
     } catch (err) {
       console.error('Registration error:', err);
