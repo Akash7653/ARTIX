@@ -339,31 +339,43 @@ export function AdminDashboard({ onLogout }: Props) {
 
   if (!isAuthenticated) {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-gray-800/40 backdrop-blur-md border border-gray-700/50 rounded-2xl p-8">
+      <div className={`h-screen transition-colors duration-300 flex items-center justify-center p-4 ${
+        darkMode
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
+          : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+      }`}>
+        <div className={`max-w-md w-full backdrop-blur-md rounded-2xl p-8 border transition-all ${
+          darkMode
+            ? 'bg-gray-800/40 border-gray-700/50'
+            : 'bg-white/40 border-gray-300/50'
+        }`}>
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
               Admin Access
             </h1>
-            <p className="text-gray-400">ARTIX 2K26 Dashboard</p>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Dashboard</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-gray-300 font-semibold mb-3">Admin Password</label>
+              <label className={`block font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Admin Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none transition"
+                  className={`w-full px-4 py-3 rounded-lg focus:outline-none transition border-2 ${
+                    darkMode
+                      ? 'bg-gray-900/50 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500'
+                      : 'bg-white/60 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  }`}
                   placeholder="Enter password"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
+                  className={`absolute right-3 top-3 transition ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -372,17 +384,21 @@ export function AdminDashboard({ onLogout }: Props) {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition"
             >
               Login
             </button>
           </form>
 
           {message && (
-            <div className={`mt-6 p-4 rounded-lg text-center font-semibold ${
+            <div className={`mt-6 p-4 rounded-lg text-center font-semibold border transition-all ${
               messageType === 'error' 
-                ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                ? darkMode 
+                  ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                  : 'bg-red-100 text-red-700 border-red-300'
+                : darkMode
+                  ? 'bg-green-500/20 text-green-300 border-green-500/30'
+                  : 'bg-green-100 text-green-700 border-green-300'
             }`}>
               {message}
             </div>
@@ -433,10 +449,14 @@ export function AdminDashboard({ onLogout }: Props) {
 
         {/* Message */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg font-semibold animate-slide-in ${
+          <div className={`mb-6 p-4 rounded-lg font-semibold animate-slide-in border transition-all ${
             messageType === 'error' 
-              ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-              : 'bg-green-500/20 text-green-300 border border-green-500/30'
+              ? darkMode
+                ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                : 'bg-red-100 text-red-700 border-red-300'
+              : darkMode
+                ? 'bg-green-500/20 text-green-300 border-green-500/30'
+                : 'bg-green-100 text-green-700 border-green-300'
           }`}>
             {message}
           </div>
@@ -536,7 +556,11 @@ export function AdminDashboard({ onLogout }: Props) {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 px-6 py-3 rounded-lg hover:bg-purple-500/30 transition font-semibold disabled:opacity-50"
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 border ${
+              darkMode
+                ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
+                : 'bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200'
+            }`}
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -574,36 +598,52 @@ export function AdminDashboard({ onLogout }: Props) {
                 setTimeout(() => setMessage(''), 3000);
               }
             }}
-            className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-3 rounded-lg hover:bg-red-500/30 transition font-semibold"
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 border ${
+              darkMode
+                ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/30'
+                : 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
+            }`}
           >
             🗑️ Clear Database
           </button>
         </div>
 
         {/* Event Entry Verification Section */}
-        <div className="mb-6 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-6">
+        <div className={`mb-6 rounded-xl p-6 border ${
+          darkMode
+            ? 'bg-indigo-500/10 border-indigo-500/30'
+            : 'bg-indigo-50 border-indigo-300'
+        }`}>
           <div className="flex items-center gap-3 mb-4">
-            <CheckCircle2 className="w-6 h-6 text-indigo-400" />
-            <h3 className="text-lg font-bold text-gray-200">Event Entry Verification</h3>
+            <CheckCircle2 className={`w-6 h-6 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            <h3 className={`text-lg font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Event Entry Verification</h3>
           </div>
-          <p className="text-indigo-300 text-sm mb-4">Verify participant entry at the event by scanning or entering their verification ID</p>
+          <p className={`text-sm mb-4 ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Verify participant entry at the event by scanning or entering their verification ID</p>
           <div className="flex gap-4 flex-wrap items-end">
             <div className="flex-1 min-w-72">
-              <label className="block text-gray-300 text-sm font-semibold mb-2">Enter Verification ID</label>
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Enter Verification ID</label>
               <input
                 type="text"
                 value={entryVerificationId}
                 onChange={(e) => setEntryVerificationId(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleVerifyEntry()}
                 placeholder="Scan or type verification ID here..."
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none transition text-lg font-mono"
                 autoFocus
+                className={`w-full px-4 py-3 rounded-lg focus:outline-none transition border-2 font-mono text-lg ${
+                  darkMode
+                    ? 'bg-gray-900/50 border-gray-600 text-white placeholder-gray-500 focus:border-indigo-500'
+                    : 'bg-white/60 border-indigo-300 text-gray-900 placeholder-gray-500 focus:border-indigo-500'
+                }`}
               />
             </div>
             <button
               onClick={handleVerifyEntry}
               disabled={verifyingEntry}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+              className={`px-8 py-3 font-bold rounded-lg transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap hover:scale-105 ${
+                darkMode
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+                  : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white'
+              }`}
             >
               <CheckCircle2 className="w-5 h-5" />
               {verifyingEntry ? 'Verifying...' : 'Verify Entry'}
@@ -614,18 +654,27 @@ export function AdminDashboard({ onLogout }: Props) {
         {/* Search & Export */}
         <div className="mb-6 flex gap-4 flex-col md:flex-row">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
+            <Search className={`absolute left-4 top-3 w-5 h-5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name, email, or registration ID..."
-              className="w-full pl-12 pr-4 py-3 bg-gray-800/40 border border-gray-700/50 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none transition"
+              className={`w-full pl-12 pr-4 py-3 rounded-lg focus:outline-none transition border-2 ${
+                darkMode
+                  ? 'bg-gray-800/40 border-gray-700/50 text-white placeholder-gray-500 focus:border-blue-500'
+                  : 'bg-white/40 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              }`}
+            />
             />
           </div>
           <button
             onClick={handleExportToExcel}
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-lg transition flex items-center gap-2 whitespace-nowrap"
+            className={`px-6 py-3 font-bold rounded-lg transition flex items-center gap-2 whitespace-nowrap hover:scale-105 ${
+              darkMode
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
+                : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+            }`}
           >
             <Download className="w-5 h-5" />
             Export Excel
@@ -633,44 +682,74 @@ export function AdminDashboard({ onLogout }: Props) {
         </div>
 
         {/* Registrations Table */}
-        <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl overflow-hidden">
+        <div className={`rounded-xl overflow-hidden border-2 ${
+          darkMode
+            ? 'bg-gray-800/40 border-gray-700/50'
+            : 'bg-white/40 border-gray-300'
+        }`}>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700/50 bg-gray-900/50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Phone</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Amount</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Actions</th>
+                <tr className={`border-b-2 ${
+                  darkMode
+                    ? 'border-gray-700/50 bg-gray-900/50'
+                    : 'border-gray-300 bg-gray-100'
+                }`}>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Name</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Email</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Phone</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Status</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Amount</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRegistrations.map((reg) => (
-                  <tr key={reg._id} className="border-b border-gray-700/30 hover:bg-gray-800/30 transition">
-                    <td className="px-6 py-4 text-sm text-gray-200">
+                  <tr key={reg._id} className={`border-b transition ${
+                    darkMode
+                      ? 'border-gray-700/30 hover:bg-gray-800/30'
+                      : 'border-gray-300 hover:bg-gray-200/30'
+                  }`}>
+                    <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
                       <div className="font-semibold">{reg.full_name}</div>
-                      <div className="text-xs text-gray-500">{reg.registration_id}</div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{reg.registration_id}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300">{reg.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-300">{reg.phone}</td>
+                    <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.email}</td>
+                    <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.phone}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         reg.approval_status === 'pending'
-                          ? 'bg-yellow-500/20 text-yellow-300'
+                          ? darkMode ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-800'
                           : reg.selected_for_event
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-red-500/20 text-red-300'
+                          ? darkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-800'
+                          : darkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-800'
                       }`}>
                         {reg.approval_status === 'pending' ? 'Pending' : reg.selected_for_event ? 'Approved' : 'Rejected'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-purple-400">₹{reg.total_amount.toLocaleString()}</td>
+                    <td className={`px-6 py-4 text-sm font-semibold ${
+                      darkMode ? 'text-purple-400' : 'text-purple-700'
+                    }`}>₹{reg.total_amount.toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
-                        className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded text-xs hover:bg-blue-500/30 transition"
+                        className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
+                          darkMode
+                            ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
                       >
                         {expandedId === reg._id ? 'Hide' : 'View'}
                       </button>
@@ -682,7 +761,7 @@ export function AdminDashboard({ onLogout }: Props) {
           </div>
 
           {filteredRegistrations.length === 0 && (
-            <div className="p-8 text-center text-gray-400">
+            <div className={`p-8 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               No registrations found
             </div>
           )}
@@ -690,7 +769,11 @@ export function AdminDashboard({ onLogout }: Props) {
 
         {/* Expanded Row Details */}
         {expandedId && (
-          <div className="mt-6 bg-gray-800/40 border border-gray-700/50 rounded-xl p-6">
+          <div className={`mt-6 rounded-xl p-6 border-2 ${
+            darkMode
+              ? 'bg-gray-800/40 border-gray-700/50'
+              : 'bg-white/40 border-gray-300'
+          }`}>
             {(() => {
               const reg = filteredRegistrations.find(r => r._id === expandedId);
               if (!reg) return null;
@@ -701,51 +784,73 @@ export function AdminDashboard({ onLogout }: Props) {
                 <div className="space-y-6">
                   {/* Personal Details */}
                   <div>
-                    <h3 className="text-lg font-bold text-gray-200 mb-4">Personal Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-900/30 p-4 rounded-lg">
+                    <h3 className={`text-lg font-bold mb-4 ${
+                      darkMode ? 'text-gray-200' : 'text-gray-800'
+                    }`}>Personal Details</h3>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg ${
+                      darkMode
+                        ? 'bg-gray-900/30'
+                        : 'bg-gray-100/50'
+                    }`}>
                       <div>
-                        <p className="text-gray-400 text-sm">Full Name</p>
-                        <p className="text-gray-200 font-semibold">{reg.full_name}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Full Name</p>
+                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.full_name}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm">College</p>
-                        <p className="text-gray-200 font-semibold">{reg.college_name}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>College</p>
+                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.college_name}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm">Branch / Year</p>
-                        <p className="text-gray-200 font-semibold">{reg.branch} ({reg.year_of_study})</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Branch / Year</p>
+                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.branch} ({reg.year_of_study})</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Payment Details */}
                   <div>
-                    <h3 className="text-lg font-bold text-gray-200 mb-4">Payment Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-900/30 p-4 rounded-lg">
+                    <h3 className={`text-lg font-bold mb-4 ${
+                      darkMode ? 'text-gray-200' : 'text-gray-800'
+                    }`}>Payment Details</h3>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg ${
+                      darkMode
+                        ? 'bg-gray-900/30'
+                        : 'bg-gray-100/50'
+                    }`}>
                       <div>
-                        <p className="text-gray-400 text-sm">Transaction ID</p>
-                        <p className="text-gray-200 font-mono text-sm">{reg.transaction_id}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transaction ID</p>
+                        <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.transaction_id}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm">UTR ID</p>
-                        <p className="text-gray-200 font-mono text-sm">{reg.utr_id}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>UTR ID</p>
+                        <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.utr_id}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm">Amount</p>
-                        <p className="text-green-400 text-lg font-bold">₹{reg.total_amount.toLocaleString()}</p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount</p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>₹{reg.total_amount.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Event Details */}
                   <div>
-                    <h3 className="text-lg font-bold text-gray-200 mb-4">Events & Team</h3>
-                    <div className="bg-gray-900/30 p-4 rounded-lg space-y-4">
+                    <h3 className={`text-lg font-bold mb-4 ${
+                      darkMode ? 'text-gray-200' : 'text-gray-800'
+                    }`}>Events & Team</h3>
+                    <div className={`p-4 rounded-lg space-y-4 ${
+                      darkMode
+                        ? 'bg-gray-900/30'
+                        : 'bg-gray-100/50'
+                    }`}>
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Selected Events</p>
+                        <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         <div className="flex flex-wrap gap-2">
                           {reg.selected_events?.map((event, i) => (
-                            <span key={i} className="px-3 py-1 bg-blue-500/30 text-blue-300 rounded-full text-xs border border-blue-500/50">
+                            <span key={i} className={`px-3 py-1 rounded-full text-xs border ${
+                              darkMode
+                                ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                : 'bg-blue-100 text-blue-700 border-blue-300'
+                            }`}>
                               {event.replace(/_/g, ' ')}
                             </span>
                           ))}
@@ -754,13 +859,21 @@ export function AdminDashboard({ onLogout }: Props) {
 
                       {reg.team_members && reg.team_members.length > 0 && (
                         <div>
-                          <p className="text-gray-400 text-sm mb-2">Team Members ({totalHeadCount} head count)</p>
+                          <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Team Members ({totalHeadCount} head count)</p>
                           <div className="space-y-2">
-                            <div className="px-3 py-2 bg-yellow-500/20 text-yellow-300 rounded text-sm border border-yellow-500/30">
+                            <div className={`px-3 py-2 rounded text-sm border ${
+                              darkMode
+                                ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                            }`}>
                               👑 Team Leader: {reg.full_name}
                             </div>
                             {reg.team_members.map((member, i) => (
-                              <div key={i} className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded text-sm border border-blue-500/30">
+                              <div key={i} className={`px-3 py-2 rounded text-sm border ${
+                                darkMode
+                                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                  : 'bg-blue-100 text-blue-700 border-blue-300'
+                              }`}>
                                 👤 {member.member_name} - {member.member_branch} - {member.member_phone}
                               </div>
                             ))}
@@ -773,18 +886,28 @@ export function AdminDashboard({ onLogout }: Props) {
                   {/* Approval Section */}
                   {reg.approval_status === 'pending' && (
                     <div>
-                      <h3 className="text-lg font-bold text-gray-200 mb-4">Approval Actions</h3>
+                      <h3 className={`text-lg font-bold mb-4 ${
+                        darkMode ? 'text-gray-200' : 'text-gray-800'
+                      }`}>Approval Actions</h3>
                       <div className="flex gap-4 flex-wrap">
                         <button
                           onClick={() => handleApprove(reg.registration_id)}
-                          className="flex items-center gap-2 px-6 py-3 bg-green-500/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition font-semibold"
+                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition font-semibold hover:scale-105 border ${
+                            darkMode
+                              ? 'bg-green-500/20 text-green-300 border-green-500/30 hover:bg-green-500/30'
+                              : 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                          }`}
                         >
                           <CheckCircle2 className="w-5 h-5" />
                           Approve
                         </button>
                         <button
                           onClick={() => handleReject(reg.registration_id)}
-                          className="flex items-center gap-2 px-6 py-3 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition font-semibold"
+                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition font-semibold hover:scale-105 border ${
+                            darkMode
+                              ? 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/30'
+                              : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                          }`}
                         >
                           <XCircle className="w-5 h-5" />
                           Reject
@@ -796,25 +919,43 @@ export function AdminDashboard({ onLogout }: Props) {
                   {/* Entry Verification Section - Set Verification ID */}
                   {reg.approval_status === 'approved' && !reg.verification_id && (
                     <div>
-                      <h3 className="text-lg font-bold text-gray-200 mb-4">Entry Verification Details</h3>
-                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
-                        <p className="text-yellow-300 text-sm">⚠️ Enter the Verification ID that the participant will use at event entry</p>
+                      <h3 className={`text-lg font-bold mb-4 ${
+                        darkMode ? 'text-gray-200' : 'text-gray-800'
+                      }`}>Entry Verification Details</h3>
+                      <div className={`rounded-lg p-4 mb-4 border ${
+                        darkMode
+                          ? 'bg-yellow-500/10 border-yellow-500/30'
+                          : 'bg-yellow-100 border-yellow-300'
+                      }`}>
+                        <p className={`text-sm ${
+                          darkMode ? 'text-yellow-300' : 'text-yellow-800'
+                        }`}>⚠️ Enter the Verification ID that the participant will use at event entry</p>
                       </div>
                       <div className="flex gap-4 flex-wrap items-end">
                         <div className="flex-1 min-w-64">
-                          <label className="block text-gray-300 text-sm font-semibold mb-2">Verification ID</label>
+                          <label className={`block text-sm font-semibold mb-2 ${
+                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>Verification ID</label>
                           <input
                             type="text"
                             value={verificationIdInput[reg.registration_id] || ''}
                             onChange={(e) => setVerificationIdInput({ ...verificationIdInput, [reg.registration_id]: e.target.value })}
                             placeholder="e.g., VER001, ARTIX-12345, etc."
-                            className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition"
+                            className={`w-full px-4 py-2 rounded-lg focus:outline-none transition border-2 ${
+                              darkMode
+                                ? 'bg-gray-900/50 border-gray-600 text-white placeholder-gray-500 focus:border-yellow-500'
+                                : 'bg-white/60 border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-yellow-500'
+                            }`}
                           />
                         </div>
                         <button
                           onClick={() => handleSetVerificationId(reg.registration_id)}
                           disabled={settingVerificationId === reg.registration_id}
-                          className="px-6 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition font-semibold disabled:opacity-50"
+                          className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 border ${
+                            darkMode
+                              ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30 hover:bg-yellow-500/30'
+                              : 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+                          }`}
                         >
                           {settingVerificationId === reg.registration_id ? 'Setting...' : 'Set ID'}
                         </button>
@@ -825,25 +966,35 @@ export function AdminDashboard({ onLogout }: Props) {
                   {/* Notification Section */}
                   {reg.approval_status === 'approved' && reg.verification_id && (
                     <div>
-                      <h3 className="text-lg font-bold text-gray-200 mb-4">Send via WhatsApp</h3>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
-                        <p className="text-green-300 text-sm mb-2">Verification ID: <span className="font-mono font-bold text-green-400">{reg.verification_id}</span></p>
-                        <p className="text-green-300 text-xs">Admin WhatsApp: +91 8919068236</p>
-                        <p className="text-green-300 text-xs mt-2">Message will include all participant details and event information</p>
+                      <h3 className={`text-lg font-bold mb-4 ${
+                        darkMode ? 'text-gray-200' : 'text-gray-800'
+                      }`}>Send via WhatsApp</h3>
+                      <div className={`rounded-lg p-4 mb-4 border ${
+                        darkMode
+                          ? 'bg-green-500/10 border-green-500/30'
+                          : 'bg-green-100 border-green-300'
+                      }`}>
+                        <p className={`text-sm mb-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Verification ID: <span className={`font-mono font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>{reg.verification_id}</span></p>
+                        <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Admin WhatsApp: +91 8919068236</p>
+                        <p className={`text-xs mt-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Message will include all participant details and event information</p>
                       </div>
                       <div className="flex gap-4 flex-wrap items-center">
                         <button
                           onClick={() => handleSendWhatsAppDirect(reg)}
                           disabled={sendingNotification === reg.registration_id}
-                          className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition font-semibold disabled:opacity-50"
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 ${
+                            darkMode
+                              ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
+                              : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                          }`}
                         >
                           <MessageCircle className="w-5 h-5" />
                           Open WhatsApp & Send
                         </button>
-                        <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                        <div className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
                           reg.notification_sent 
-                            ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
-                            : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                            ? darkMode ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300'
+                            : darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500/30' : 'bg-gray-100 text-gray-700 border-gray-300'
                         }`}>
                           📤 Notification: {reg.notification_sent ? '✅ Sent' : '⏳ Not Sent'}
                         </div>
