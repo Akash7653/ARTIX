@@ -2,20 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Adjust zoom for smaller size */
+/* Adjust zoom for normal size - reduced to prevent overzooming */
 html {
-  font-size: 12px;
+  font-size: 10px;
 }
 
 @media (min-width: 768px) {
   html {
-    font-size: 13px;
+    font-size: 11px;
   }
 }
 
 @media (min-width: 1024px) {
   html {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
