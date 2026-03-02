@@ -1520,6 +1520,9 @@ app.get('/api/admin/registrations', async (req, res) => {
       .sort({ created_at: -1 })
       .toArray();
 
+    console.log('🔍 DEBUG: registrations from DB:', registrations.length, 'items');
+    console.log('🔍 DEBUG: first registration:', registrations[0] ? JSON.stringify(registrations[0]).substring(0, 200) : 'empty');
+
     // Format response
     const formattedData = registrations.map(reg => ({
       _id: reg._id,
@@ -1543,6 +1546,9 @@ app.get('/api/admin/registrations', async (req, res) => {
       notification_sent: reg.notification_sent || false,
       entry_verified_at: reg.entry_verified_at || null
     }));
+
+    console.log('🔍 DEBUG: formattedData:', formattedData.length, 'items');
+    console.log('🔍 DEBUG: formatted first item:', formattedData[0]);
 
     logAdmin('Registrations retrieved successfully', {
       page,
@@ -1569,6 +1575,12 @@ app.get('/api/admin/registrations', async (req, res) => {
         search: searchQuery || null
       }
     };
+
+    // Debug logging before sending response
+    console.log('🔍 DEBUG: responseData object:', responseData);
+    console.log('🔍 DEBUG: responseData.data array length:', responseData.data.length);
+    console.log('🔍 DEBUG: responseData.success:', responseData.success);
+    console.log('🔍 DEBUG: JSON.stringify attempt:', JSON.stringify(responseData).substring(0, 200));
 
     // Cache the response
     registrationCache.set(cacheKey, responseData);
