@@ -1005,6 +1005,70 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
   }
 });
 
+// 4. Admin Approve/Reject Registration (Admin Dashboard - matches frontend path)
+app.post('/api/admin/registrations/:registrationId/approve', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const { approved, rejected } = req.body;
+
+    console.log(`📋 Admin Approval Request:`, { registrationId, approved, rejected });
+
+    if (approved === undefined && rejected === undefined) {
+      console.error('❌ Missing both approved and rejected in body');
+      return res.status(400).json({ error: 'Please specify approved or rejected status' });
+    }
+
+    if (approved && rejected) {
+      return res.status(400).json({ error: 'Cannot approve and reject simultaneously' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (registration.approval_status === 'approved') {
+      return res.status(400).json({ error: 'This entry has already been reviewed' });
+    }
+
+    // Update approval status - DO NOT generate verification ID yet
+    const approvalDate = new Date();
+    const updateDoc = {
+      $set: {
+        approval_status: approved ? 'approved' : 'rejected',
+        approval_date: approvalDate,
+        selected_for_event: approved
+      }
+    };
+
+    await registrationsCollection.updateOne(
+      { _id: registration._id },
+      updateDoc
+    );
+
+    console.log(`✅ ${approved ? 'Approved' : 'Rejected'}: ${registrationId}`);
+    logAdmin(`Registration ${approved ? 'approved' : 'rejected'}`, { registrationId, participantName: registration.full_name });
+
+    res.json({
+      success: true,
+      message: approved ? '✅ Participant APPROVED. Now set verification ID.' : '❌ Participant REJECTED',
+      registration: {
+        registration_id: registrationId,
+        approval_status: approved ? 'approved' : 'rejected',
+        selected_for_event: approved,
+        verification_id: null
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Admin Approval error:', err);
+    res.status(500).json({ error: 'Failed to process approval', details: err.message });
+  }
+});
+
 // 5. Confirm and Send Notifications (After verification ID is set)
 app.post('/api/admin/confirm-and-notify', async (req, res) => {
   try {
