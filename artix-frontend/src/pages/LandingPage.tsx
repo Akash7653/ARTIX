@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { HeroSection, BackgroundColorSelector } from './HeroSection';
-import { H1, H2, H3, Body, Eyebrow } from './Typography';
+import { HeroSection } from '../components/HeroSection';
+import { H1, H2, H3, Body, Eyebrow } from '../components/Typography';
 import './LandingPage.css';
 
 /**

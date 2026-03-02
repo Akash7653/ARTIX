@@ -292,7 +292,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handler for multer upload errors
-const handleUploadError = (err, req, res, next) => {
+const handleUploadError = (err, req, res, callback) => {
   if (err) {
     logError('File upload error handler triggered', err);
     
@@ -311,13 +311,23 @@ const handleUploadError = (err, req, res, next) => {
       });
     }
     
+    if (err.message && err.message.includes('File extension not allowed')) {
+      return res.status(400).json({ 
+        error: err.message,
+        details: 'Please use a valid image file (JPG, PNG, WebP)'
+      });
+    }
+    
     // Generic upload error
     return res.status(400).json({ 
       error: 'File upload error',
       details: err.message || 'An error occurred while uploading your file'
     });
   }
-  next();
+  // Call the callback if no error
+  if (callback && typeof callback === 'function') {
+    callback();
+  }
 };
 
 // Check if Transaction ID or UTR ID already exists

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { api } from '../lib/api';
-import { INDIVIDUAL_EVENTS, COMBO_OPTIONS, type RegistrationFormData } from '../types/registration';
+import { INDIVIDUAL_EVENTS, type RegistrationFormData } from '../types/registration';
 import { generateWhatsAppMessage, openWhatsAppWeb } from '../utils/whatsappHelper';
 
 interface Props {
@@ -24,10 +24,6 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
   const [utrId, setUtrId] = useState<string>('');
 
   const calculateTotal = (): number => {
-    if (formData.selectedCombo) {
-      const combo = COMBO_OPTIONS.find(c => c.id === formData.selectedCombo);
-      return combo?.price || 0;
-    }
     return formData.selectedIndividualEvents.reduce((total, eventId) => {
       const event = INDIVIDUAL_EVENTS.find(e => e.id === eventId);
       return total + (event?.price || 0);
@@ -155,9 +151,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
           formData.branch,
           formData.yearOfStudy,
           formData.phone,
-          formData.selectedIndividualEvents.length > 0 
-            ? formData.selectedIndividualEvents 
-            : (formData.selectedCombo ? [formData.selectedCombo] : []),
+          formData.selectedIndividualEvents,
           totalAmount,
           response.registrationId,
           undefined, // Verification ID not available yet (set by admin after approval)

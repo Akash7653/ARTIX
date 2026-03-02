@@ -7,6 +7,7 @@
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
+  'image/x-jpg',
   'image/png',
   'image/webp'
 ];
@@ -28,7 +29,20 @@ const FORBIDDEN_EXTENSIONS = [
  */
 export function isValidMimeType(mimeType) {
   if (!mimeType) return false;
-  return ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase());
+  
+  const normalizedMimeType = mimeType.toLowerCase().trim();
+  
+  // Check if MIME type is in allowed list
+  if (ALLOWED_MIME_TYPES.includes(normalizedMimeType)) {
+    return true;
+  }
+  
+  // Allow any image/* MIME type as fallback
+  if (normalizedMimeType.startsWith('image/')) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
