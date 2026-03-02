@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { LandingPage } from './pages/LandingPage';
 import { RegistrationPage } from './components/RegistrationPage';
 import { AdminScanner } from './components/AdminScanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -20,11 +19,9 @@ function App() {
   const renderContent = () => {
     if (currentPath === '/admin-scan') {
       return <AdminScanner />;
-    } else if (currentPath === '/register') {
-      return <RegistrationPage fromLandingPage={true} />;
     } else {
-      // Default to landing page for home and any other route
-      return <LandingPage />;
+      // Default to registration page (home page)
+      return <RegistrationPage fromLandingPage={false} />;
     }
   };
 
