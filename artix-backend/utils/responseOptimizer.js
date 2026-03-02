@@ -187,7 +187,7 @@ class PaginationBuilder {
 function createOptimizationMiddleware(options = {}) {
   const fieldFilter = new FieldFilter();
   const {
-    filterFields = true,
+    filterFields = false, // DISABLED: Field names don't match database schema
     removeNulls = true,
     compressSize = false // For future implementation
   } = options;
@@ -204,9 +204,10 @@ function createOptimizationMiddleware(options = {}) {
                       : req.path.includes('/event') ? 'events'
                       : null;
 
-      // Apply field filtering
+      // Apply field filtering (DISABLED due to field name mismatches)
       if (filterFields && dataType) {
-        optimized = fieldFilter.apply(optimized, context, dataType);
+        console.warn('⚠️  Field filtering is disabled. Data passed through as-is.');
+        // optimized = fieldFilter.apply(optimized, context, dataType);
       }
 
       // Remove null values
@@ -214,8 +215,9 @@ function createOptimizationMiddleware(options = {}) {
         optimized = ResponseCompressor.removeNullValues(optimized);
       }
 
-      // Add response metadata
-      if (typeof optimized === 'object' && !Array.isArray(optimized)) {
+      // Add response metadata ONLY for non-API responses (don't add for structured API responses)
+      const isStructuredResponse = optimized && (optimized.success !== undefined || optimized.data !== undefined || optimized.pagination !== undefined);
+      if (typeof optimized === 'object' && !Array.isArray(optimized) && !isStructuredResponse) {
         optimized._metadata = {
           responsedAt: new Date().toISOString(),
           responseSize: JSON.stringify(optimized).length,
