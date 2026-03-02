@@ -1305,12 +1305,67 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
       return res.status(400).json({ error: 'Participant phone number not found' });
     }
 
-    // Generate wa.me link for admin to use (free WhatsApp Web approach)
     const adminPhone = '+919398176430';
+
+    // Generate full formatted message like whatsappHelper.ts does
+    const formatPhoneForDisplay = (phone) => {
+      const normalized = phone.replace(/\D/g, '');
+      const withCountry = normalized.startsWith('91') ? normalized : '91' + normalized;
+      if (withCountry.length === 12) {
+        return `+${withCountry.slice(0, 2)} ${withCountry.slice(2, 7)} ${withCountry.slice(7)}`;
+      }
+      return phone;
+    };
+
+    const lines = [
+      '🎉 *ARTIX 2026 - REGISTRATION APPROVED* 🎉',
+      '',
+      '✅ Your registration has been approved!',
+      '',
+      '🔎 *Verification Details:*',
+      `Verification ID: *${registration.verification_id || 'Pending Admin Approval'}*`,
+      '',
+      '👤 *Participant Information:*',
+      `Name: ${registration.full_name}`,
+      `College: ${registration.college_name || 'N/A'}`,
+      `Branch: ${registration.branch}`,
+      `Year: ${registration.year_of_study}`,
+      `Phone: ${formatPhoneForDisplay(registration.phone)}`,
+      ''
+    ];
+
+    // Add team details if team exists
+    if (registration.team_members && registration.team_members.length > 0) {
+      lines.push('👥 *Team Details:*');
+      registration.team_members.forEach((member, idx) => {
+        lines.push(`  Team Member ${idx + 1}: ${member.member_name}`);
+      });
+      lines.push('');
+    }
+
+    // Add event details
+    lines.push('📅 *Event Details:*');
+    if (registration.selected_events && registration.selected_events.length > 0) {
+      const eventString = registration.selected_events.join(', ');
+      lines.push(`Events: ${eventString}`);
+    }
+    lines.push(`Total Amount: ₹${registration.total_amount || '0'}`);
+    lines.push(`Registration ID: ${registration.registration_id}`);
+    lines.push('');
+    
+    lines.push('📌 *Verification Instructions:*');
+    lines.push('Use your Verification ID at the event registration desk for quick entry verification.');
+    lines.push('');
+    lines.push('---');
+    lines.push('For assistance, contact ARTIX Admin Team');
+    lines.push(`Admin Contact: ${adminPhone}`);
+
+    const message = lines.join('\n');
+    
+    // Normalize phone for wa.me URL
     const phoneEdited = registration.phone.replace(/\D/g, '');
     const normalizedPhone = phoneEdited.startsWith('91') ? phoneEdited : '91' + phoneEdited;
     
-    const message = `Hi ${registration.full_name || 'Participant'},\n\nVerification ID: ${registration.verification_id || 'Pending'}\n\nRegistration ID: ${registration.registration_id}\n\nPlease use this for event entry.`;
     const encodedMessage = encodeURIComponent(message);
     const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
