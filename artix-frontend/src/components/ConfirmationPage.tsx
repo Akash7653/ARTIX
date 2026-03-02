@@ -1,5 +1,6 @@
 import { CheckCircle } from 'lucide-react';
 import type { RegistrationFormData } from '../types/registration';
+import { generateWhatsAppMessage, openWhatsAppWeb } from '../utils/whatsappHelper';
 
 interface Props {
   registrationId: string;
@@ -49,6 +50,53 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
           }`}>
             Your details have been successfully submitted. If you are approved, you will receive your entry ID to your WhatsApp number. Stay tuned! 🎉
           </p>
+        </div>
+
+        {/* WhatsApp Confirmation Message Sent */}
+        <div className={`p-6 md:p-10 border-3 rounded-xl mb-8 ${
+          darkMode
+            ? 'bg-gradient-to-br from-cyan-500/15 to-blue-500/15 border-cyan-500/40'
+            : 'bg-gradient-to-br from-cyan-400/15 to-blue-400/15 border-cyan-400/40'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className={`text-base md:text-lg font-bold mb-2 ${
+                darkMode ? 'text-cyan-300' : 'text-cyan-700'
+              }`}>
+                📱 WhatsApp Message Sent!
+              </p>
+              <p className={`text-sm md:text-base ${
+                darkMode ? 'text-cyan-200' : 'text-cyan-600'
+              }`}>
+                A confirmation message with your registration details has been sent to your WhatsApp number (<strong>{formData.phone}</strong>).
+                Check your WhatsApp for the message, or click the button below to open WhatsApp Web.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const message = generateWhatsAppMessage(
+                  formData.fullName,
+                  formData.collegeName,
+                  formData.branch,
+                  formData.yearOfStudy,
+                  formData.phone,
+                  formData.selectedIndividualEvents.length > 0 
+                    ? formData.selectedIndividualEvents 
+                    : (formData.selectedCombo ? [formData.selectedCombo] : []),
+                  formData.totalAmount || 0,
+                  registrationId
+                );
+                openWhatsAppWeb(formData.phone, message);
+              }}
+              className={`px-6 py-2 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                darkMode
+                  ? 'bg-green-600 text-white hover:bg-green-700 border border-green-500'
+                  : 'bg-green-600 text-white hover:bg-green-700 border border-green-500'
+              }`}
+            >
+              💬 Open WhatsApp
+            </button>
+          </div>
         </div>
 
         {/* Your Information */}

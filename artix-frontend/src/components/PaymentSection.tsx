@@ -3,6 +3,7 @@ import { Upload, CheckCircle2, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { api } from '../lib/api';
 import { INDIVIDUAL_EVENTS, COMBO_OPTIONS, type RegistrationFormData } from '../types/registration';
+import { generateWhatsAppMessage, openWhatsAppWeb } from '../utils/whatsappHelper';
 
 interface Props {
   formData: RegistrationFormData;
@@ -147,7 +148,36 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       const response = await api.register(registrationData);
 
       if (response.success) {
-        onSubmitSuccess(response.registrationId, null);
+        // Generate WhatsApp message from registration data
+        const whatsappMessage = generateWhatsAppMessage(
+          formData.fullName,
+          formData.collegeName,
+          formData.branch,
+          formData.yearOfStudy,
+          formData.phone,
+          formData.selectedIndividualEvents.length > 0 
+            ? formData.selectedIndividualEvents 
+            : (formData.selectedCombo ? [formData.selectedCombo] : []),
+          totalAmount,
+          response.registrationId,
+          undefined, // Verification ID not available yet (set by admin after approval)
+          formData.teamMembers && formData.teamMembers.length > 0 
+            ? formData.teamMembers 
+            : undefined
+        );
+
+        // Open WhatsApp Web with the message
+        try {
+          openWhatsAppWeb(formData.phone, whatsappMessage);
+          console.log('✅ WhatsApp Web opened with confirmation message');
+        } catch (whatsappError) {
+          console.error('Error opening WhatsApp:', whatsappError);
+          // Even if WhatsApp fails, continue with registration success
+          // The user can manually send the confirmation message if needed
+        }
+
+        // Proceed with normal flow
+        onSubmitSuccess(response.registrationId);
       }
     } catch (err) {
       console.error('Registration error:', err);

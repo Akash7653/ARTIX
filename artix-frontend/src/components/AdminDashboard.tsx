@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw } from 'lucide-react';
+import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
 
 interface TeamMember {
@@ -65,6 +65,11 @@ export function AdminDashboard({ onLogout }: Props) {
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [showBulkMessageModal, setShowBulkMessageModal] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState('');
+  const [sendingBulkMessage, setSendingBulkMessage] = useState(false);
+  const [bulkMessageResult, setBulkMessageResult] = useState<any>(null);
+  const [adminPhone, setAdminPhone] = useState('+918919068236');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -354,6 +359,48 @@ export function AdminDashboard({ onLogout }: Props) {
       setMessage('❌ Failed to export to Excel');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleSendBulkWhatsApp = async () => {
+    if (!bulkMessage.trim()) {
+      setMessage('❌ Please enter a message');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setSendingBulkMessage(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${baseUrl}/admin/bulk-send-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: bulkMessage, 
+          approvalStatus: 'approved', 
+          adminPhone: adminPhone 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send bulk messages');
+      }
+
+      setBulkMessageResult(data.results);
+      setMessage(`✅ WhatsApp campaign sent! Success: ${data.results.successful.length}/${data.results.total}`);
+      setMessageType('success');
+      setBulkMessage('');
+      setTimeout(loadData, 1000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send bulk messages';
+      setMessage(`❌ ${errorMsg}`);
+      setMessageType('error');
+      console.error(err);
+    } finally {
+      setSendingBulkMessage(false);
     }
   };
 
@@ -709,6 +756,17 @@ export function AdminDashboard({ onLogout }: Props) {
             <Download className="w-5 h-5" />
             Export Excel
           </button>
+          <button
+            onClick={() => setShowBulkMessageModal(true)}
+            className={`px-6 py-3 font-bold rounded-lg transition flex items-center gap-2 whitespace-nowrap hover:scale-105 ${
+              darkMode
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white'
+            }`}
+          >
+            <Send className="w-5 h-5" />
+            Bulk WhatsApp
+          </button>
         </div>
 
         {/* Registrations Table */}
@@ -1034,6 +1092,135 @@ export function AdminDashboard({ onLogout }: Props) {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* Bulk WhatsApp Message Modal */}
+        {showBulkMessageModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className={`max-w-2xl w-full rounded-2xl border-2 ${
+              darkMode
+                ? 'bg-gray-900/95 border-gray-700/50'
+                : 'bg-white/95 border-gray-300'
+            }`}>
+              <div className={`px-8 py-6 border-b-2 ${
+                darkMode
+                  ? 'border-gray-700/50'
+                  : 'border-gray-300'
+              }`}>
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  📱 Send Bulk WhatsApp Message
+                </h2>
+                <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Send WhatsApp messages to all approved participants with verification IDs
+                </p>
+              </div>
+
+              <div className="px-8 py-6 space-y-6">
+                {/* Admin Phone Info */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Admin Phone Number
+                  </label>
+                  <div className={`px-4 py-3 rounded-lg border-2 ${
+                    darkMode
+                      ? 'bg-gray-800/40 border-gray-700/50 text-gray-300'
+                      : 'bg-gray-100 border-gray-300 text-gray-900'
+                  }`}>
+                    {adminPhone}
+                  </div>
+                </div>
+
+                {/* Message Template Info */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Message Content
+                  </label>
+                  <p className={`text-xs mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    💡 You can use these placeholders: {'{name}'}, {'{verification_id}'}, {'{registration_id}'}, {'{admin_phone}'}
+                  </p>
+                  <textarea
+                    value={bulkMessage}
+                    onChange={(e) => setBulkMessage(e.target.value)}
+                    placeholder="Enter your message here. Example: Hi {name}, your verification ID is {verification_id}. Contact us at {admin_phone} for support."
+                    className={`w-full px-4 py-3 rounded-lg focus:outline-none transition border-2 min-h-32 resize-none ${
+                      darkMode
+                        ? 'bg-gray-800/40 border-gray-700/50 text-white placeholder-gray-500 focus:border-blue-500'
+                        : 'bg-white/60 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                    }`}
+                  />
+                </div>
+
+                {/* Message Preview */}
+                {bulkMessage && (
+                  <div>
+                    <p className={`text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Preview
+                    </p>
+                    <div className={`px-4 py-3 rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-gray-800/40 border-gray-700/50 text-gray-300'
+                        : 'bg-gray-100 border-gray-300 text-gray-900'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap break-words">{bulkMessage}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Results */}
+                {bulkMessageResult && (
+                  <div className={`px-4 py-3 rounded-lg border-2 ${
+                    bulkMessageResult.failed_count === 0
+                      ? darkMode
+                        ? 'bg-green-500/20 border-green-500/30 text-green-300'
+                        : 'bg-green-100 border-green-300 text-green-800'
+                      : darkMode
+                        ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300'
+                        : 'bg-yellow-100 border-yellow-300 text-yellow-800'
+                  }`}>
+                    <p className="font-semibold">
+                      ✅ Success: {bulkMessageResult.successful_count} | ❌ Failed: {bulkMessageResult.failed_count}
+                    </p>
+                    <p className="text-sm mt-1">
+                      Success Rate: {((bulkMessageResult.successful_count / bulkMessageResult.total) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className={`px-8 py-6 border-t-2 flex gap-4 justify-end ${
+                darkMode
+                  ? 'border-gray-700/50'
+                  : 'border-gray-300'
+              }`}>
+                <button
+                  onClick={() => {
+                    setShowBulkMessageModal(false);
+                    setBulkMessageResult(null);
+                  }}
+                  disabled={sendingBulkMessage}
+                  className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 ${
+                    darkMode
+                      ? 'bg-gray-700/40 text-gray-300 hover:bg-gray-700/60'
+                      : 'bg-gray-300 text-gray-900 hover:bg-gray-400'
+                  }`}
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleSendBulkWhatsApp}
+                  disabled={sendingBulkMessage || !bulkMessage.trim()}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 ${
+                    darkMode
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700'
+                      : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  {sendingBulkMessage ? 'Sending...' : 'Send to All'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

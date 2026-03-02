@@ -120,6 +120,10 @@ function generateRegistrationId() {
 
 // NOTE: Verification ID generation REMOVED - Admin manually sets via dashboard only
 
+// Admin Configuration
+const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
+console.log(`📱 Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
+
 // Routes
 
 // Health Check Endpoint
@@ -1642,7 +1646,148 @@ app.post('/api/admin/verify-entry', async (req, res) => {
   }
 });
 
-// 13. CLEAR DATABASE (Admin Only - Testing Purpose)
+// 13. Bulk Send WhatsApp Messages to All Approved Participants
+app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
+  try {
+    const { message, approvalStatus = 'approved', adminPhone = ADMIN_PHONE_NUMBER } = req.body;
+
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    console.log(`\n📢 === BULK WHATSAPP SENDING STARTED ===`);
+    console.log(`📱 From Admin Phone: ${adminPhone}`);
+    console.log(`📋 Message: ${message.substring(0, 50)}...`);
+
+    // Get all registrations matching criteria (with verification ID)
+    const registrations = await registrationsCollection.find({
+      approval_status: approvalStatus || 'approved',
+      verification_id: { $exists: true, $ne: null, $ne: '' },
+      phone: { $exists: true, $ne: null, $ne: '' }
+    }).toArray();
+
+    if (registrations.length === 0) {
+      return res.status(400).json({ 
+        error: 'No approved registrations with phone numbers found',
+        message: 'Please ensure participants are approved and have phone numbers set'
+      });
+    }
+
+    console.log(`📨 Total registrations to notify: ${registrations.length}`);
+
+    const results = {
+      successful: [],
+      failed: [],
+      total: registrations.length
+    };
+
+    // Check Twilio credentials
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
+      console.error('❌ Twilio credentials NOT configured!');
+      return res.status(500).json({ 
+        error: 'Twilio WhatsApp service not configured',
+        details: 'Contact administrator to set up WhatsApp credentials'
+      });
+    }
+
+    const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    // Send messages to each registration
+    for (const registration of registrations) {
+      try {
+        const formattedPhone = registration.phone.replace(/\D/g, '');
+        const phoneWithCountry = 'whatsapp:+91' + (formattedPhone.startsWith('91') ? formattedPhone.substring(2) : formattedPhone);
+        
+        // Personalize message with participant name
+        const personalizedMessage = message
+          .replace('{name}', registration.full_name)
+          .replace('{verification_id}', registration.verification_id)
+          .replace('{registration_id}', registration.registration_id)
+          .replace('{admin_phone}', adminPhone);
+
+        console.log(`📤 Sending to ${registration.phone}...`);
+
+        const msg = await twilioClient.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER,
+          to: phoneWithCountry,
+          body: personalizedMessage
+        });
+
+        results.successful.push({
+          registration_id: registration.registration_id,
+          phone: registration.phone,
+          name: registration.full_name,
+          messageId: msg.sid
+        });
+
+        console.log(`✅ Message sent to ${registration.phone} (SID: ${msg.sid})`);
+
+        // Mark as notified in database
+        await registrationsCollection.updateOne(
+          { _id: registration._id },
+          {
+            $set: {
+              bulk_notification_sent: true,
+              bulk_notification_sent_at: new Date(),
+              last_message_sid: msg.sid
+            }
+          }
+        );
+
+      } catch (err) {
+        console.error(`❌ Failed to send to ${registration.phone}:`, err.message);
+        results.failed.push({
+          registration_id: registration.registration_id,
+          phone: registration.phone,
+          name: registration.full_name,
+          error: err.message
+        });
+      }
+    }
+
+    console.log(`📢 === BULK WHATSAPP SENDING COMPLETED ===`);
+    console.log(`✅ Successful: ${results.successful.length}`);
+    console.log(`❌ Failed: ${results.failed.length}`);
+
+    res.json({
+      success: true,
+      message: `WhatsApp campaign sent to ${results.successful.length} participants`,
+      results: results,
+      summary: {
+        total_participants: results.total,
+        successful_count: results.successful.length,
+        failed_count: results.failed.length,
+        success_rate: ((results.successful.length / results.total) * 100).toFixed(2) + '%'
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Bulk WhatsApp send error:', err);
+    res.status(500).json({ 
+      error: 'Bulk WhatsApp sending failed', 
+      details: err.message 
+    });
+  }
+});
+
+// 14. Get Admin Configuration (Phone Number, etc.)
+app.get('/api/admin/config', (req, res) => {
+  try {
+    res.json({
+      admin_phone_number: ADMIN_PHONE_NUMBER,
+      twilio_configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER),
+      features: {
+        individual_whatsapp: true,
+        bulk_whatsapp: true,
+        email_notifications: true
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get config', details: err.message });
+  }
+});
+
+// 15. CLEAR DATABASE (Admin Only - Testing Purpose)
 app.post('/api/admin/clear-database', async (req, res) => {
   try {
     const { adminPassword } = req.body;
