@@ -22,7 +22,6 @@ export function RegistrationPage({ fromLandingPage = false }) {
     rollNumber: '',
     section: '',
     selectedIndividualEvents: [],
-    selectedCombo: '',
     teamSize: 0,
     teamMembers: [],
     paymentScreenshot: null,

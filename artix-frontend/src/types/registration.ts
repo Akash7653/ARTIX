@@ -26,7 +26,6 @@ export interface RegistrationFormData {
   rollNumber: string;
   section: string;
   selectedIndividualEvents: string[];
-  selectedCombo: string;
   teamSize: number;
   teamMembers: TeamMember[];
   paymentScreenshot: File | null;
