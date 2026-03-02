@@ -996,19 +996,22 @@ export function AdminDashboard({ onLogout }: Props) {
                       <div>
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         <div className="flex flex-wrap gap-2">
-                          {reg.selected_events && reg.selected_events.length > 0 ? (
-                            reg.selected_events.map((event, i) => (
-                              <span key={i} className={`px-3 py-1 rounded-full text-xs border ${
-                                darkMode
-                                  ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
-                                  : 'bg-blue-100 text-blue-700 border-blue-300'
-                              }`}>
-                                {event.replace(/_/g, ' ')}
-                              </span>
-                            ))
+                          {reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
+                            reg.selected_events.map((event, i) => {
+                              const eventName = event ? String(event).replace(/_/g, ' ').toUpperCase() : 'Unknown';
+                              return (
+                                <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
+                                  darkMode
+                                    ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                    : 'bg-blue-100 text-blue-700 border-blue-300'
+                                }`}>
+                                  🎯 {eventName}
+                                </span>
+                              );
+                            })
                           ) : (
-                            <span className={`text-xs px-3 py-1 rounded-full ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                              No events selected
+                            <span className={`text-xs px-3 py-1 rounded-full italic ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                              ℹ️ No events selected
                             </span>
                           )}
                         </div>
@@ -1042,31 +1045,40 @@ export function AdminDashboard({ onLogout }: Props) {
 
                   {/* Approval Section */}
                   {reg.approval_status === 'pending' && (
-                    <div>
-                      <h3 className={`text-lg font-bold mb-4 ${
-                        darkMode ? 'text-gray-200' : 'text-gray-800'
-                      }`}>Approval Actions</h3>
+                    <div className={`rounded-lg p-5 border-2 ${
+                      darkMode
+                        ? 'bg-gray-800/40 border-purple-500/40'
+                        : 'bg-purple-50 border-purple-300'
+                    }`}>
+                      <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
+                        darkMode ? 'text-purple-400' : 'text-purple-700'
+                      }`}>
+                        ✅ Step 1: Review & Approve
+                      </h3>
+                      <p className={`text-sm mb-4 ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Approve or reject this registration. After approval, you'll set a verification ID.</p>
                       <div className="flex gap-4 flex-wrap">
                         <button
                           onClick={() => handleApprove(reg.registration_id)}
-                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition font-semibold hover:scale-105 border ${
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold hover:scale-105 border-2 ${
                             darkMode
-                              ? 'bg-green-500/20 text-green-300 border-green-500/30 hover:bg-green-500/30'
-                              : 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                              ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
+                              : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
                           }`}
                         >
-                          <CheckCircle2 className="w-5 h-5" />
+                          <CheckCircle2 className="w-6 h-6" />
                           Approve
                         </button>
                         <button
                           onClick={() => handleReject(reg.registration_id)}
-                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition font-semibold hover:scale-105 border ${
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold hover:scale-105 border-2 ${
                             darkMode
-                              ? 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/30'
-                              : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                              ? 'bg-red-600/40 text-red-200 border-red-500 hover:bg-red-600/50'
+                              : 'bg-red-500 text-white border-red-600 hover:bg-red-600'
                           }`}
                         >
-                          <XCircle className="w-5 h-5" />
+                          <XCircle className="w-6 h-6" />
                           Reject
                         </button>
                       </div>
@@ -1075,85 +1087,102 @@ export function AdminDashboard({ onLogout }: Props) {
 
                   {/* Entry Verification Section - Set Verification ID */}
                   {reg.approval_status === 'approved' && !reg.verification_id && (
-                    <div>
-                      <h3 className={`text-lg font-bold mb-4 ${
-                        darkMode ? 'text-gray-200' : 'text-gray-800'
-                      }`}>Entry Verification Details</h3>
-                      <div className={`rounded-lg p-4 mb-4 border ${
-                        darkMode
-                          ? 'bg-yellow-500/10 border-yellow-500/30'
-                          : 'bg-yellow-100 border-yellow-300'
+                    <div className={`rounded-lg p-5 border-2 ${
+                      darkMode
+                        ? 'bg-yellow-500/5 border-yellow-500/40'
+                        : 'bg-yellow-50 border-yellow-300'
+                    }`}>
+                      <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
+                        darkMode ? 'text-yellow-300' : 'text-yellow-700'
                       }`}>
-                        <p className={`text-sm ${
-                          darkMode ? 'text-yellow-300' : 'text-yellow-800'
-                        }`}>⚠️ Enter the Verification ID that the participant will use at event entry</p>
-                      </div>
-                      <div className="flex gap-4 flex-wrap items-end">
-                        <div className="flex-1 min-w-64">
+                        🔐 Step 2: Set Verification ID
+                      </h3>
+                      <p className={`text-sm mb-4 ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Create a unique verification ID for this participant. They will use this ID at event entry.</p>
+                      <div className="flex gap-3 items-end flex-wrap">
+                        <div className="flex-1 min-w-xs">
                           <label className={`block text-sm font-semibold mb-2 ${
                             darkMode ? 'text-gray-300' : 'text-gray-700'
-                          }`}>Verification ID</label>
+                          }`}>Enter Verification ID</label>
                           <input
                             type="text"
                             value={verificationIdInput[reg.registration_id] || ''}
                             onChange={(e) => setVerificationIdInput({ ...verificationIdInput, [reg.registration_id]: e.target.value })}
-                            placeholder="e.g., VER001, ARTIX-12345, etc."
-                            className={`w-full px-4 py-2 rounded-lg focus:outline-none transition border-2 ${
+                            placeholder="e.g., ARTIX-8026, VER001, etc."
+                            className={`w-full px-4 py-2 rounded-lg font-mono font-bold focus:outline-none transition border-2 ${
                               darkMode
-                                ? 'bg-gray-900/50 border-gray-600 text-white placeholder-gray-500 focus:border-yellow-500'
-                                : 'bg-white/60 border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-yellow-500'
+                                ? 'bg-gray-900/70 border-yellow-500/40 text-yellow-300 placeholder-gray-600 focus:border-yellow-400'
+                                : 'bg-white border-yellow-400 text-yellow-700 placeholder-gray-500 focus:border-yellow-500'
                             }`}
                           />
                         </div>
                         <button
                           onClick={() => handleSetVerificationId(reg.registration_id)}
                           disabled={settingVerificationId === reg.registration_id}
-                          className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 border ${
+                          className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 border-2 ${
                             darkMode
-                              ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30 hover:bg-yellow-500/30'
-                              : 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+                              ? 'bg-yellow-500/30 text-yellow-200 border-yellow-400 hover:bg-yellow-500/40'
+                              : 'bg-yellow-200 text-yellow-800 border-yellow-400 hover:bg-yellow-300'
                           }`}
                         >
-                          {settingVerificationId === reg.registration_id ? 'Setting...' : 'Set ID'}
+                          {settingVerificationId === reg.registration_id ? '⏳ Setting...' : '✅ Set ID'}
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Notification Section */}
+                  {/* Notification Section - Send WhatsApp */}
                   {reg.approval_status === 'approved' && reg.verification_id && (
-                    <div>
-                      <h3 className={`text-lg font-bold mb-4 ${
-                        darkMode ? 'text-gray-200' : 'text-gray-800'
-                      }`}>Send via WhatsApp</h3>
+                    <div className={`rounded-lg p-5 border-2 ${
+                      darkMode
+                        ? 'bg-green-500/5 border-green-500/40'
+                        : 'bg-green-50 border-green-300'
+                    }`}>
+                      <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
+                        darkMode ? 'text-green-400' : 'text-green-700'
+                      }`}>
+                        📱 Step 3: Send WhatsApp Message
+                      </h3>
+                      
                       <div className={`rounded-lg p-4 mb-4 border ${
                         darkMode
-                          ? 'bg-green-500/10 border-green-500/30'
-                          : 'bg-green-100 border-green-300'
+                          ? 'bg-gray-800/50 border-green-500/30'
+                          : 'bg-green-100/50 border-green-400'
                       }`}>
-                        <p className={`text-sm mb-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Verification ID: <span className={`font-mono font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>{reg.verification_id}</span></p>
-                        <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-800'}`}>📱 Sending to: +91 {reg.phone}</p>
-                        <p className={`text-xs mt-2 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>Message includes verification ID, participant details, team members (if any), and event information</p>
+                        <div className="space-y-2">
+                          <p className={`flex items-center gap-2 text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-800'}`}>
+                            🔐 Verification ID: <span className={`font-mono px-2 py-1 rounded ${darkMode ? 'bg-gray-900 text-green-300' : 'bg-white text-green-700 border'}`}>{reg.verification_id}</span>
+                          </p>
+                          <p className={`flex items-center gap-2 text-sm ${darkMode ? 'text-green-300' : 'text-green-800'}`}>
+                            📱 Sending to: <span className="font-semibold">+91 {reg.phone}</span>
+                          </p>
+                          <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                            ✅ Formatted message includes: Verification ID, participant details, event information
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex gap-4 flex-wrap items-center">
+
+                      <div className="flex gap-3 flex-wrap items-center">
                         <button
                           onClick={() => handleSendWhatsAppDirect(reg)}
                           disabled={sendingNotification === reg.registration_id}
-                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 ${
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
                             darkMode
-                              ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
-                              : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                              ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
+                              : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
                           }`}
                         >
-                          <MessageCircle className="w-5 h-5" />
-                          Send to Participant WhatsApp
+                          <MessageCircle className="w-6 h-6" />
+                          {sendingNotification === reg.registration_id ? 'Sending...' : 'Send WhatsApp Message'}
                         </button>
-                        <div className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
+
+                        <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
                           reg.notification_sent 
-                            ? darkMode ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300'
-                            : darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500/30' : 'bg-gray-100 text-gray-700 border-gray-300'
+                            ? darkMode ? 'bg-green-500/20 text-green-300 border-green-500' : 'bg-green-200 text-green-800 border-green-400'
+                            : darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
                         }`}>
-                          📤 Notification: {reg.notification_sent ? '✅ Sent' : '⏳ Not Sent'}
+                          {reg.notification_sent ? '✅ Message Sent' : '⏳ Pending'}
                         </div>
                       </div>
                     </div>
