@@ -18,6 +18,9 @@ import { swaggerSpec } from './swagger.js';
 import { validateUploadFile, generateSafeFilename } from './utils/fileValidator.js';
 import { registrationCache, statsCache } from './utils/cache.js';
 import { createOptimizationMiddleware } from './utils/responseOptimizer.js';
+import { createAdminRoutes } from './routes/adminRoutes.js';
+import { PerformanceMonitoringSystem } from './utils/performanceMonitor.js';
+import { createMonitoringRoutes } from './routes/monitoringRoutes.js';
 
 dotenv.config();
 
@@ -223,6 +226,36 @@ const upload = multer({
 
 // Serve uploaded files as static
 app.use('/uploads', express.static(uploadsDir));
+
+// ==================== WEEK 4: PERFORMANCE MONITORING SETUP ====================
+// Initialize Performance Monitoring System
+const monitoringSystem = new PerformanceMonitoringSystem(logger);
+
+// Middleware to track API performance metrics
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  
+  // Capture the response end event
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const dataSize = parseInt(res.get('Content-Length')) || 0;
+    
+    // Track the request in our monitoring system
+    monitoringSystem.performance.trackRequest(
+      req.path,
+      req.method,
+      res.statusCode,
+      duration,
+      dataSize
+    );
+  });
+  
+  next();
+});
+
+logger.info('✅ Performance Monitoring System initialized');
+
+// ==================== END MONITORING SETUP ====================
 
 // Utility Functions
 function generateRegistrationId() {
@@ -2404,6 +2437,20 @@ app.post('/api/admin/clear-database', async (req, res) => {
     res.status(500).json({ error: 'Failed to clear database', details: err.message });
   }
 });
+
+// ==================== WEEK 4: ADVANCED ADMIN ROUTES ====================
+// Mount Admin Routes with JWT verification
+app.use('/api/admin', verifyJWT, createAdminRoutes(db, logger));
+
+// Mount Monitoring Routes
+app.use('/api/monitor', createMonitoringRoutes(monitoringSystem, logger));
+
+logger.info('✅ Week 4 Advanced Admin Routes mounted');
+logger.info('✅ Performance Monitoring Routes mounted');
+logger.info('📊 Admin endpoints available at /api/admin/*');
+logger.info('📊 Monitoring endpoints available at /api/monitor/*');
+
+// ==================== END ADVANCED ROUTES ====================
 
 // Start Server
 async function startServer() {
