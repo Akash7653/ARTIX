@@ -7,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 
 dotenv.config();
 
@@ -77,6 +79,44 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Security & Rate Limiting Middleware
+app.use(helmet()); // Add security headers
+
+// Rate limiters for different endpoints
+const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 registrations per IP per hour
+  message: '❌ Too many registrations from this IP. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.ip === '127.0.0.1' // Skip for localhost (testing)
+});
+
+const whatsappLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 20, // 20 WhatsApp messages per IP per 10 minutes
+  message: '❌ Too many WhatsApp messages. Please wait before sending more.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per IP per 15 minutes
+  message: '❌ Too many admin requests. Please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 login attempts per IP per 15 minutes
+  message: '❌ Too many login attempts. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // Don't count successful logins
+});
 
 // File upload setup
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -231,7 +271,7 @@ app.post('/api/check-transaction-utr', async (req, res) => {
 });
 
 // 1. Register User
-app.post('/api/register', (req, res, next) => {
+app.post('/api/register', registrationLimiter, (req, res, next) => {
   upload.single('paymentScreenshot')(req, res, (err) => {
     handleUploadError(err, req, res, () => {
       registerHandler(req, res);
@@ -1285,7 +1325,7 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
 }
 
 // API Endpoint: Send Detailed WhatsApp to Participant
-app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
+app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req, res) => {
   try {
     const { registrationId } = req.body;
 
@@ -1685,7 +1725,7 @@ app.post('/api/admin/verify-entry', async (req, res) => {
 });
 
 // 13. Bulk Send WhatsApp Messages to All Approved Participants
-app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
+app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
   try {
     const { message, approvalStatus, adminPhone = ADMIN_PHONE_NUMBER, whatsappType = 'all' } = req.body;
 
