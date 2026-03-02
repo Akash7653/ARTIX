@@ -164,6 +164,68 @@ const handleUploadError = (err, req, res, next) => {
   next();
 };
 
+// Check if Transaction ID or UTR ID already exists
+app.post('/api/check-transaction-utr', async (req, res) => {
+  try {
+    const { transactionId, utrId } = req.body;
+
+    if (!transactionId && !utrId) {
+      return res.status(400).json({ error: 'Transaction ID or UTR ID is required' });
+    }
+
+    const query = {};
+    const errors = [];
+
+    // Check transaction ID
+    if (transactionId && transactionId.trim()) {
+      const existingTransaction = await registrationsCollection.findOne({ 
+        transaction_id: transactionId.trim() 
+      });
+      
+      if (existingTransaction) {
+        errors.push({
+          field: 'transactionId',
+          message: `Transaction ID "${transactionId}" is already registered. Please use a different Transaction ID.`
+        });
+      }
+    }
+
+    // Check UTR ID
+    if (utrId && utrId.trim()) {
+      const existingUTR = await registrationsCollection.findOne({ 
+        utr_id: utrId.trim() 
+      });
+      
+      if (existingUTR) {
+        errors.push({
+          field: 'utrId',
+          message: `UTR ID "${utrId}" is already registered. Please use a different UTR ID.`
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(409).json({ 
+        success: false,
+        errors: errors,
+        message: 'Duplicate transaction ID or UTR ID detected'
+      });
+    }
+
+    return res.json({ 
+      success: true,
+      message: 'Transaction ID and UTR ID are available'
+    });
+
+  } catch (err) {
+    console.error('Error checking transaction/UTR:', err);
+    res.status(500).json({ 
+      error: 'Error checking transaction/UTR availability',
+      message: err.message 
+    });
+  }
+});
+
 // 1. Register User
 app.post('/api/register', (req, res, next) => {
   upload.single('paymentScreenshot')(req, res, (err) => {
@@ -239,6 +301,32 @@ async function registerHandler(req, res) {
       return res.status(409).json({ 
         error: 'Email already registered. Each email can only register once.',
         hint: `The email "${normalizedEmail}" was already registered. Please use a different email address.`
+      });
+    }
+
+    // Check for duplicate Transaction ID
+    const existingTransaction = await registrationsCollection.findOne({ 
+      transaction_id: transactionId.trim() 
+    });
+    if (existingTransaction) {
+      console.warn(`⚠️ DUPLICATE TRANSACTION ID: ${transactionId}`);
+      console.warn(`   Existing registration: ${existingTransaction.registration_id}`);
+      return res.status(409).json({ 
+        error: 'Transaction ID already registered.',
+        hint: `The Transaction ID "${transactionId}" has already been used for registration. Please use a different Transaction ID.`
+      });
+    }
+
+    // Check for duplicate UTR ID
+    const existingUTR = await registrationsCollection.findOne({ 
+      utr_id: utrId.trim() 
+    });
+    if (existingUTR) {
+      console.warn(`⚠️ DUPLICATE UTR ID: ${utrId}`);
+      console.warn(`   Existing registration: ${existingUTR.registration_id}`);
+      return res.status(409).json({ 
+        error: 'UTR ID already registered.',
+        hint: `The UTR ID "${utrId}" has already been used for registration. Please use a different UTR ID.`
       });
     }
 

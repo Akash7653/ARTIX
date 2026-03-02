@@ -107,6 +107,31 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
         throw new Error('Please select at least one event');
       }
 
+      // Check if Transaction ID or UTR ID already exist in database
+      console.log('🔍 Checking if Transaction ID and UTR ID are available...');
+      const baseUrl = import.meta.env.VITE_API_URL;
+      const checkResponse = await fetch(`${baseUrl}/api/check-transaction-utr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionId: transactionId.trim(),
+          utrId: utrId.trim()
+        })
+      });
+
+      const checkData = await checkResponse.json();
+
+      if (!checkResponse.ok || !checkData.success) {
+        // Build error message from check response
+        if (checkData.errors && Array.isArray(checkData.errors)) {
+          const errorMessages = checkData.errors.map((e: any) => e.message).join('\n');
+          throw new Error(errorMessages);
+        }
+        throw new Error(checkData.message || 'Failed to verify Transaction ID and UTR ID');
+      }
+
+      console.log('✅ Transaction ID and UTR ID are available');
+
       // Prepare form data with normalized email and transaction/UTR IDs
       const registrationData = {
         ...formData,
@@ -131,6 +156,10 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       // Provide specific error guidance
       if (errorMessage.includes('Email already registered')) {
         setError('❌ This email is already registered. Please use a different email address.');
+      } else if (errorMessage.includes('Transaction ID')) {
+        setError('❌ ' + errorMessage);
+      } else if (errorMessage.includes('UTR ID')) {
+        setError('❌ ' + errorMessage);
       } else if (errorMessage.includes('500')) {
         setError('⚠️ Server error. Please check all fields are filled correctly and try again.');
       } else {
