@@ -10,7 +10,7 @@ import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import compression from 'compression';
 import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './utils/logger.js';
 import swaggerUi from 'swagger-ui-express';
@@ -938,6 +938,38 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   }
 });
 
+// Helper function to generate formatted approval message for WhatsApp
+function generateApprovalMessage(fullName, verificationId, college, branch, year, phone, events, amount, registrationId) {
+  const eventsList = Array.isArray(events) ? events.join(', ') : events || 'Registration';
+  
+  const message = `✅ *ARTIX 2026 - REGISTRATION APPROVED* ✅
+
+✅ Your registration has been approved!
+
+*🎫 Verification Details:*
+Verification ID: *${verificationId}*
+
+*👤 Participant Information:*
+Name: ${fullName}
+College: ${college}
+Branch: ${branch}
+Year: ${year}
+Phone: ${phone}
+
+*🎯 Event Details:*
+Events: ${eventsList}
+Total Amount: ₹${amount}
+Registration ID: ${registrationId}
+
+*📋 Verification Instructions:*
+Use your Verification ID at the event registration desk for quick entry verification.
+
+---
+For assistance, contact ARTIX Admin Team`;
+
+  return message;
+}
+
 // 4. Set Verification ID MANUALLY (Admin inputs verification ID)
 app.post('/api/admin/set-verification-id', async (req, res) => {
   try {
@@ -988,20 +1020,38 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
     const updatedReg = await registrationsCollection.findOne({ _id: registration._id });
     console.log(`✅ Verified: verification_id now = "${updatedReg?.verification_id}"`);
 
-    // Send WhatsApp notification with verification ID
-    const whatsappResult = await sendWhatsAppNotification(registration.phone, registration.full_name, trimmedVerifId);
-    console.log(`📱 WhatsApp notification sent:`, whatsappResult);
+    // Generate formatted WhatsApp message and wa.me link
+    const whatsappMessage = generateApprovalMessage(
+      registration.full_name,
+      trimmedVerifId,
+      registration.college_name || 'N/A',
+      registration.branch,
+      registration.year_of_study,
+      registration.phone,
+      registration.selected_events,
+      registration.total_amount,
+      registrationId
+    );
+
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const whatsappLink = `https://wa.me/${registration.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
 
     console.log(`✅ Verification ID set for ${registrationId}: ${trimmedVerifId}`);
+    console.log(`📱 WhatsApp link generated:`, whatsappLink);
 
     res.json({
       success: true,
-      message: 'Verification ID set successfully' + (whatsappResult.success ? ' and WhatsApp notification sent!' : ''),
+      message: 'Verification ID set successfully! Click the WhatsApp link to send the message.',
       registration: {
         registration_id: registrationId,
-        verification_id: trimmedVerifId
+        verification_id: trimmedVerifId,
+        phone: registration.phone
       },
-      whatsapp: whatsappResult
+      whatsapp: {
+        link: whatsappLink,
+        message: whatsappMessage,
+        manual: true
+      }
     });
 
   } catch (err) {

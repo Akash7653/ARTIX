@@ -252,11 +252,19 @@ export function AdminDashboard({ onLogout }: Props) {
       const result = await response.json();
       console.log(`✅ Verification ID set:`, result);
       
-      setMessage(`✅ Verification ID set successfully! WhatsApp sent to participant.`);
+      // Open WhatsApp with the pre-formatted message
+      if (result.whatsapp?.link) {
+        console.log(`📱 Opening WhatsApp link...`);
+        setTimeout(() => {
+          window.open(result.whatsapp.link, '_blank');
+        }, 500);
+      }
+      
+      setMessage(`✅ Verification ID set! WhatsApp will open to send the message.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
       setTimeout(loadData, 500);
-      setTimeout(() => setMessage(''), 4000);
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to set verification ID:', errorMsg);
