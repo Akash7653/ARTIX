@@ -39,21 +39,30 @@ async function connectDB() {
     paymentsCollection = db.collection('payments');
     teamMembersCollection = db.collection('team_members');
     
-    // Create indexes
+    // Create indexes for faster queries
     await registrationsCollection.createIndex({ email: 1 }, { unique: true });
     await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+    
+    // Indexes for pagination and filtering
+    await registrationsCollection.createIndex({ approval_status: 1 });
+    await registrationsCollection.createIndex({ created_at: -1 }); // For sorting recent first
+    await registrationsCollection.createIndex({ full_name: 1 }); // For searching by name
+    await registrationsCollection.createIndex({ phone: 1 }); // For searching by phone
+    
+    // Compound index for efficient pagination with status filter
+    await registrationsCollection.createIndex({ approval_status: 1, created_at: -1 });
     
     // Drop verification_id index if exists (to prevent null duplicate errors)
     try {
       await registrationsCollection.dropIndex({ verification_id: 1 });
-      console.log('✓ Dropped verification_id unique index');
+      logger.info('✓ Dropped verification_id unique index');
     } catch (e) {
       // Index might not exist, that's fine
     }
     
-    console.log('✅ Connected to MongoDB');
+    logger.info('Connected to MongoDB with optimized indexes');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
+    logError('MongoDB connection failed', err);
     process.exit(1);
   }
 }
@@ -1137,21 +1146,49 @@ app.get('/api/admin/export', async (req, res) => {
 // 9. Get All Registrations (for admin dashboard display)
 app.get('/api/admin/registrations', async (req, res) => {
   try {
-    console.log('📋 Fetching all registrations for admin dashboard...');
-    
-    // Get all registrations with pagination
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    // Get pagination parameters
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50)); // Max 100, min 1
     const skip = (page - 1) * limit;
     
+    // Get filter parameters
+    const approvalStatus = req.query.approval_status;
+    const searchQuery = req.query.search;
+    
+    // Build filter object
+    let filter = {};
+    if (approvalStatus && ['pending', 'approved', 'rejected'].includes(approvalStatus)) {
+      filter.approval_status = approvalStatus;
+    }
+    
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const searchRegex = new RegExp(searchQuery.trim(), 'i'); // Case-insensitive regex
+      filter.$or = [
+        { full_name: { $regex: searchRegex } },
+        { email: { $regex: searchRegex } },
+        { phone: { $regex: searchRegex } },
+        { registration_id: { $regex: searchRegex } }
+      ];
+    }
+    
+    logAdmin('Fetching registrations', {
+      page,
+      limit,
+      approvalStatus: approvalStatus || 'all',
+      hasSearch: !!searchQuery
+    });
+    
+    // Get total count for pagination
+    const totalCount = await registrationsCollection.countDocuments(filter);
+    const pages = Math.ceil(totalCount / limit);
+    
+    // Fetch registrations with sorting and pagination
     const registrations = await registrationsCollection
-      .find({})
+      .find(filter)
       .skip(skip)
       .limit(limit)
       .sort({ created_at: -1 })
       .toArray();
-
-    const totalCount = await registrationsCollection.countDocuments();
 
     // Format response
     const formattedData = registrations.map(reg => ({
@@ -1177,16 +1214,34 @@ app.get('/api/admin/registrations', async (req, res) => {
       entry_verified_at: reg.entry_verified_at || null
     }));
 
+    logAdmin('Registrations retrieved successfully', {
+      page,
+      totalCount,
+      returningCount: registrations.length,
+      totalPages: pages
+    });
+
     res.json({
       success: true,
-      totalCount,
-      page,
-      limit,
-      data: formattedData
+      data: formattedData,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        pages,
+        hasMore: page < pages,
+        hasPrevious: page > 1,
+        nextPage: page < pages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null
+      },
+      filters: {
+        approvalStatus: approvalStatus || 'all',
+        search: searchQuery || null
+      }
     });
 
   } catch (err) {
-    console.error('❌ Registrations fetch error:', err);
+    logError('Failed to fetch registrations', err);
     res.status(500).json({ error: 'Failed to fetch registrations', details: err.message });
   }
 });
