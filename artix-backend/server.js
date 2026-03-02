@@ -11,10 +11,12 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import compression from 'compression';
 import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './utils/logger.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
 import { validateUploadFile, generateSafeFilename } from './utils/fileValidator.js';
+import { registrationCache, statsCache } from './utils/cache.js';
 
 dotenv.config();
 
@@ -94,6 +96,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Performance Optimizations
+app.use(compression()); // Gzip compression for all responses
 
 // Security & Rate Limiting Middleware
 app.use(helmet()); // Add security headers
@@ -1325,6 +1330,16 @@ app.get('/api/admin/registrations', async (req, res) => {
     const approvalStatus = req.query.approval_status;
     const searchQuery = req.query.search;
     
+    // Build cache key based on filters
+    const cacheKey = `registrations_${page}_${limit}_${approvalStatus || 'all'}_${searchQuery || 'none'}`;
+    
+    // Check if data exists in cache
+    const cachedData = registrationCache.get(cacheKey);
+    if (cachedData) {
+      logAdmin('Registrations served from cache', { cacheKey });
+      return res.json(cachedData);
+    }
+    
     // Build filter object
     let filter = {};
     if (approvalStatus && ['pending', 'approved', 'rejected'].includes(approvalStatus)) {
@@ -1341,7 +1356,7 @@ app.get('/api/admin/registrations', async (req, res) => {
       ];
     }
     
-    logAdmin('Fetching registrations', {
+    logAdmin('Fetching registrations from database', {
       page,
       limit,
       approvalStatus: approvalStatus || 'all',
@@ -1391,7 +1406,7 @@ app.get('/api/admin/registrations', async (req, res) => {
       totalPages: pages
     });
 
-    res.json({
+    const responseData = {
       success: true,
       data: formattedData,
       pagination: {
@@ -1408,7 +1423,13 @@ app.get('/api/admin/registrations', async (req, res) => {
         approvalStatus: approvalStatus || 'all',
         search: searchQuery || null
       }
-    });
+    };
+
+    // Cache the response
+    registrationCache.set(cacheKey, responseData);
+    logAdmin('Registrations cached for future requests', { cacheKey });
+
+    res.json(responseData);
 
   } catch (err) {
     logError('Failed to fetch registrations', err);
