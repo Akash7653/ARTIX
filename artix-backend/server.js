@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './utils/logger.js';
 
 dotenv.config();
 
@@ -306,6 +307,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
     
     if (!password) {
+      logAdmin('Login attempt with missing password');
       return res.status(400).json({ 
         error: 'Password required',
         message: 'Please enter your admin password'
@@ -314,6 +316,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
     
     // Compare password (in production, use bcrypt)
     if (password !== ADMIN_PASSWORD) {
+      logAdmin('Failed login attempt - invalid password', { ip: req.ip });
       return res.status(401).json({ 
         error: 'Invalid password',
         message: 'The password you entered is incorrect'
@@ -330,7 +333,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
     
-    console.log('✅ Admin login successful');
+    logAdmin('Admin login successful', { ip: req.ip, token: token.substring(0, 10) + '...' });
     
     res.json({
       success: true,
@@ -341,7 +344,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
     });
     
   } catch (err) {
-    console.error('❌ Login error:', err);
+    logError('Login error', err);
     res.status(500).json({ 
       error: 'Login failed',
       message: err.message 
@@ -417,10 +420,11 @@ async function registerHandler(req, res) {
     // Check for duplicate email (case-insensitive)
     const existingUser = await registrationsCollection.findOne({ email: normalizedEmail });
     if (existingUser) {
-      console.warn(`⚠️ DUPLICATE EMAIL: ${normalizedEmail}`);
-      console.warn(`   Existing registration: ${existingUser.registration_id}`);
-      console.warn(`   Existing email in DB: "${existingUser.email}"`);
-      console.warn(`   Trying to register: "${normalizedEmail}"`);
+      logRegistration('Duplicate email registration attempt', { 
+        email: normalizedEmail, 
+        existingRegistration: existingUser.registration_id,
+        attemptedTime: new Date().toISOString()
+      });
       return res.status(409).json({ 
         error: 'Email already registered. Each email can only register once.',
         hint: `The email "${normalizedEmail}" was already registered. Please use a different email address.`
@@ -432,8 +436,10 @@ async function registerHandler(req, res) {
       transaction_id: transactionId.trim() 
     });
     if (existingTransaction) {
-      console.warn(`⚠️ DUPLICATE TRANSACTION ID: ${transactionId}`);
-      console.warn(`   Existing registration: ${existingTransaction.registration_id}`);
+      logRegistration('Duplicate transaction ID attempt', { 
+        transactionId: transactionId.trim(), 
+        existingRegistration: existingTransaction.registration_id
+      });
       return res.status(409).json({ 
         error: 'Transaction ID already registered.',
         hint: `The Transaction ID "${transactionId}" has already been used for registration. Please use a different Transaction ID.`
@@ -445,8 +451,10 @@ async function registerHandler(req, res) {
       utr_id: utrId.trim() 
     });
     if (existingUTR) {
-      console.warn(`⚠️ DUPLICATE UTR ID: ${utrId}`);
-      console.warn(`   Existing registration: ${existingUTR.registration_id}`);
+      logRegistration('Duplicate UTR ID attempt', { 
+        utrId: utrId.trim(), 
+        existingRegistration: existingUTR.registration_id
+      });
       return res.status(409).json({ 
         error: 'UTR ID already registered.',
         hint: `The UTR ID "${utrId}" has already been used for registration. Please use a different UTR ID.`
@@ -455,7 +463,11 @@ async function registerHandler(req, res) {
 
     // Generate registration ID ONLY (no verification ID)
     const registrationId = generateRegistrationId();
-    console.log(`📝 Processing registration: ${registrationId} for ${normalizedEmail}`);
+    logRegistration('Processing new registration', { 
+      registrationId, 
+      email: normalizedEmail,
+      college: collegeName
+    });
 
     // Parse team members if they're a string
     let parsedTeamMembers = [];
@@ -533,7 +545,13 @@ async function registerHandler(req, res) {
 
     // Insert registration
     const result = await registrationsCollection.insertOne(registrationDoc);
-    console.log(`✅ Registration inserted successfully:`, result.insertedId);
+    logRegistration('Registration created successfully', { 
+      registrationId,
+      email: normalizedEmail,
+      totalAmount,
+      events: selectedEventsArray,
+      teamMemberCount: parsedTeamMembers.length
+    });
 
     // Create payment record
     const paymentDoc = {
@@ -545,7 +563,7 @@ async function registerHandler(req, res) {
       created_at: new Date()
     };
     await paymentsCollection.insertOne(paymentDoc);
-    console.log(`✅ Payment record created`);
+    logRegistration('Payment record created', { registrationId, amount: totalAmount });
 
     // Insert team members if any
     if (parsedTeamMembers.length > 0) {
@@ -568,10 +586,10 @@ async function registerHandler(req, res) {
     });
 
   } catch (err) {
-    console.error('❌ Registration error:', err);
-    console.error('Error code:', err.code);
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
+    logError('Registration processing failed', err, { 
+      email: email?.toLowerCase().trim(),
+      registrationId: registrationId || 'unknown'
+    });
     
     if (req.file) {
       try {
@@ -587,7 +605,9 @@ async function registerHandler(req, res) {
     
     // Check for MongoDB duplicate key error (code 11000)
     if (err.code === 11000) {
-      console.error('🔴 DUPLICATE KEY ERROR - Check if database was properly cleared');
+      logError('Duplicate key error in registration', err, { 
+        field: Object.keys(err.keyPattern || {})[0] 
+      });
       const field = Object.keys(err.keyPattern || {})[0] || 'email';
       const value = err.keyValue ? err.keyValue[field] : 'unknown';
       errorMessage = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered: ${value}`;
@@ -1409,6 +1429,7 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     const { registrationId } = req.body;
 
     if (!registrationId) {
+      logWhatsApp('WhatsApp send attempt without registration ID');
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
@@ -1417,10 +1438,12 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     });
 
     if (!registration) {
+      logWhatsApp('WhatsApp send attempt for non-existent registration', { registrationId });
       return res.status(404).json({ error: 'Registration not found' });
     }
 
     if (!registration.phone) {
+      logWhatsApp('WhatsApp send attempt without phone number', { registrationId });
       return res.status(400).json({ error: 'Participant phone number not found' });
     }
 
@@ -1488,7 +1511,12 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     const encodedMessage = encodeURIComponent(message);
     const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
-    console.log(`✅ WhatsApp wa.me link generated for admin to send to: ${registration.phone}`);
+    logWhatsApp('WhatsApp message prepared for sending', { 
+      registrationId,
+      participantName: registration.full_name,
+      phone: registration.phone,
+      messageLength: message.length
+    });
     
     // Update notification_sent flag in database
     await registrationsCollection.updateOne(
@@ -1503,6 +1531,11 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
       }
     );
 
+    logWhatsApp('Notification flag updated in database', { 
+      registrationId,
+      phone: registration.phone
+    });
+
     res.json({
       success: true,
       message: '✅ WhatsApp message ready to send!',
@@ -1516,7 +1549,9 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
       }
     });
   } catch (err) {
-    console.error('❌ Error in send-whatsapp-to-participant endpoint:', err);
+    logError('WhatsApp send endpoint failed', err, { 
+      registrationId: req.body?.registrationId 
+    });
     res.status(500).json({ 
       error: 'Failed to generate WhatsApp link', 
       details: err.message 
@@ -1809,6 +1844,7 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
     const { message, approvalStatus, adminPhone = ADMIN_PHONE_NUMBER, whatsappType = 'all' } = req.body;
 
     if (!message || message.trim().length === 0) {
+      logWhatsApp('Bulk send attempt without message content');
       return res.status(400).json({ error: 'Message content is required' });
     }
 
@@ -1827,11 +1863,11 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
       statusLabel = 'all registrations (pending + approved)';
     }
 
-    console.log(`\n📢 === BULK WHATSAPP SENDING STARTED ===`);
-    console.log(`📱 From Admin Phone: ${adminPhone}`);
-    console.log(`📱 Target Status: ${statusLabel}`);
-    console.log(`📱 WhatsApp Type: ${whatsappType} (Normal | Business | All)`);
-    console.log(`📋 Message: ${message.substring(0, 50)}...`);
+    logWhatsApp('Bulk WhatsApp send initiated', { 
+      targetStatus: statusLabel,
+      whatsappType,
+      messageLength: message.length
+    });
 
     // Get all registrations matching criteria (must have phone number)
     const registrations = await registrationsCollection.find({
@@ -1840,6 +1876,7 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
     }).toArray();
 
     if (registrations.length === 0) {
+      logWhatsApp('No registrations found for bulk send', { targetStatus: statusLabel });
       return res.status(400).json({ 
         error: `No registrations matching criteria found`,
         details: `No registrations with status "${statusLabel}" and valid phone numbers found. Please ensure registrations exist and have phone numbers.`,
@@ -1847,7 +1884,10 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
       });
     }
 
-    console.log(`📨 Total registrations to notify: ${registrations.length}`);
+    logWhatsApp('Found registrations for bulk send', { 
+      count: registrations.length,
+      targetStatus: statusLabel
+    });
 
     const results = {
       successful: [],  // Changed from 'prepared' to match frontend expectations
@@ -1880,7 +1920,10 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
 
         results.waLinks.push(waLink);
 
-        console.log(`✅ wa.me link prepared for ${registration.phone}`);
+        logWhatsApp('Bulk send link prepared', { 
+          registrationId: registration.registration_id,
+          phone: registration.phone
+        });
 
         // Mark as notified in database
         await registrationsCollection.updateOne(
@@ -1894,7 +1937,10 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
         );
 
       } catch (err) {
-        console.error(`❌ Failed to prepare link for ${registration.phone}:`, err.message);
+        logError('Failed to prepare bulk send link', err, { 
+          phone: registration.phone,
+          registrationId: registration.registration_id
+        });
         results.failed.push({
           registration_id: registration.registration_id,
           phone: registration.phone,
@@ -1904,9 +1950,11 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
       }
     }
 
-    console.log(`📢 === BULK WHATSAPP LINKS PREPARED ===`);
-    console.log(`✅ Prepared: ${results.successful.length}`);
-    console.log(`❌ Failed: ${results.failed.length}`);
+    logWhatsApp('Bulk WhatsApp send completed', { 
+      successful: results.successful.length,
+      failed: results.failed.length,
+      total: results.total
+    });
 
     res.json({
       success: true,
@@ -1925,7 +1973,9 @@ app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Bulk WhatsApp link preparation error:', err);
+    logError('Bulk WhatsApp send failed', err, { 
+      approvalStatus: req.body?.approvalStatus
+    });
     res.status(500).json({ 
       error: 'Bulk WhatsApp link preparation failed', 
       details: err.message 
@@ -2023,13 +2073,16 @@ app.post('/api/admin/clear-database', async (req, res) => {
 async function startServer() {
   try {
     await connectDB();
+    logger.info('Connected to MongoDB successfully');
     
     app.listen(PORT, () => {
       console.log(`🚀 ARTIX Server running on http://localhost:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Server started on port ${PORT}`, { environment: process.env.NODE_ENV || 'development' });
     });
   } catch (err) {
     console.error('Server startup error:', err);
+    logError('Server startup failed', err);
     process.exit(1);
   }
 }
@@ -2039,6 +2092,7 @@ startServer();
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n📛 Shutting down...');
+  logger.info('Server shutdown initiated');
   await client.close();
   process.exit(0);
 });

@@ -1,0 +1,4 @@
+# Logs directory - contains application logs
+# This directory is for development/debugging purposes
+*.log
+*.log.*
