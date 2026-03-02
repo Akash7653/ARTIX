@@ -406,24 +406,30 @@ export function AdminDashboard({ onLogout }: Props) {
 
       // New free WhatsApp Web approach - show wa.me links
       if (data.results && data.results.waLinks && data.results.waLinks.length > 0) {
-        setBulkMessageResult(data.results);
-        const count = data.results.prepared.length;
+        // Set result with count properties for display
+        const resultWithCounts = {
+          ...data.results,
+          successful_count: data.results.successful.length,
+          failed_count: data.results.failed.length
+        };
+        setBulkMessageResult(resultWithCounts);
+        const count = data.results.successful.length;
         setMessage(`✅ ${count} WhatsApp messages ready! Links have been generated.`);
         setMessageType('success');
         setBulkMessage('');
         
         // Option to open first link or show first few links
         const shouldOpenLink = window.confirm(
-          `✅ Prepared ${count} WhatsApp messages\n\nTo send these messages, you can:\n- Click on individual "Send via WhatsApp" buttons\n- Or copy the wa.me links and share them\n\nNote: Participants automatically receive messages during registration.`
+          `✅ Prepared ${count} WhatsApp messages\n\nTo send these messages, you can:\n- Click on individual "Send via WhatsApp" buttons for each participant\n- Or use the generated wa.me links to send manually\n\nNote: Participants automatically receive messages during registration.`
         );
         
-        if (shouldOpenLink && data.results.prepared[0]?.waLink) {
-          window.open(data.results.prepared[0].waLink, '_blank');
+        if (shouldOpenLink && data.results.successful[0]?.waLink) {
+          window.open(data.results.successful[0].waLink, '_blank');
         }
         
         setTimeout(loadData, 1000);
       } else {
-        setMessage(`✅ ${data.summary.prepared_count || 'All'} WhatsApp messages prepared using free wa.me method`);
+        setMessage(`✅ ${data.summary.successful_count || 'All'} WhatsApp messages prepared using free wa.me method`);
         setMessageType('success');
         setBulkMessage('');
         setTimeout(loadData, 1000);

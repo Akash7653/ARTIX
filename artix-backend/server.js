@@ -1714,7 +1714,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
     console.log(`📨 Total registrations to notify: ${registrations.length}`);
 
     const results = {
-      prepared: [],
+      successful: [],  // Changed from 'prepared' to match frontend expectations
       failed: [],
       total: registrations.length,
       waLinks: []
@@ -1735,7 +1735,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
         const encodedMessage = encodeURIComponent(personalizedMessage);
         const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
-        results.prepared.push({
+        results.successful.push({
           registration_id: registration.registration_id,
           phone: registration.phone,
           name: registration.full_name,
@@ -1769,19 +1769,19 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
     }
 
     console.log(`📢 === BULK WHATSAPP LINKS PREPARED ===`);
-    console.log(`✅ Prepared: ${results.prepared.length}`);
+    console.log(`✅ Prepared: ${results.successful.length}`);
     console.log(`❌ Failed: ${results.failed.length}`);
 
     res.json({
       success: true,
-      message: `WhatsApp messages ready for ${results.prepared.length} participants`,
+      message: `WhatsApp messages ready for ${results.successful.length} participants`,
       method: 'WhatsApp Web (Free - no API required)',
       results: results,
       summary: {
         total_participants: results.total,
-        prepared_count: results.prepared.length,
+        successful_count: results.successful.length,
         failed_count: results.failed.length,
-        success_rate: ((results.prepared.length / results.total) * 100).toFixed(2) + '%'
+        success_rate: ((results.successful.length / results.total) * 100).toFixed(2) + '%'
       },
       note: 'Auto participant notifications: Participants automatically receive WhatsApp messages during registration through the free wa.me method. Admin can use the wa.me links above for additional bulk messaging.'
     });
