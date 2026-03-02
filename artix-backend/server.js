@@ -1018,13 +1018,15 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
 
     console.log(`📋 Admin Approval Request:`, { registrationId, approved, rejected });
 
-    if (approved === undefined && rejected === undefined) {
-      console.error('❌ Missing both approved and rejected in body');
-      return res.status(400).json({ error: 'Please specify approved or rejected status' });
-    }
-
-    if (approved && rejected) {
-      return res.status(400).json({ error: 'Cannot approve and reject simultaneously' });
+    // Determine the approval status
+    let finalApprovalStatus = null;
+    if (approved === true) {
+      finalApprovalStatus = 'approved';
+    } else if (approved === false || rejected === true) {
+      finalApprovalStatus = 'rejected';
+    } else {
+      console.error('❌ Missing approval status in body');
+      return res.status(400).json({ error: 'Please specify approved: true or false' });
     }
 
     const registration = await registrationsCollection.findOne({
@@ -1035,17 +1037,17 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       return res.status(404).json({ error: 'Registration not found' });
     }
 
-    if (registration.approval_status === 'approved') {
+    if (registration.approval_status === 'approved' || registration.approval_status === 'rejected') {
       return res.status(400).json({ error: 'This entry has already been reviewed' });
     }
 
-    // Update approval status - DO NOT generate verification ID yet
+    // Update approval status
     const approvalDate = new Date();
     const updateDoc = {
       $set: {
-        approval_status: approved ? 'approved' : 'rejected',
+        approval_status: finalApprovalStatus,
         approval_date: approvalDate,
-        selected_for_event: approved
+        selected_for_event: finalApprovalStatus === 'approved'
       }
     };
 
@@ -1054,16 +1056,19 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       updateDoc
     );
 
-    console.log(`✅ ${approved ? 'Approved' : 'Rejected'}: ${registrationId}`);
-    logAdmin(`Registration ${approved ? 'approved' : 'rejected'}`, { registrationId, participantName: registration.full_name });
+    console.log(`✅ ${finalApprovalStatus === 'approved' ? 'Approved' : 'Rejected'}: ${registrationId}`);
+    logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
+      registrationId, 
+      participantName: registration.full_name 
+    });
 
     res.json({
       success: true,
-      message: approved ? '✅ Participant APPROVED. Now set verification ID.' : '❌ Participant REJECTED',
+      message: finalApprovalStatus === 'approved' ? '✅ Participant APPROVED. Now set verification ID.' : '❌ Participant REJECTED',
       registration: {
         registration_id: registrationId,
-        approval_status: approved ? 'approved' : 'rejected',
-        selected_for_event: approved,
+        approval_status: finalApprovalStatus,
+        selected_for_event: finalApprovalStatus === 'approved',
         verification_id: null
       }
     });

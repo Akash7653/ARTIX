@@ -181,22 +181,40 @@ export function AdminDashboard({ onLogout }: Props) {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
       const token = localStorage.getItem('adminToken');
+      
+      console.log(`❌ Rejecting registration: ${registrationId}`);
+      console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
+      
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rejected: true })
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ approved: false })
       });
 
-      if (!response.ok) throw new Error('Rejection failed');
+      console.log(`📊 Response status: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Rejection error:', errorData);
+        throw new Error(errorData.error || 'Rejection failed');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Rejection response:`, result);
       
       setMessage('❌ Participant Rejected');
       setMessageType('success');
       setTimeout(loadData, 500);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Failed to reject');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to reject:', errorMsg);
+      setMessage(`❌ Failed to reject: ${errorMsg}`);
       setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
