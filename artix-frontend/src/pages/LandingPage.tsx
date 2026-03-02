@@ -10,6 +10,7 @@ import './LandingPage.css';
 export function LandingPage() {
   const [showColorSelector, setShowColorSelector] = useState(false);
   const [bgColor, setBgColor] = useState('#000000');
+  const [showAdminModal, setShowAdminModal] = useState(false);
 
   useEffect(() => {
     const savedColor = localStorage.getItem('artix_bg_color');
@@ -18,16 +19,36 @@ export function LandingPage() {
 
   const handleBgColorChange = (color) => {
     setBgColor(color);
+    localStorage.setItem('artix_bg_color', color);
   };
 
   const handleCTAClick = () => {
-    // Scroll to registration section or navigate
-    const registrationSection = document.getElementById('registration');
-    registrationSection?.scrollIntoView({ behavior: 'smooth' });
+    // Navigate to registration page
+    window.history.pushState({}, '', '/register');
+    window.location.pathname === '/register' && window.location.reload();
+  };
+
+  const navigateToRegister = () => {
+    window.location.href = '/register';
+  };
+
+  const handleAdminClick = () => {
+    window.location.href = '/admin-scan';
   };
 
   return (
-    <main className="w-full overflow-hidden bg-black">
+    <main className="w-full overflow-hidden bg-black relative">
+      {/* Admin Button */}
+      <div className="fixed top-4 left-4 z-50 md:top-6 md:left-6">
+        <button
+          onClick={handleAdminClick}
+          className="inline-flex items-center gap-2 px-4 py-3 md:px-6 md:py-4 rounded-lg font-bold text-lg md:text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-700 hover:to-orange-700"
+          title="Open Admin Panel"
+        >
+          <span>🔐</span>
+          <span>Admin</span>
+        </button>
+      </div>
       {/* Hero Section with Video Background */}
       <HeroSection
         title="ARTIX 2026"
@@ -103,7 +124,7 @@ export function LandingPage() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={handleCTAClick}
+              onClick={navigateToRegister}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl"
             >
               Register Now
@@ -142,13 +163,16 @@ export function LandingPage() {
             Complete your registration to participate in India's premier IoT and Robotics event.
           </Body>
           
-          {/* Placeholder for registration form */}
+          {/* CTA Button to Registration */}
           <div className="bg-gray-900/50 backdrop-blur-lg border border-gray-800 rounded-2xl p-12">
-            <Body className="text-gray-400">
-              Registration form will be integrated here. Click the button below to proceed.
+            <Body className="text-gray-400 mb-6">
+              Ready to join India's premier IoT and Robotics event?
             </Body>
-            <button className="mt-6 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all duration-300">
-              Open Registration Form
+            <button
+              onClick={navigateToRegister}
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+            >
+              Open Registration Form →
             </button>
           </div>
         </div>

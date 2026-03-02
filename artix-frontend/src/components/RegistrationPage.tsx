@@ -8,8 +8,8 @@ import { AdminModal } from './AdminModal';
 import { Sun, Moon } from 'lucide-react';
 import type { RegistrationFormData } from '../types/registration';
 
-export function RegistrationPage() {
-  const [showLanding, setShowLanding] = useState(true);
+export function RegistrationPage({ fromLandingPage = false }) {
+  const [showLanding, setShowLanding] = useState(fromLandingPage ? false : true);
   const [darkMode, setDarkMode] = useState(true);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [formData, setFormData] = useState<RegistrationFormData>({
@@ -35,6 +35,10 @@ export function RegistrationPage() {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  const handleGoBack = () => {
+    window.location.href = '/';
+  };
+
   if (showConfirmation) {
     return (
       <ConfirmationPage
@@ -47,7 +51,7 @@ export function RegistrationPage() {
   if (showLanding) {
     return (
       <>
-        <LandingPage
+        <LandingPage2
           onStart={() => setShowLanding(false)}
           darkMode={darkMode}
           onToggleTheme={() => setDarkMode(!darkMode)}
@@ -82,14 +86,14 @@ export function RegistrationPage() {
       <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
         {/* Back Button */}
         <button
-          onClick={() => setShowLanding(true)}
+          onClick={() => fromLandingPage ? handleGoBack() : setShowLanding(true)}
           className={`mb-6 flex items-center gap-2 px-5 py-3 text-lg font-semibold rounded-lg transition-all duration-300 ${
             darkMode
               ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400'
           }`}
         >
-          ← Back to Home
+          ← Back {fromLandingPage ? 'to Landing Page' : 'to Home'}
         </button>
 
         <header className="text-center mb-12">
@@ -162,7 +166,7 @@ export function RegistrationPage() {
   );
 }
 
-function LandingPage({
+function LandingPage2({
   onStart,
   darkMode,
   onToggleTheme,
