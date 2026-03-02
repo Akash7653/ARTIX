@@ -9,6 +9,8 @@ import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
@@ -117,6 +119,33 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true // Don't count successful logins
 });
+
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || 'artix-2026-super-secret-key-change-in-production';
+const JWT_EXPIRES_IN = '24h';
+
+// Middleware to verify JWT token
+const verifyJWT = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
+  
+  if (!token) {
+    return res.status(401).json({ 
+      error: 'No token provided',
+      message: 'Please provide a valid authentication token'
+    });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.admin = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ 
+      error: 'Invalid token',
+      message: 'Token is invalid or has expired. Please login again.'
+    });
+  }
+};
 
 // File upload setup
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -265,6 +294,56 @@ app.post('/api/check-transaction-utr', async (req, res) => {
     console.error('Error checking transaction/UTR:', err);
     res.status(500).json({ 
       error: 'Error checking transaction/UTR availability',
+      message: err.message 
+    });
+  }
+});
+
+// 0. Admin Login - Generate JWT Token
+app.post('/api/admin/login', loginLimiter, (req, res) => {
+  try {
+    const { password } = req.body;
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+    
+    if (!password) {
+      return res.status(400).json({ 
+        error: 'Password required',
+        message: 'Please enter your admin password'
+      });
+    }
+    
+    // Compare password (in production, use bcrypt)
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).json({ 
+        error: 'Invalid password',
+        message: 'The password you entered is incorrect'
+      });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        admin: true,
+        loginTime: new Date().toISOString()
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+    
+    console.log('✅ Admin login successful');
+    
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token: token,
+      expiresIn: JWT_EXPIRES_IN,
+      type: 'Bearer'
+    });
+    
+  } catch (err) {
+    console.error('❌ Login error:', err);
+    res.status(500).json({ 
+      error: 'Login failed',
       message: err.message 
     });
   }
