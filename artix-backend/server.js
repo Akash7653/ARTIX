@@ -101,8 +101,8 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '1gb' }));
+app.use(express.urlencoded({ limit: '1gb', extended: true }));
 
 // Performance Optimizations
 app.use(compression()); // Gzip compression for all responses
@@ -207,9 +207,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB limit
-  },
+  // No file size limits - allowing unlimited uploads
   fileFilter: (req, file, cb) => {
     // Log incoming file details for debugging
     console.log(`📤 File upload received:`, {
@@ -316,14 +314,8 @@ const handleUploadError = (err, req, res, callback) => {
     });
     logError('File upload error handler triggered', err);
     
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      console.log(`⚠️ File size limit exceeded`);
-      return res.status(413).json({ 
-        error: 'File too large. Maximum file size is 50MB.',
-        details: `File size exceeds limit`,
-        errorCode: 'LIMIT_FILE_SIZE'
-      });
-    }
+    // File size limit check removed
+    // Multer will handle limit errors if configured
     
     // File validation errors from fileFilter
     if (err.message && err.message.includes('Invalid file type')) {

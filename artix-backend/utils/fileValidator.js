@@ -135,18 +135,8 @@ export function validateUploadFile(file, maxSizeInMB = 10) {
     };
   }
 
-  // Validate file size
-  if (!isValidFileSize(file.size, maxSizeInMB)) {
-    return {
-      valid: false,
-      error: `File size exceeds ${maxSizeInMB}MB limit.`,
-      details: {
-        fileSize: file.size,
-        maxSize: maxSizeInMB * 1024 * 1024,
-        fileSizeInMB: (file.size / (1024 * 1024)).toFixed(2)
-      }
-    };
-  }
+  // File size validation removed - allowing uploads of any size
+  // (Multer has its own size limits if needed)
 
   // All validations passed
   return {
