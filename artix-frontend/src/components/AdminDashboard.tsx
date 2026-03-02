@@ -70,6 +70,7 @@ export function AdminDashboard({ onLogout }: Props) {
   const [sendingBulkMessage, setSendingBulkMessage] = useState(false);
   const [bulkMessageResult, setBulkMessageResult] = useState<any>(null);
   const [whatsappType, setWhatsappType] = useState<'normal' | 'business' | 'all'>('all');
+  const [approvalStatusFilter, setApprovalStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [adminPhone, setAdminPhone] = useState('+918919068236');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -392,9 +393,9 @@ export function AdminDashboard({ onLogout }: Props) {
       const response = await fetch(`${baseUrl}/admin/bulk-send-whatsapp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: bulkMessage, 
-          approvalStatus: 'approved', 
+        body: JSON.stringify({
+          message: bulkMessage,
+          approvalStatus: approvalStatusFilter === 'all' ? undefined : approvalStatusFilter,
           adminPhone: adminPhone,
           whatsappType: whatsappType
         })
@@ -1207,6 +1208,40 @@ export function AdminDashboard({ onLogout }: Props) {
                   </p>
                 </div>
 
+                {/* Approval Status Filter */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Send To: Registration Status 🎯
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'pending', label: 'Pending', icon: '⏳' },
+                      { value: 'approved', label: 'Approved', icon: '✅' },
+                      { value: 'all', label: 'All (Both)', icon: '📋' }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setApprovalStatusFilter(option.value as 'all' | 'pending' | 'approved')}
+                        className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
+                          approvalStatusFilter === option.value
+                            ? darkMode
+                              ? 'bg-blue-600/40 border-blue-500 text-blue-200'
+                              : 'bg-blue-100 border-blue-500 text-blue-900'
+                            : darkMode
+                              ? 'bg-gray-800/40 border-gray-700/50 text-gray-300 hover:border-gray-600'
+                              : 'bg-white/50 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        {option.icon} {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    💡 Choose which registration statuses to send messages to. "All" sends to both pending and approved registrations.
+                  </p>
+                </div>
+
                 {/* Message Template Info */}
                 <div>
                   <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1275,6 +1310,7 @@ export function AdminDashboard({ onLogout }: Props) {
                     setBulkMessageResult(null);
                     setBulkMessage('');
                     setWhatsappType('all');
+                    setApprovalStatusFilter('all');
                   }}
                   disabled={sendingBulkMessage}
                   className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 ${

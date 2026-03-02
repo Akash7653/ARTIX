@@ -1687,28 +1687,44 @@ app.post('/api/admin/verify-entry', async (req, res) => {
 // 13. Bulk Send WhatsApp Messages to All Approved Participants
 app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
   try {
-    const { message, approvalStatus = 'approved', adminPhone = ADMIN_PHONE_NUMBER, whatsappType = 'all' } = req.body;
+    const { message, approvalStatus, adminPhone = ADMIN_PHONE_NUMBER, whatsappType = 'all' } = req.body;
 
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message content is required' });
     }
 
+    // Determine which statuses to query
+    let statusQuery;
+    let statusLabel = 'all registrations';
+    if (approvalStatus === 'pending') {
+      statusQuery = { approval_status: 'pending' };
+      statusLabel = 'pending registrations (awaiting approval)';
+    } else if (approvalStatus === 'approved') {
+      statusQuery = { approval_status: 'approved' };
+      statusLabel = 'approved registrations only';
+    } else {
+      // 'all' or undefined - send to both pending and approved
+      statusQuery = { approval_status: { $in: ['pending', 'approved'] } };
+      statusLabel = 'all registrations (pending + approved)';
+    }
+
     console.log(`\n📢 === BULK WHATSAPP SENDING STARTED ===`);
     console.log(`📱 From Admin Phone: ${adminPhone}`);
+    console.log(`📱 Target Status: ${statusLabel}`);
     console.log(`📱 WhatsApp Type: ${whatsappType} (Normal | Business | All)`);
     console.log(`📋 Message: ${message.substring(0, 50)}...`);
 
-    // Get all registrations matching criteria (with verification ID)
+    // Get all registrations matching criteria (must have phone number)
     const registrations = await registrationsCollection.find({
-      approval_status: approvalStatus || 'approved',
-      verification_id: { $exists: true, $ne: null, $ne: '' },
+      ...statusQuery,
       phone: { $exists: true, $ne: null, $ne: '' }
     }).toArray();
 
     if (registrations.length === 0) {
       return res.status(400).json({ 
-        error: 'No approved registrations with phone numbers found',
-        message: 'Please ensure participants are approved and have phone numbers set'
+        error: `No registrations matching criteria found`,
+        details: `No registrations with status "${statusLabel}" and valid phone numbers found. Please ensure registrations exist and have phone numbers.`,
+        targetStatus: statusLabel
       });
     }
 
@@ -1775,8 +1791,9 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
 
     res.json({
       success: true,
-      message: `WhatsApp messages ready for ${results.successful.length} participants`,
+      message: `WhatsApp messages ready for ${results.successful.length} participants (${statusLabel})`,
       method: 'WhatsApp Web (Free - no API required)',
+      targetStatus: statusLabel,
       whatsappType: whatsappType,
       results: results,
       summary: {
@@ -1785,7 +1802,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
         failed_count: results.failed.length,
         success_rate: ((results.successful.length / results.total) * 100).toFixed(2) + '%'
       },
-      note: `Auto participant notifications: Participants automatically receive WhatsApp messages during registration through the free wa.me method. Admin bulk send configured for: ${whatsappType === 'all' ? 'All WhatsApp Users (Normal + Business)' : whatsappType === 'normal' ? 'Normal WhatsApp Accounts' : 'WhatsApp Business Accounts'}. Admin can use the wa.me links above for additional bulk messaging.`
+      note: `Admin bulk send configured for: ${statusLabel}. WhatsApp type: ${whatsappType === 'all' ? 'All WhatsApp Users (Normal + Business)' : whatsappType === 'normal' ? 'Normal WhatsApp Accounts' : 'WhatsApp Business Accounts'}. Admin can use the wa.me links above for additional bulk messaging.`
     });
 
   } catch (err) {
