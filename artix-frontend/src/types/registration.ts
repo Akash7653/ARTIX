@@ -38,3 +38,5 @@ export const INDIVIDUAL_EVENTS: IndividualEvent[] = [
   { id: 'registration', name: 'Registration', price: 70 },
   { id: 'project_expo', name: 'Project Expo', price: 150 },
 ];
+
+export const COMBO_OPTIONS: ComboOption[] = [];
