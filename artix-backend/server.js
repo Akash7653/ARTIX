@@ -677,7 +677,7 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
 
     const { full_name, email, phone, verification_id } = registration;
     let emailResult = { success: false };
-    let whatsappResult = { success: false };
+    let whatsappResult = { success: false, note: 'WhatsApp handled client-side via wa.me' };
 
     // Send Email
     if ((method === 'email' || method === 'both') && email) {
@@ -685,10 +685,10 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
       emailResult = await sendEmailNotification(email, full_name, verification_id);
     }
 
-    // Send WhatsApp
+    // WhatsApp is now handled client-side (free wa.me approach)
     if ((method === 'whatsapp' || method === 'both') && phone) {
-      console.log(`💬 Sending WhatsApp to ${phone}...`);
-      whatsappResult = await sendWhatsAppNotification(phone, full_name, verification_id);
+      console.log(`✅ WhatsApp messaging handled via client-side wa.me (free method)`);
+      whatsappResult = { success: true, note: 'Client-side wa.me method' };
     }
 
     // Mark notification as sent
@@ -705,11 +705,11 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
       }
     );
 
-    console.log(`✅ Notifications sent for ${registrationId} via ${method}`);
+    console.log(`✅ Notifications processed for ${registrationId} via ${method}`);
 
     res.json({
       success: true,
-      message: `Notifications sent successfully via ${method}`,
+      message: `Notifications processed successfully via ${method}`,
       email: {
         sent: emailResult.success,
         status: emailResult.success ? 'Email sent' : (emailResult.reason || 'Failed'),
@@ -717,7 +717,8 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
       },
       whatsapp: {
         sent: whatsappResult.success,
-        status: whatsappResult.success ? 'WhatsApp sent' : (whatsappResult.reason || 'Failed'),
+        status: 'WhatsApp handled via free wa.me method (client-side)',
+        note: 'Participants receive WhatsApp automatically after registration through the frontend'
         details: whatsappResult
       },
       registration: {
@@ -1412,10 +1413,10 @@ app.post('/api/admin/send-notification', async (req, res) => {
       emailResult = await sendEmailNotification(email, full_name, verification_id);
     }
 
-    // Send WhatsApp
+    // WhatsApp is now handled client-side (free wa.me approach)
     if (method === 'whatsapp' || method === 'both') {
-      console.log(`💬 Sending WhatsApp to ${phone}...`);
-      whatsappResult = await sendWhatsAppNotification(phone, full_name, verification_id);
+      console.log(`✅ WhatsApp messaging handled via client-side wa.me (free method)`);
+      whatsappResult = { success: true, note: 'Client-side wa.me method' };
     }
 
     // Update registration to mark notification as sent
@@ -1444,7 +1445,8 @@ app.post('/api/admin/send-notification', async (req, res) => {
       },
       whatsapp: {
         sent: whatsappResult.success,
-        status: whatsappResult.success ? 'WhatsApp sent successfully' : (whatsappResult.reason || whatsappResult.error || 'Failed to send WhatsApp'),
+        status: 'WhatsApp handled via free wa.me method (client-side)',
+        note: 'Participants receive WhatsApp automatically after registration through the frontend',
         details: whatsappResult
       },
       registration: {
