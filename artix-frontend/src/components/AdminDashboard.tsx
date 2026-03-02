@@ -140,24 +140,40 @@ export function AdminDashboard({ onLogout }: Props) {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
       const token = localStorage.getItem('adminToken');
+      
+      console.log(`👤 Approving registration: ${registrationId}`);
+      console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
+      
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({ approved: true })
       });
 
-      if (!response.ok) throw new Error('Approval failed');
+      console.log(`📊 Response status: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Approval error:', errorData);
+        throw new Error(errorData.error || 'Approval failed');
+      }
       
       const result = await response.json();
+      console.log(`✅ Approval response:`, result);
+      
       setMessage(`✅ Approved! Now enter the Verification ID.`);
       setMessageType('success');
       setTimeout(loadData, 500);
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
-      setMessage('❌ Failed to approve');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to approve:', errorMsg);
+      setMessage(`❌ Failed to approve: ${errorMsg}`);
       setMessageType('error');
-      console.error(err);
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
@@ -197,24 +213,38 @@ export function AdminDashboard({ onLogout }: Props) {
     setSettingVerificationId(registrationId);
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      
+      console.log(`🔐 Setting verification ID for: ${registrationId}`);
+      console.log(`🔐 Verification ID: ${verificationId}`);
+      
       const response = await fetch(`${baseUrl}/admin/set-verification-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ registrationId, verificationId })
       });
 
-      if (!response.ok) throw new Error('Failed to set verification ID');
+      console.log(`📊 Response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(errorData.error || 'Failed to set verification ID');
+      }
       
-      setMessage(`✅ Verification ID set successfully!`);
+      const result = await response.json();
+      console.log(`✅ Verification ID set:`, result);
+      
+      setMessage(`✅ Verification ID set successfully! WhatsApp sent to participant.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
       setTimeout(loadData, 500);
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
-      setMessage('❌ Failed to set verification ID');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to set verification ID:', errorMsg);
+      setMessage(`❌ Failed: ${errorMsg}`);
       setMessageType('error');
-      console.error(err);
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     } finally {
       setSettingVerificationId(null);
     }
@@ -233,28 +263,37 @@ export function AdminDashboard({ onLogout }: Props) {
     setVerifyingEntry(true);
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      
+      console.log(`✅ Verifying entry with ID: ${verificationId}`);
+      
       const response = await fetch(`${baseUrl}/admin/verify-entry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verification_id: verificationId })
       });
 
+      console.log(`📊 Response status: ${response.status}`);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error('❌ Verification error:', error);
         throw new Error(error.error || 'Verification failed');
       }
       
       const result = await response.json();
-      setMessage(`✅ Entry Verified! ${result.participant.full_name} from ${result.participant.college_name}`);
+      console.log(`✅ Entry verified:`, result);
+      
+      setMessage(`✅ Entry Verified! ${result.participant?.full_name || 'Participant'} from ${result.participant?.college_name || 'N/A'}`);
       setMessageType('success');
       setEntryVerificationId('');
       setTimeout(loadData, 500);
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage(`❌ ${err.message || 'Failed to verify entry'}`);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to verify entry:', errorMsg);
+      setMessage(`❌ ${errorMsg}`);
       setMessageType('error');
-      console.error(err);
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     } finally {
       setVerifyingEntry(false);
     }
@@ -931,15 +970,21 @@ export function AdminDashboard({ onLogout }: Props) {
                       <div>
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         <div className="flex flex-wrap gap-2">
-                          {reg.selected_events?.map((event, i) => (
-                            <span key={i} className={`px-3 py-1 rounded-full text-xs border ${
-                              darkMode
-                                ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
-                                : 'bg-blue-100 text-blue-700 border-blue-300'
-                            }`}>
-                              {event.replace(/_/g, ' ')}
+                          {reg.selected_events && reg.selected_events.length > 0 ? (
+                            reg.selected_events.map((event, i) => (
+                              <span key={i} className={`px-3 py-1 rounded-full text-xs border ${
+                                darkMode
+                                  ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                  : 'bg-blue-100 text-blue-700 border-blue-300'
+                              }`}>
+                                {event.replace(/_/g, ' ')}
+                              </span>
+                            ))
+                          ) : (
+                            <span className={`text-xs px-3 py-1 rounded-full ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                              No events selected
                             </span>
-                          ))}
+                          )}
                         </div>
                       </div>
 

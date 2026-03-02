@@ -988,15 +988,20 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
     const updatedReg = await registrationsCollection.findOne({ _id: registration._id });
     console.log(`✅ Verified: verification_id now = "${updatedReg?.verification_id}"`);
 
+    // Send WhatsApp notification with verification ID
+    const whatsappResult = await sendWhatsAppNotification(registration.phone, registration.full_name, trimmedVerifId);
+    console.log(`📱 WhatsApp notification sent:`, whatsappResult);
+
     console.log(`✅ Verification ID set for ${registrationId}: ${trimmedVerifId}`);
 
     res.json({
       success: true,
-      message: 'Verification ID set successfully',
+      message: 'Verification ID set successfully' + (whatsappResult.success ? ' and WhatsApp notification sent!' : ''),
       registration: {
         registration_id: registrationId,
         verification_id: trimmedVerifId
-      }
+      },
+      whatsapp: whatsappResult
     });
 
   } catch (err) {
