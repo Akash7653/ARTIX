@@ -12,6 +12,8 @@ import helmet from 'helmet';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './utils/logger.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swagger.js';
 
 dotenv.config();
 
@@ -156,6 +158,18 @@ const verifyJWT = (req, res, next) => {
     });
   }
 };
+
+// Swagger UI Setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayOperationId: true
+  },
+  customSiteTitle: 'ARTIX 2026 API Documentation',
+  customCss: '.swagger-ui .topbar { display: none }'
+}));
+
+logger.info('Swagger UI available at /api-docs');
 
 // File upload setup
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -309,6 +323,44 @@ app.post('/api/check-transaction-utr', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/login:
+ *   post:
+ *     summary: Admin Login
+ *     description: Authenticate admin and receive JWT token for secured endpoints
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             password: "admin123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       400:
+ *         description: Password required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Invalid password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many login attempts
+ */
 // 0. Admin Login - Generate JWT Token
 app.post('/api/admin/login', loginLimiter, (req, res) => {
   try {
@@ -361,6 +413,68 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/register:
+ *   post:
+ *     summary: User Registration
+ *     description: Submit event registration with participant details and payment proof
+ *     tags:
+ *       - Registration
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               collegeName:
+ *                 type: string
+ *               yearOfStudy:
+ *                 type: string
+ *               branch:
+ *                 type: string
+ *               rollNumber:
+ *                 type: string
+ *               selectedIndividualEvents:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               totalAmount:
+ *                 type: number
+ *               transactionId:
+ *                 type: string
+ *               utrId:
+ *                 type: string
+ *               paymentScreenshot:
+ *                 type: string
+ *                 format: binary
+ *             required:
+ *               - fullName
+ *               - email
+ *               - phone
+ *               - totalAmount
+ *               - transactionId
+ *               - utrId
+ *               - paymentScreenshot
+ *     responses:
+ *       201:
+ *         description: Registration submitted successfully
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email/Transaction ID already registered
+ *       429:
+ *         description: Too many registrations
+ *       500:
+ *         description: Server error
+ */
 // 1. Register User
 app.post('/api/register', registrationLimiter, (req, res, next) => {
   upload.single('paymentScreenshot')(req, res, (err) => {
@@ -1144,6 +1258,46 @@ app.get('/api/admin/export', async (req, res) => {
 });
 
 // 9. Get All Registrations (for admin dashboard display)
+/**
+ * @swagger
+ * /api/admin/registrations:
+ *   get:
+ *     summary: Get all registrations with pagination
+ *     description: Retrieve list of registrations with pagination, filtering, and search support
+ *     tags:
+ *       - Admin
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Registrations per page (max 100)
+ *       - in: query
+ *         name: approval_status
+ *         schema:
+ *           type: string
+ *           enum: [pending, approved, rejected]
+ *         description: Filter by approval status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name, email, phone, or registration ID
+ *     responses:
+ *       200:
+ *         description: List of registrations with pagination metadata
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/admin/registrations', async (req, res) => {
   try {
     // Get pagination parameters
@@ -1477,7 +1631,40 @@ async function sendDetailedWhatsAppNotification(phone, registration) {
     return { success: false, error: err.message, errorCode: err.code };
   }
 }
-
+/**
+ * @swagger
+ * /api/admin/send-whatsapp-to-participant:
+ *   post:
+ *     summary: Send WhatsApp message to single participant
+ *     description: Generate a WhatsApp web link for sending approval message to participant
+ *     tags:
+ *       - WhatsApp
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               registrationId:
+ *                 type: string
+ *               personalizedMessage:
+ *                 type: string
+ *                 description: Optional custom message
+ *             required:
+ *               - registrationId
+ *     responses:
+ *       200:
+ *         description: WhatsApp link generated
+ *       400:
+ *         description: Missing registration ID or participant not found
+ *       404:
+ *         description: Registration not found
+ *       429:
+ *         description: Too many WhatsApp requests
+ */
 // API Endpoint: Send Detailed WhatsApp to Participant
 app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req, res) => {
   try {
@@ -1893,6 +2080,45 @@ app.post('/api/admin/verify-entry', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/bulk-send-whatsapp:
+ *   post:
+ *     summary: Send WhatsApp messages to multiple participants
+ *     description: Generate WhatsApp web links for bulk messaging to pending or approved registrations
+ *     tags:
+ *       - WhatsApp
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Message template with {name}, {registration_id}, {verification_id} variables
+ *               approvalStatus:
+ *                 type: string
+ *                 enum: [pending, approved, all]
+ *                 description: Target registrations by status
+ *               adminPhone:
+ *                 type: string
+ *               whatsappType:
+ *                 type: string
+ *                 enum: [normal, business, all]
+ *             required:
+ *               - message
+ *     responses:
+ *       200:
+ *         description: Bulk message links generated
+ *       400:
+ *         description: Missing message or no registrations found
+ *       429:
+ *         description: Too many WhatsApp requests
+ */
 // 13. Bulk Send WhatsApp Messages to All Approved Participants
 app.post('/api/admin/bulk-send-whatsapp', whatsappLimiter, async (req, res) => {
   try {
