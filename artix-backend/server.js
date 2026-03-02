@@ -17,6 +17,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
 import { validateUploadFile, generateSafeFilename } from './utils/fileValidator.js';
 import { registrationCache, statsCache } from './utils/cache.js';
+import { createOptimizationMiddleware } from './utils/responseOptimizer.js';
 
 dotenv.config();
 
@@ -99,6 +100,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Performance Optimizations
 app.use(compression()); // Gzip compression for all responses
+app.use(createOptimizationMiddleware({
+  filterFields: true,
+  removeNulls: true
+})); // Response field filtering and null removal
 
 // Security & Rate Limiting Middleware
 app.use(helmet()); // Add security headers
@@ -1138,12 +1143,19 @@ app.get('/api/health', (req, res) => {
 // 7. Get Statistics (for admin)
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    // Disable caching
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    // Check cache first
+    const cacheKey = 'admin_stats';
+    const cachedStats = statsCache.get(cacheKey);
     
-    console.log('📊 Fetching statistics...');
+    if (cachedStats) {
+      logAdmin('Admin stats served from cache', { cacheKey, cached: true });
+      return res.json(cachedStats);
+    }
+    
+    // Set cache headers for 5 minutes
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    
+    console.log('📊 Fetching statistics from database...');
     
     if (!registrationsCollection) {
       console.error('❌ Registrations collection not initialized');
@@ -1210,7 +1222,7 @@ app.get('/api/admin/stats', async (req, res) => {
     });
     console.log(`✅ Verified Entries: ${verifiedEntries}`);
 
-    res.json({
+    const statsData = {
       totalRegistrations,
       approvedEntries,
       rejectedEntries,
@@ -1220,7 +1232,13 @@ app.get('/api/admin/stats', async (req, res) => {
       pendingRevenue,
       totalRevenue: approvedRevenue + pendingRevenue,
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // Cache the stats for 5 minutes
+    statsCache.set(cacheKey, statsData);
+    logAdmin('Admin stats cached for future requests', { cacheKey, ttl: '5min' });
+
+    res.json(statsData);
 
   } catch (err) {
     console.error('❌ Stats error:', err);
