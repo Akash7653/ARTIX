@@ -89,32 +89,45 @@ export function AdminDashboard({ onLogout }: Props) {
       
       console.log('📊 Loading admin data from:', baseUrl);
       
-      const statsRes = await fetch(`${baseUrl}/admin/stats`, { headers }).then(r => {
-        if (!r.ok) console.error('Stats fetch failed:', r.status);
-        return r.json();
-      });
+      const statsRes = await fetch(`${baseUrl}/admin/stats`, { headers });
+      console.log('📊 Stats fetch status:', statsRes.status, statsRes.statusText);
+      const statsData = await statsRes.json();
+      console.log('📊 Stats response:', statsData);
       
-      const regsRes = await fetch(`${baseUrl}/admin/registrations`, { headers }).then(r => {
-        if (!r.ok) console.error('Registrations fetch failed:', r.status);
-        return r.json();
-      });
+      const regsRes = await fetch(`${baseUrl}/admin/registrations`, { headers });
+      console.log('📋 Registrations fetch status:', regsRes.status, regsRes.statusText);
+      const regsData = await regsRes.json();
+      console.log('📋 Registrations FULL response:', regsData);
+      console.log('📋 Registrations response keys:', Object.keys(regsData));
+      console.log('📋 Registrations data field:', regsData.data);
+      console.log('📋 Registrations success field:', regsData.success);
       
-      console.log('📊 Stats response:', statsRes);
-      console.log('📋 Registrations response:', regsRes);
-      console.log('📋 Registrations data:', regsRes.data);
-      console.log('📋 Registrations data length:', regsRes.data?.length || 0);
-      
-      if (statsRes && typeof statsRes === 'object') {
-        setStats(statsRes);
+      if (!regsRes.ok) {
+        throw new Error(`Registrations API error: ${regsRes.status} ${regsRes.statusText}`);
       }
       
-      if (regsRes && regsRes.data && Array.isArray(regsRes.data)) {
-        console.log('✅ Setting registrations:', regsRes.data.length, 'items');
-        setRegistrations(regsRes.data);
+      if (statsData && typeof statsData === 'object') {
+        setStats(statsData);
+      }
+      
+      // Check all possible response structures
+      let registrationsArray = [];
+      if (regsData?.data && Array.isArray(regsData.data)) {
+        registrationsArray = regsData.data;
+        console.log('✅ Found data in response.data:', registrationsArray.length);
+      } else if (Array.isArray(regsData)) {
+        registrationsArray = regsData;
+        console.log('✅ Response is array directly:', registrationsArray.length);
+      } else if (regsData?.registrations && Array.isArray(regsData.registrations)) {
+        registrationsArray = regsData.registrations;
+        console.log('✅ Found data in response.registrations:', registrationsArray.length);
       } else {
-        console.warn('⚠️ No data array in response:', regsRes);
-        setRegistrations([]);
+        console.warn('⚠️ Could not find array in response. Full response:', regsData);
       }
+      
+      console.log('📋 Setting registrations:', registrationsArray.length, 'items');
+      setRegistrations(registrationsArray);
+      
     } catch (err) {
       console.error('❌ Failed to load data:', err);
       setMessage('⚠️ Failed to load data: ' + err.message);
