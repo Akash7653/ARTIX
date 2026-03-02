@@ -11,13 +11,13 @@ import {
   validateDateRange,
   validateExport,
   validatePagination
-} from './validators.js';
+} from '../utils/validators.js';
 import {
   BulkOperations,
   Analytics,
   AdvancedSearch
-} from './adminFeatures.js';
-import { ExportService } from './exportService.js';
+} from '../utils/adminFeatures.js';
+import { ExportService } from '../utils/exportService.js';
 
 export function createAdminRoutes(db, logger) {
   const router = Router();
