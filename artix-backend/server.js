@@ -14,6 +14,7 @@ import bcrypt from 'bcryptjs';
 import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './utils/logger.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
+import { validateUploadFile, generateSafeFilename } from './utils/fileValidator.js';
 
 dotenv.config();
 
@@ -182,7 +183,9 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    // Use safe filename generation to prevent directory traversal
+    const safeFilename = generateSafeFilename(file.originalname);
+    cb(null, safeFilename);
   }
 });
 
@@ -192,12 +195,19 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Only accept image files
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
+    // Validate file using comprehensive validation
+    const validation = validateUploadFile(file, 10);
+    
+    if (!validation.valid) {
+      logError('File upload validation failed', {
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        error: validation.error
+      });
+      return cb(new Error(validation.error));
     }
+    
+    cb(null, true);
   }
 });
 
@@ -241,21 +251,27 @@ app.get('/api/health', (req, res) => {
 // Error handler for multer upload errors
 const handleUploadError = (err, req, res, next) => {
   if (err) {
+    logError('File upload error handler triggered', err);
+    
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({ 
         error: 'File too large. Maximum file size is 10MB.',
-        details: `File size: ${err.limit} bytes`
+        details: `File size exceeds limit`
       });
     }
-    if (err.message && err.message.includes('Only image files')) {
+    
+    // File validation errors from fileFilter
+    if (err.message && err.message.includes('Invalid file type')) {
       return res.status(400).json({ 
-        error: 'Invalid file type. Only image files are allowed.',
-        details: err.message
+        error: err.message,
+        details: 'Only JPEG, PNG, and WebP images are allowed'
       });
     }
+    
+    // Generic upload error
     return res.status(400).json({ 
       error: 'File upload error',
-      details: err.message
+      details: err.message || 'An error occurred while uploading your file'
     });
   }
   next();
