@@ -87,19 +87,37 @@ export function AdminDashboard({ onLogout }: Props) {
       const token = localStorage.getItem('adminToken');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      const [statsRes, regsRes] = await Promise.all([
-        fetch(`${baseUrl}/admin/stats`, { headers }).then(r => r.json()),
-        fetch(`${baseUrl}/admin/registrations`, { headers }).then(r => r.json())
-      ]);
+      console.log('📊 Loading admin data from:', baseUrl);
       
-      console.log('Stats response:', statsRes);
-      console.log('Registrations response:', regsRes);
+      const statsRes = await fetch(`${baseUrl}/admin/stats`, { headers }).then(r => {
+        if (!r.ok) console.error('Stats fetch failed:', r.status);
+        return r.json();
+      });
       
-      setStats(statsRes);
-      setRegistrations(regsRes.data || []);
+      const regsRes = await fetch(`${baseUrl}/admin/registrations`, { headers }).then(r => {
+        if (!r.ok) console.error('Registrations fetch failed:', r.status);
+        return r.json();
+      });
+      
+      console.log('📊 Stats response:', statsRes);
+      console.log('📋 Registrations response:', regsRes);
+      console.log('📋 Registrations data:', regsRes.data);
+      console.log('📋 Registrations data length:', regsRes.data?.length || 0);
+      
+      if (statsRes && typeof statsRes === 'object') {
+        setStats(statsRes);
+      }
+      
+      if (regsRes && regsRes.data && Array.isArray(regsRes.data)) {
+        console.log('✅ Setting registrations:', regsRes.data.length, 'items');
+        setRegistrations(regsRes.data);
+      } else {
+        console.warn('⚠️ No data array in response:', regsRes);
+        setRegistrations([]);
+      }
     } catch (err) {
-      console.error('Failed to load data:', err);
-      setMessage('⚠️ Failed to load data');
+      console.error('❌ Failed to load data:', err);
+      setMessage('⚠️ Failed to load data: ' + err.message);
       setMessageType('error');
     }
     setLoading(false);
