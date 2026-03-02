@@ -28,7 +28,9 @@ const FORBIDDEN_EXTENSIONS = [
  * Validate file MIME type
  */
 export function isValidMimeType(mimeType) {
-  if (!mimeType) return false;
+  // If no MIME type provided, it might be an image with missing type info
+  // We'll validate by file extension instead
+  if (!mimeType) return true;
   
   const normalizedMimeType = mimeType.toLowerCase().trim();
   
@@ -37,8 +39,14 @@ export function isValidMimeType(mimeType) {
     return true;
   }
   
-  // Allow any image/* MIME type as fallback
+  // Allow any image/* MIME type (most permissive approach)
   if (normalizedMimeType.startsWith('image/')) {
+    return true;
+  }
+  
+  // Some systems send application/octet-stream for images
+  // We'll allow it and rely on extension validation
+  if (normalizedMimeType === 'application/octet-stream') {
     return true;
   }
   
@@ -84,7 +92,7 @@ export function getFileExtension(filename) {
 /**
  * Validate file size
  */
-export function isValidFileSize(sizeInBytes, maxSizeInMB = 10) {
+export function isValidFileSize(sizeInBytes, maxSizeInMB = 50) {
   const maxBytes = maxSizeInMB * 1024 * 1024;
   return sizeInBytes > 0 && sizeInBytes <= maxBytes;
 }
@@ -102,26 +110,27 @@ export function validateUploadFile(file, maxSizeInMB = 10) {
     };
   }
 
-  // Validate MIME type
-  if (!isValidMimeType(file.mimetype)) {
-    return {
-      valid: false,
-      error: 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.',
-      details: {
-        provided: file.mimetype,
-        allowed: ALLOWED_MIME_TYPES
-      }
-    };
-  }
-
-  // Validate file extension
+  // Validate file extension FIRST (most important for security)
   if (!isValidFileExtension(file.originalname)) {
     return {
       valid: false,
       error: 'File extension not allowed. Please use an image file (JPG, PNG, WebP).',
       details: {
         filename: file.originalname,
-        forbidden: FORBIDDEN_EXTENSIONS
+        allowed: ['jpg', 'jpeg', 'png', 'webp']
+      }
+    };
+  }
+
+  // Validate MIME type (more lenient for production compatibility)
+  if (!isValidMimeType(file.mimetype)) {
+    return {
+      valid: false,
+      error: `Invalid file type. Expected image file but got: ${file.mimetype || 'unknown'}. Only JPEG, PNG, and WebP images are allowed.`,
+      details: {
+        provided: file.mimetype,
+        allowed: ALLOWED_MIME_TYPES,
+        filename: file.originalname
       }
     };
   }
@@ -145,7 +154,7 @@ export function validateUploadFile(file, maxSizeInMB = 10) {
     error: null,
     details: {
       filename: file.originalname,
-      mimeType: file.mimetype,
+      mimeType: file.mimetype || 'image (auto-detected)',
       size: file.size,
       sizeInMB: (file.size / (1024 * 1024)).toFixed(2)
     }

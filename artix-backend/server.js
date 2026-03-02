@@ -205,21 +205,33 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 50 * 1024 * 1024 // 50MB limit
   },
   fileFilter: (req, file, cb) => {
+    // Log incoming file details for debugging
+    console.log(`📤 File upload received:`, {
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      encoding: file.encoding,
+      timestamp: new Date().toISOString()
+    });
+
     // Validate file using comprehensive validation
-    const validation = validateUploadFile(file, 10);
+    const validation = validateUploadFile(file, 50);
     
     if (!validation.valid) {
       logError('File upload validation failed', {
         filename: file.originalname,
         mimeType: file.mimetype,
-        error: validation.error
+        error: validation.error,
+        details: validation.details
       });
+      console.log(`❌ Validation error:`, validation.error);
       return cb(new Error(validation.error));
     }
     
+    console.log(`✅ File validation passed`);
     cb(null, true);
   }
 });
@@ -294,34 +306,47 @@ app.get('/api/health', (req, res) => {
 // Error handler for multer upload errors
 const handleUploadError = (err, req, res, callback) => {
   if (err) {
+    console.log(`🔴 Upload error handler triggered:`, {
+      code: err.code,
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
     logError('File upload error handler triggered', err);
     
     if (err.code === 'LIMIT_FILE_SIZE') {
+      console.log(`⚠️ File size limit exceeded`);
       return res.status(413).json({ 
-        error: 'File too large. Maximum file size is 10MB.',
-        details: `File size exceeds limit`
+        error: 'File too large. Maximum file size is 50MB.',
+        details: `File size exceeds limit`,
+        errorCode: 'LIMIT_FILE_SIZE'
       });
     }
     
     // File validation errors from fileFilter
     if (err.message && err.message.includes('Invalid file type')) {
+      console.log(`⚠️ Invalid MIME type`);
       return res.status(400).json({ 
         error: err.message,
-        details: 'Only JPEG, PNG, and WebP images are allowed'
+        details: 'Only JPEG, PNG, and WebP images are allowed',
+        errorCode: 'INVALID_MIME_TYPE'
       });
     }
     
     if (err.message && err.message.includes('File extension not allowed')) {
+      console.log(`⚠️ Invalid file extension`);
       return res.status(400).json({ 
         error: err.message,
-        details: 'Please use a valid image file (JPG, PNG, WebP)'
+        details: 'Please use a valid image file (JPG, PNG, WebP)',
+        errorCode: 'INVALID_EXTENSION'
       });
     }
-    
-    // Generic upload error
+
+    // Generic upload error - provide detailed information for debugging
+    console.log(`⚠️ Generic upload error: ${err.message}`);
     return res.status(400).json({ 
       error: 'File upload error',
-      details: err.message || 'An error occurred while uploading your file'
+      details: err.message || 'An error occurred while uploading your file',
+      errorCode: 'UPLOAD_ERROR'
     });
   }
   // Call the callback if no error
