@@ -58,7 +58,7 @@ export function ParticipantDetailsForm({ formData, updateFormData, darkMode = tr
         <div>
           <label className={`block mb-2 md:mb-3 text-base md:text-lg font-semibold ${
             darkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Phone Number *</label>
+          }`}>WhatsApp Number * 📱</label>
           <input
             type="tel"
             required
@@ -70,8 +70,9 @@ export function ParticipantDetailsForm({ formData, updateFormData, darkMode = tr
                 ? 'bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-500 focus:border-blue-500/50 focus:bg-gray-800/70'
                 : 'bg-white/50 border-gray-300/50 text-gray-900 placeholder-gray-500 focus:border-blue-500/50 focus:bg-white/70'
             }`}
-            placeholder="10-digit number"
+            placeholder="10-digit WhatsApp number"
           />
+          <p className="text-xs md:text-sm mt-2 text-gray-500">💡 Your active WhatsApp number for registration confirmations</p>
         </div>
 
         <div>

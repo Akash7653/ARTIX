@@ -69,6 +69,7 @@ export function AdminDashboard({ onLogout }: Props) {
   const [bulkMessage, setBulkMessage] = useState('');
   const [sendingBulkMessage, setSendingBulkMessage] = useState(false);
   const [bulkMessageResult, setBulkMessageResult] = useState<any>(null);
+  const [whatsappType, setWhatsappType] = useState<'normal' | 'business' | 'all'>('all');
   const [adminPhone, setAdminPhone] = useState('+918919068236');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -394,7 +395,8 @@ export function AdminDashboard({ onLogout }: Props) {
         body: JSON.stringify({ 
           message: bulkMessage, 
           approvalStatus: 'approved', 
-          adminPhone: adminPhone 
+          adminPhone: adminPhone,
+          whatsappType: whatsappType
         })
       });
 
@@ -1171,6 +1173,40 @@ export function AdminDashboard({ onLogout }: Props) {
                   </div>
                 </div>
 
+                {/* WhatsApp Type Selection */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    📱 Send to WhatsApp Type
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'normal', label: 'Normal WhatsApp', icon: '👤' },
+                      { value: 'business', label: 'WhatsApp Business', icon: '🏢' },
+                      { value: 'all', label: 'All Users (Both)', icon: '🌍' }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setWhatsappType(option.value as 'normal' | 'business' | 'all')}
+                        className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
+                          whatsappType === option.value
+                            ? darkMode
+                              ? 'bg-green-600/40 border-green-500 text-green-200'
+                              : 'bg-green-100 border-green-500 text-green-900'
+                            : darkMode
+                              ? 'bg-gray-800/40 border-gray-700/50 text-gray-300 hover:border-gray-600'
+                              : 'bg-white/50 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        {option.icon} {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    💡 Select which WhatsApp users to send messages to. "All Users" sends to everyone with any WhatsApp account.
+                  </p>
+                </div>
+
                 {/* Message Template Info */}
                 <div>
                   <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1237,6 +1273,8 @@ export function AdminDashboard({ onLogout }: Props) {
                   onClick={() => {
                     setShowBulkMessageModal(false);
                     setBulkMessageResult(null);
+                    setBulkMessage('');
+                    setWhatsappType('all');
                   }}
                   disabled={sendingBulkMessage}
                   className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 ${

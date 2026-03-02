@@ -1687,7 +1687,7 @@ app.post('/api/admin/verify-entry', async (req, res) => {
 // 13. Bulk Send WhatsApp Messages to All Approved Participants
 app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
   try {
-    const { message, approvalStatus = 'approved', adminPhone = ADMIN_PHONE_NUMBER } = req.body;
+    const { message, approvalStatus = 'approved', adminPhone = ADMIN_PHONE_NUMBER, whatsappType = 'all' } = req.body;
 
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message content is required' });
@@ -1695,6 +1695,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
 
     console.log(`\n📢 === BULK WHATSAPP SENDING STARTED ===`);
     console.log(`📱 From Admin Phone: ${adminPhone}`);
+    console.log(`📱 WhatsApp Type: ${whatsappType} (Normal | Business | All)`);
     console.log(`📋 Message: ${message.substring(0, 50)}...`);
 
     // Get all registrations matching criteria (with verification ID)
@@ -1776,6 +1777,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
       success: true,
       message: `WhatsApp messages ready for ${results.successful.length} participants`,
       method: 'WhatsApp Web (Free - no API required)',
+      whatsappType: whatsappType,
       results: results,
       summary: {
         total_participants: results.total,
@@ -1783,7 +1785,7 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
         failed_count: results.failed.length,
         success_rate: ((results.successful.length / results.total) * 100).toFixed(2) + '%'
       },
-      note: 'Auto participant notifications: Participants automatically receive WhatsApp messages during registration through the free wa.me method. Admin can use the wa.me links above for additional bulk messaging.'
+      note: `Auto participant notifications: Participants automatically receive WhatsApp messages during registration through the free wa.me method. Admin bulk send configured for: ${whatsappType === 'all' ? 'All WhatsApp Users (Normal + Business)' : whatsappType === 'normal' ? 'Normal WhatsApp Accounts' : 'WhatsApp Business Accounts'}. Admin can use the wa.me links above for additional bulk messaging.`
     });
 
   } catch (err) {
