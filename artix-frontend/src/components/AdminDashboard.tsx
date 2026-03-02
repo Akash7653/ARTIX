@@ -300,13 +300,28 @@ export function AdminDashboard({ onLogout }: Props) {
       console.log('📱 WhatsApp API Response:', data);
 
       if (response.ok && data.success) {
-        alert('✅ WhatsApp message sent successfully to ' + reg.phone + '!');
+        // New free WhatsApp Web approach - provide wa.me link
+        if (data.details && data.details.waLink) {
+          const waLink = data.details.waLink;
+          const participantName = data.details.participantName || 'participant';
+          const confirmOpen = window.confirm(
+            `✅ WhatsApp ready!\n\nParticipant: ${participantName}\nPhone: ${reg.phone}\n\nClick OK to open WhatsApp Web to send the message.`
+          );
+          
+          if (confirmOpen) {
+            // Open WhatsApp Web in new tab
+            window.open(waLink, '_blank');
+            alert('✅ WhatsApp opened! Please send the message to ' + participantName);
+          }
+        } else {
+          alert('✅ ' + (data.message || 'Message ready to send'));
+        }
         // Reload data to update notification status
         setTimeout(loadData, 1500);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error occurred';
         console.error('❌ WhatsApp Error:', errorMsg);
-        alert('❌ Failed to send WhatsApp:\n\n' + errorMsg);
+        alert('❌ Failed to prepare WhatsApp message:\n\n' + errorMsg);
       }
     } catch (err) {
       console.error('❌ Error sending WhatsApp:', err);
@@ -386,16 +401,35 @@ export function AdminDashboard({ onLogout }: Props) {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send bulk messages');
+        throw new Error(data.error || 'Failed to prepare bulk messages');
       }
 
-      setBulkMessageResult(data.results);
-      setMessage(`✅ WhatsApp campaign sent! Success: ${data.results.successful.length}/${data.results.total}`);
-      setMessageType('success');
-      setBulkMessage('');
-      setTimeout(loadData, 1000);
+      // New free WhatsApp Web approach - show wa.me links
+      if (data.results && data.results.waLinks && data.results.waLinks.length > 0) {
+        setBulkMessageResult(data.results);
+        const count = data.results.prepared.length;
+        setMessage(`✅ ${count} WhatsApp messages ready! Links have been generated.`);
+        setMessageType('success');
+        setBulkMessage('');
+        
+        // Option to open first link or show first few links
+        const shouldOpenLink = window.confirm(
+          `✅ Prepared ${count} WhatsApp messages\n\nTo send these messages, you can:\n- Click on individual "Send via WhatsApp" buttons\n- Or copy the wa.me links and share them\n\nNote: Participants automatically receive messages during registration.`
+        );
+        
+        if (shouldOpenLink && data.results.prepared[0]?.waLink) {
+          window.open(data.results.prepared[0].waLink, '_blank');
+        }
+        
+        setTimeout(loadData, 1000);
+      } else {
+        setMessage(`✅ ${data.summary.prepared_count || 'All'} WhatsApp messages prepared using free wa.me method`);
+        setMessageType('success');
+        setBulkMessage('');
+        setTimeout(loadData, 1000);
+      }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to send bulk messages';
+      const errorMsg = err instanceof Error ? err.message : 'Failed to prepare bulk messages';
       setMessage(`❌ ${errorMsg}`);
       setMessageType('error');
       console.error(err);

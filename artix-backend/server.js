@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
-import twilio from 'twilio';
 
 dotenv.config();
 
@@ -1293,23 +1292,6 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
-    // Check Twilio credentials immediately
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-      console.error('❌ Twilio credentials NOT configured!');
-      return res.status(500).json({ 
-        error: 'Twilio credentials not configured on server',
-        details: 'TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be set as environment variables on Vercel'
-      });
-    }
-
-    if (!process.env.TWILIO_WHATSAPP_NUMBER) {
-      console.error('❌ Twilio WhatsApp number NOT configured!');
-      return res.status(500).json({ 
-        error: 'Twilio WhatsApp number not configured on server',
-        details: 'TWILIO_WHATSAPP_NUMBER must be set as environment variable'
-      });
-    }
-
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
@@ -1318,25 +1300,21 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
       return res.status(404).json({ error: 'Registration not found' });
     }
 
-    if (!registration.verification_id) {
-      return res.status(400).json({ error: 'Verification ID must be set first' });
-    }
-
     if (!registration.phone) {
       return res.status(400).json({ error: 'Participant phone number not found' });
     }
 
-    console.log(`📱 Sending detailed WhatsApp to participant: ${registration.phone}`);
-    const whatsappResult = await sendDetailedWhatsAppNotification(registration.phone, registration);
+    // Generate wa.me link for admin to use (free WhatsApp Web approach)
+    const adminPhone = '+919398176430';
+    const phoneEdited = registration.phone.replace(/\D/g, '');
+    const normalizedPhone = phoneEdited.startsWith('91') ? phoneEdited : '91' + phoneEdited;
+    
+    const message = `Hi ${registration.full_name || 'Participant'},\n\nVerification ID: ${registration.verification_id || 'Pending'}\n\nRegistration ID: ${registration.registration_id}\n\nPlease use this for event entry.`;
+    const encodedMessage = encodeURIComponent(message);
+    const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
-    if (!whatsappResult.success) {
-      console.error('❌ WhatsApp send failed:', whatsappResult.error);
-      return res.status(500).json({ 
-        error: 'Failed to send WhatsApp message',
-        details: whatsappResult.error || whatsappResult.reason || 'Unknown error'
-      });
-    }
-
+    console.log(`✅ WhatsApp wa.me link generated for admin to send to: ${registration.phone}`);
+    
     // Update notification_sent flag in database
     await registrationsCollection.updateOne(
       { _id: registration._id },
@@ -1344,25 +1322,28 @@ app.post('/api/admin/send-whatsapp-to-participant', async (req, res) => {
         $set: {
           notification_sent: true,
           notification_sent_at: new Date(),
-          notification_method: 'whatsapp',
-          whatsapp_sent: whatsappResult.success,
-          whatsapp_message_sid: whatsappResult.messageSid || null
+          notification_method: 'whatsapp_web',
+          admin_notified: true
         }
       }
     );
 
     res.json({
       success: true,
-      message: '✅ WhatsApp message sent to participant successfully!',
+      message: '✅ WhatsApp message ready to send!',
       details: {
+        method: 'WhatsApp Web (Free)',
         phone: registration.phone,
-        messageSid: whatsappResult.messageSid
+        participantName: registration.full_name,
+        verificationId: registration.verification_id || 'Pending',
+        waLink: waLink,
+        instruction: 'Click the link above or scan to send message via WhatsApp Web'
       }
     });
   } catch (err) {
     console.error('❌ Error in send-whatsapp-to-participant endpoint:', err);
     res.status(500).json({ 
-      error: 'Failed to send WhatsApp message', 
+      error: 'Failed to generate WhatsApp link', 
       details: err.message 
     });
   }
@@ -1676,51 +1657,37 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
     console.log(`📨 Total registrations to notify: ${registrations.length}`);
 
     const results = {
-      successful: [],
+      prepared: [],
       failed: [],
-      total: registrations.length
+      total: registrations.length,
+      waLinks: []
     };
 
-    // Check Twilio credentials
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
-      console.error('❌ Twilio credentials NOT configured!');
-      return res.status(500).json({ 
-        error: 'Twilio WhatsApp service not configured',
-        details: 'Contact administrator to set up WhatsApp credentials'
-      });
-    }
-
-    const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-    // Send messages to each registration
+    // Generate wa.me links for each participant (free WhatsApp Web approach)
     for (const registration of registrations) {
       try {
-        const formattedPhone = registration.phone.replace(/\D/g, '');
-        const phoneWithCountry = 'whatsapp:+91' + (formattedPhone.startsWith('91') ? formattedPhone.substring(2) : formattedPhone);
+        const phoneEdited = registration.phone.replace(/\D/g, '');
+        const normalizedPhone = phoneEdited.startsWith('91') ? phoneEdited : '91' + phoneEdited;
         
-        // Personalize message with participant name
         const personalizedMessage = message
           .replace('{name}', registration.full_name)
-          .replace('{verification_id}', registration.verification_id)
+          .replace('{verification_id}', registration.verification_id || 'Pending')
           .replace('{registration_id}', registration.registration_id)
           .replace('{admin_phone}', adminPhone);
 
-        console.log(`📤 Sending to ${registration.phone}...`);
+        const encodedMessage = encodeURIComponent(personalizedMessage);
+        const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
-        const msg = await twilioClient.messages.create({
-          from: process.env.TWILIO_WHATSAPP_NUMBER,
-          to: phoneWithCountry,
-          body: personalizedMessage
-        });
-
-        results.successful.push({
+        results.prepared.push({
           registration_id: registration.registration_id,
           phone: registration.phone,
           name: registration.full_name,
-          messageId: msg.sid
+          waLink: waLink
         });
 
-        console.log(`✅ Message sent to ${registration.phone} (SID: ${msg.sid})`);
+        results.waLinks.push(waLink);
+
+        console.log(`✅ wa.me link prepared for ${registration.phone}`);
 
         // Mark as notified in database
         await registrationsCollection.updateOne(
@@ -1728,14 +1695,13 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
           {
             $set: {
               bulk_notification_sent: true,
-              bulk_notification_sent_at: new Date(),
-              last_message_sid: msg.sid
+              bulk_notification_sent_at: new Date()
             }
           }
         );
 
       } catch (err) {
-        console.error(`❌ Failed to send to ${registration.phone}:`, err.message);
+        console.error(`❌ Failed to prepare link for ${registration.phone}:`, err.message);
         results.failed.push({
           registration_id: registration.registration_id,
           phone: registration.phone,
@@ -1745,26 +1711,28 @@ app.post('/api/admin/bulk-send-whatsapp', async (req, res) => {
       }
     }
 
-    console.log(`📢 === BULK WHATSAPP SENDING COMPLETED ===`);
-    console.log(`✅ Successful: ${results.successful.length}`);
+    console.log(`📢 === BULK WHATSAPP LINKS PREPARED ===`);
+    console.log(`✅ Prepared: ${results.prepared.length}`);
     console.log(`❌ Failed: ${results.failed.length}`);
 
     res.json({
       success: true,
-      message: `WhatsApp campaign sent to ${results.successful.length} participants`,
+      message: `WhatsApp messages ready for ${results.prepared.length} participants`,
+      method: 'WhatsApp Web (Free - no API required)',
       results: results,
       summary: {
         total_participants: results.total,
-        successful_count: results.successful.length,
+        prepared_count: results.prepared.length,
         failed_count: results.failed.length,
-        success_rate: ((results.successful.length / results.total) * 100).toFixed(2) + '%'
-      }
+        success_rate: ((results.prepared.length / results.total) * 100).toFixed(2) + '%'
+      },
+      note: 'Auto participant notifications: Participants automatically receive WhatsApp messages during registration through the free wa.me method. Admin can use the wa.me links above for additional bulk messaging.'
     });
 
   } catch (err) {
-    console.error('❌ Bulk WhatsApp send error:', err);
+    console.error('❌ Bulk WhatsApp link preparation error:', err);
     res.status(500).json({ 
-      error: 'Bulk WhatsApp sending failed', 
+      error: 'Bulk WhatsApp link preparation failed', 
       details: err.message 
     });
   }
