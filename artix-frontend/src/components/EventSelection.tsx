@@ -56,14 +56,13 @@ export function EventSelection({ formData, updateFormData, darkMode = true }: Pr
                     : darkMode
                     ? 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                     : 'border-gray-300 bg-white/30 hover:border-gray-400'
-                } ${hasComboSelection ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
               >
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     checked={formData.selectedIndividualEvents.includes(event.id)}
                     onChange={() => handleIndividualEventToggle(event.id)}
-                    disabled={hasComboSelection}
                     className="w-5 h-5 sm:w-6 sm:h-6 accent-blue-500"
                   />
                   <span className={`ml-3 sm:ml-4 text-base md:text-lg font-semibold ${
