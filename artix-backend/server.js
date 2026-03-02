@@ -718,7 +718,7 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
       whatsapp: {
         sent: whatsappResult.success,
         status: 'WhatsApp handled via free wa.me method (client-side)',
-        note: 'Participants receive WhatsApp automatically after registration through the frontend'
+        note: 'Participants receive WhatsApp automatically after registration through the frontend',
         details: whatsappResult
       },
       registration: {
