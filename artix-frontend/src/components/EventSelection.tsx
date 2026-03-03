@@ -8,15 +8,21 @@ interface Props {
 
 export function EventSelection({ formData, updateFormData, darkMode = true }: Props) {
   const handleIndividualEventToggle = (eventId: string) => {
+    console.log('🎯 EVENT TOGGLE: eventId=' + eventId);
     const newEvents = formData.selectedIndividualEvents.includes(eventId)
       ? formData.selectedIndividualEvents.filter(id => id !== eventId)
       : [...formData.selectedIndividualEvents, eventId];
+
+    console.log('🎯 BEFORE UPDATE - newEvents:', newEvents);
+    console.log('🎯 BEFORE UPDATE - length:', newEvents.length);
 
     updateFormData({
       selectedIndividualEvents: newEvents,
       teamSize: newEvents.includes('project_expo') ? formData.teamSize : 0,
       teamMembers: newEvents.includes('project_expo') ? formData.teamMembers : [],
     });
+
+    console.log('🎯 AFTER UPDATE - formData should have new events');
   };
 
   const calculateTotal = (): number => {

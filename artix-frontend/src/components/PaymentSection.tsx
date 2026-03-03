@@ -74,6 +74,14 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
     setIsSubmitting(true);
 
     try {
+      // CRITICAL: Log state at submission time
+      console.log('🔴🔴🔴 SUBMISSION START - CRITICAL EVENT CHECK 🔴🔴🔴');
+      console.log('formData.selectedIndividualEvents:', formData.selectedIndividualEvents);
+      console.log('Type:', typeof formData.selectedIndividualEvents);
+      console.log('Is Array:', Array.isArray(formData.selectedIndividualEvents));
+      console.log('Length:', formData.selectedIndividualEvents?.length || 0);
+      console.log('Full formData:', formData);
+      
       // Validate all required fields
       if (!formData.fullName?.trim()) {
         throw new Error('Please enter your full name');

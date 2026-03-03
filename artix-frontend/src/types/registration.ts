@@ -26,6 +26,7 @@ export interface RegistrationFormData {
   rollNumber: string;
   section: string;
   selectedIndividualEvents: string[];
+  selectedCombo?: string; // Add missing combo field
   teamSize: number;
   teamMembers: TeamMember[];
   paymentScreenshot: File | null;
