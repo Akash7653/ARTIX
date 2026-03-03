@@ -1615,7 +1615,9 @@ app.get('/api/admin/registrations', async (req, res) => {
         created_at: reg.created_at,
         notification_sent: reg.notification_sent || false,
         whatsapp_sent: reg.notification_sent || false,
-        entry_verified_at: reg.entry_verified_at || null
+        entry_verified_at: reg.entry_verified_at || null,
+        payment_screenshot_base64: reg.payment_screenshot_base64 || null,
+        payment_screenshot_mimetype: reg.payment_screenshot_mimetype || 'image/jpeg'
       };
     });
 

@@ -1086,7 +1086,18 @@ export function AdminDashboard({ onLogout }: Props) {
                       </div>
                       <div>
                         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Registration Date</p>
-                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.created_at ? new Date(reg.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</p>
+                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                          {(() => {
+                            try {
+                              if (!reg.created_at) return 'N/A';
+                              const date = new Date(reg.created_at);
+                              if (isNaN(date.getTime())) return 'N/A';
+                              return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+                            } catch (e) {
+                              return 'N/A';
+                            }
+                          })()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1096,22 +1107,51 @@ export function AdminDashboard({ onLogout }: Props) {
                     <h3 className={`text-lg font-bold mb-4 ${
                       darkMode ? 'text-gray-200' : 'text-gray-800'
                     }`}>Payment Details</h3>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg ${
+                    <div className={`p-4 rounded-lg space-y-4 ${
                       darkMode
                         ? 'bg-gray-900/30'
                         : 'bg-gray-100/50'
                     }`}>
-                      <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transaction ID</p>
-                        <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.transaction_id}</p>
-                      </div>
-                      <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>UTR ID</p>
-                        <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.utr_id}</p>
-                      </div>
-                      <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount</p>
-                        <p className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>₹{reg.total_amount.toLocaleString()}</p>
+                      {/* Payment Screenshot */}
+                      {reg.payment_screenshot_base64 && (
+                        <div>
+                          <p className={`text-sm mb-2 font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Payment Screenshot</p>
+                          <img
+                            src={`data:${reg.payment_screenshot_mimetype || 'image/jpeg'};base64,${reg.payment_screenshot_base64}`}
+                            alt="Payment screenshot"
+                            className={`rounded-lg max-w-sm border-2 cursor-pointer transition hover:scale-105 ${darkMode ? 'border-gray-600' : 'border-gray-400'}`}
+                            onClick={() => {
+                              // Allow fullscreen view by opening in new tab
+                              const canvas = document.createElement('canvas');
+                              const ctx = canvas.getContext('2d');
+                              const img = new Image();
+                              img.onload = function() {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                const link = document.createElement('a');
+                                link.href = canvas.toDataURL(reg.payment_screenshot_mimetype || 'image/jpeg');
+                                link.download = `payment-${reg.registration_id}.jpg`;
+                                link.click();
+                              };
+                              img.src = `data:${reg.payment_screenshot_mimetype || 'image/jpeg'};base64,${reg.payment_screenshot_base64}`;
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transaction ID</p>
+                          <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.transaction_id}</p>
+                        </div>
+                        <div>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>UTR ID</p>
+                          <p className={`font-mono text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.utr_id}</p>
+                        </div>
+                        <div>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount</p>
+                          <p className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>₹{reg.total_amount.toLocaleString()}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
