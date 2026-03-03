@@ -1,4 +1,14 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+
+// Add timeout to fetch requests
+const fetchWithTimeout = (url: string, options: RequestInit = {}, timeout = 30000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout - server took too long to respond. Please check your internet connection or try again.')), timeout)
+    )
+  ]);
+};
 
 export const api = {
   register: async (formData: any) => {
@@ -32,21 +42,37 @@ export const api = {
       form.append('paymentScreenshot', formData.paymentScreenshot);
     }
 
-    const response = await fetch(`${API_BASE_URL}/register`, {
-      method: 'POST',
-      body: form,
-    });
+    try {
+      console.log('📤 Registering at:', `${API_BASE_URL}/register`);
+      const response = await fetchWithTimeout(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        body: form,
+      }, 30000);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Registration failed');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Registration failed');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('❌ Registration API error:', err);
+      
+      // Provide more helpful error messages
+      if (err instanceof Error) {
+        if (err.message.includes('timeout')) {
+          throw new Error(err.message);
+        }
+        if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
+          throw new Error('Failed to connect to server. This could be a temporary network issue. Please try again.');
+        }
+      }
+      throw err;
     }
-
-    return await response.json();
   },
 
   verifyQR: async (qrData: any) => {
-    const response = await fetch(`${API_BASE_URL}/verify-qr`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/verify-qr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrData }),

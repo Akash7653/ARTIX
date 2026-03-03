@@ -172,7 +172,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       console.error('Registration error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       
-      // Provide specific error guidance
+      // Provide specific error guidance with admin contact
       if (errorMessage.includes('Email already registered')) {
         setError('❌ This email is already registered. Please use a different email address.');
       } else if (errorMessage.includes('Transaction ID')) {
@@ -180,9 +180,13 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       } else if (errorMessage.includes('UTR ID')) {
         setError('❌ ' + errorMessage);
       } else if (errorMessage.includes('500')) {
-        setError('⚠️ Server error. Please check all fields are filled correctly and try again.');
+        setError('⚠️ Server error. Please check all fields are filled correctly and try again. If the issue persists, contact ARTIX Admin: +91 8919068236');
+      } else if (errorMessage.includes('timeout')) {
+        setError('⏱️ Request timeout - Server took too long to respond.\n\nPlease check your internet connection and try again.\n\nIf the problem continues, contact ARTIX Admin: +91 8919068236\n\n⚠️ Important: If you have already registered, do NOT register again. Check your email for confirmation.');
+      } else if (errorMessage.includes('Failed to connect') || errorMessage.includes('Failed to fetch') || errorMessage.includes('Network')) {
+        setError('🔌 Failed to connect to server. This could be a temporary network issue.\n\nPlease:\n1. Check your internet connection\n2. Wait a few seconds\n3. Try again\n\nIf the problem persists, contact ARTIX Admin: +91 8919068236\n\n⚠️ Important: If you have already registered, do NOT register again. Check your email for confirmation.');
       } else {
-        setError(errorMessage);
+        setError(errorMessage + '\n\nIf you need help, contact ARTIX Admin: +91 8919068236');
       }
     } finally {
       setIsSubmitting(false);
