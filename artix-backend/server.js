@@ -2612,6 +2612,40 @@ logger.info('📊 Monitoring endpoints available at /api/monitor/*');
 
 // ==================== END ADVANCED ROUTES ====================
 
+// DIAGNOSTIC ENDPOINT: Check MongoDB vs API response for events
+app.get('/api/admin/diagnostics/events', async (req, res) => {
+  try {
+    console.log('\n🔍 === DIAGNOSTICS ENDPOINT ===');
+    
+    // Get all registrations directly from MongoDB
+    const registrations = await registrationsCollection.find({}).toArray();
+    
+    const diagnostics = {
+      total_registrations: registrations.length,
+      registrations_data: registrations.map(reg => ({
+        registration_id: reg.registration_id,
+        full_name: reg.full_name,
+        total_amount: reg.total_amount,
+        selected_events_raw: reg.selected_events,
+        selected_events_type: typeof reg.selected_events,
+        selected_events_is_array: Array.isArray(reg.selected_events),
+        selected_events_length: Array.isArray(reg.selected_events) ? reg.selected_events.length : 0,
+        has_undefined_string: Array.isArray(reg.selected_events) ? reg.selected_events.includes('undefined') : 'N/A',
+        event_type: reg.event_type,
+        created_at: reg.created_at
+      })),
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('🔍 Diagnostics data:', JSON.stringify(diagnostics, null, 2));
+    
+    res.json(diagnostics);
+  } catch (err) {
+    console.error('Diagnostics error:', err);
+    res.status(500).json({ error: 'Diagnostics failed', details: err.message });
+  }
+});
+
 // Start Server
 async function startServer() {
   try {
