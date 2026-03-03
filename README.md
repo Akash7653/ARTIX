@@ -5,6 +5,7 @@ A professional, fully-featured event registration web application for ARTIX 2026
 ## 🌟 Features
 
 ### Frontend
+
 - **Responsive Design**: Mobile-first responsive layout with stunning glassmorphism UI
 - **Dark Tech Theme**: Black + Neon Blue + Electric Purple color scheme
 - **Smooth Animations**: Professional fade-in and bounce animations
@@ -16,6 +17,7 @@ A professional, fully-featured event registration web application for ARTIX 2026
 - **Admin Scanner**: Password-protected QR code scanning for entry verification
 
 ### Backend
+
 - **MongoDB Integration**: Secure database with connection to your IOT cluster
 - **RESTful APIs**: Complete API endpoints for all operations
 - **File Upload**: Payment screenshot storage with local disk management
