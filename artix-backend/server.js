@@ -2598,21 +2598,7 @@ app.post('/api/admin/clear-database', async (req, res) => {
   }
 });
 
-// ==================== WEEK 4: ADVANCED ADMIN ROUTES ====================
-// Mount Admin Routes with JWT verification
-app.use('/api/admin', verifyJWT, createAdminRoutes(db, logger));
-
-// Mount Monitoring Routes
-app.use('/api/monitor', createMonitoringRoutes(monitoringSystem, logger));
-
-logger.info('✅ Week 4 Advanced Admin Routes mounted');
-logger.info('✅ Performance Monitoring Routes mounted');
-logger.info('📊 Admin endpoints available at /api/admin/*');
-logger.info('📊 Monitoring endpoints available at /api/monitor/*');
-
-// ==================== END ADVANCED ROUTES ====================
-
-// DIAGNOSTIC ENDPOINT: Check MongoDB vs API response for events
+// DIAGNOSTIC ENDPOINT: Check MongoDB vs API response for events (UNPROTECTED - before JWT middleware)
 app.get('/api/admin/diagnostics/events', async (req, res) => {
   try {
     console.log('\n🔍 === DIAGNOSTICS ENDPOINT ===');
@@ -2645,6 +2631,20 @@ app.get('/api/admin/diagnostics/events', async (req, res) => {
     res.status(500).json({ error: 'Diagnostics failed', details: err.message });
   }
 });
+
+// ==================== WEEK 4: ADVANCED ADMIN ROUTES ====================
+// Mount Admin Routes with JWT verification
+app.use('/api/admin', verifyJWT, createAdminRoutes(db, logger));
+
+// Mount Monitoring Routes
+app.use('/api/monitor', createMonitoringRoutes(monitoringSystem, logger));
+
+logger.info('✅ Week 4 Advanced Admin Routes mounted');
+logger.info('✅ Performance Monitoring Routes mounted');
+logger.info('📊 Admin endpoints available at /api/admin/*');
+logger.info('📊 Monitoring endpoints available at /api/monitor/*');
+
+// ==================== END ADVANCED ROUTES ====================
 
 // Start Server
 async function startServer() {
