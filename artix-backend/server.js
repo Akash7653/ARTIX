@@ -1330,19 +1330,8 @@ app.get('/api/health', (req, res) => {
 // 7. Get Statistics (for admin)
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    // Check cache first
-    const cacheKey = 'admin_stats';
-    const cachedStats = statsCache.get(cacheKey);
-    
-    if (cachedStats) {
-      logAdmin('Admin stats served from cache', { cacheKey, cached: true });
-      return res.json(cachedStats);
-    }
-    
-    // Set cache headers for 5 minutes
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    
-    console.log('📊 Fetching statistics from database...');
+    // IMPORTANT: ALWAYS fetch latest stats (no caching for admin dashboard)
+    console.log('📊 Fetching fresh statistics from database...');
     
     if (!registrationsCollection) {
       console.error('❌ Registrations collection not initialized');
@@ -1421,9 +1410,8 @@ app.get('/api/admin/stats', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // Cache the stats for 5 minutes
-    statsCache.set(cacheKey, statsData);
-    logAdmin('Admin stats cached for future requests', { cacheKey, ttl: '5min' });
+    // DISABLED CACHING: Always fetch fresh data for real-time stats
+    // statsCache.set(cacheKey, statsData);
 
     res.json(statsData);
 

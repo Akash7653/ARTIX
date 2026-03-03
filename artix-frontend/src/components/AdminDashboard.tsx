@@ -253,15 +253,10 @@ export function AdminDashboard({ onLogout }: Props) {
       const result = await response.json();
       console.log(`✅ Verification ID set:`, result);
       
-      // Open WhatsApp with the pre-formatted message
-      if (result.whatsapp?.link) {
-        console.log(`📱 Opening WhatsApp link...`);
-        setTimeout(() => {
-          window.open(result.whatsapp.link, '_blank');
-        }, 500);
-      }
+      // FIXED: Do NOT open WhatsApp automatically
+      // Users should click "Send WhatsApp Message" button in Step 3 instead
       
-      setMessage(`✅ Verification ID set! WhatsApp will open to send the message.`);
+      setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" in Step 3 to send the message.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
       setTimeout(loadData, 500);
@@ -1014,9 +1009,11 @@ export function AdminDashboard({ onLogout }: Props) {
                       <div>
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         <div className="flex flex-wrap gap-2">
-                          {reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
+                          {reg && reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
                             reg.selected_events.map((event, i) => {
-                              const eventName = event ? String(event).replace(/_/g, ' ').toUpperCase() : 'Unknown';
+                              // Ensure event is a valid string
+                              const eventStr = event && (typeof event === 'string' ? event : String(event));
+                              const eventName = eventStr ? eventStr.replace(/_/g, ' ').toUpperCase() : 'Unknown';
                               return (
                                 <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
                                   darkMode
@@ -1151,7 +1148,7 @@ export function AdminDashboard({ onLogout }: Props) {
                   )}
 
                   {/* Notification Section - Send WhatsApp */}
-                  {reg.approval_status === 'approved' && reg.verification_id && (
+                  {reg.approval_status === 'approved' && reg.verification_id && !reg.notification_sent && (
                     <div className={`rounded-lg p-5 border-2 ${
                       darkMode
                         ? 'bg-green-500/5 border-green-500/40'
@@ -1196,11 +1193,30 @@ export function AdminDashboard({ onLogout }: Props) {
                         </button>
 
                         <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
-                          reg.notification_sent 
-                            ? darkMode ? 'bg-green-500/20 text-green-300 border-green-500' : 'bg-green-200 text-green-800 border-green-400'
-                            : darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
+                          darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
                         }`}>
-                          {reg.notification_sent ? '✅ Message Sent' : '⏳ Pending'}
+                          ⏳ Pending
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Success message after WhatsApp sent */}
+                  {reg.approval_status === 'approved' && reg.verification_id && reg.notification_sent && (
+                    <div className={`rounded-lg p-5 border-2 ${
+                      darkMode
+                        ? 'bg-green-500/10 border-green-500/40'
+                        : 'bg-green-100 border-green-300'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className={`w-8 h-8 ${darkMode ? 'text-green-400' : 'text-green-700'}`} />
+                        <div>
+                          <h3 className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                            ✅ All Done!
+                          </h3>
+                          <p className={`text-sm ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                            Participant {reg.full_name} has been approved and notified via WhatsApp.
+                          </p>
                         </div>
                       </div>
                     </div>
