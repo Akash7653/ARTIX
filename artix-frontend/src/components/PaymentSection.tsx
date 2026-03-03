@@ -102,7 +102,6 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       if (!transactionId.trim()) {
         throw new Error('Please enter Transaction ID');
       }
-
       if (!utrId.trim()) {
         throw new Error('Please enter UTR ID');
       }
@@ -113,28 +112,42 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
 
       // Check if Transaction ID or UTR ID already exist in database
       console.log('🔍 Checking if Transaction ID and UTR ID are available...');
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const checkResponse = await fetch(`${baseUrl}/check-transaction-utr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactionId: transactionId.trim(),
-          utrId: utrId.trim()
-        })
-      });
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      
+      try {
+        const checkResponse = await fetch(`${baseUrl}/check-transaction-utr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionId: transactionId.trim(),
+            utrId: utrId.trim()
+          })
+        });
 
-      const checkData = await checkResponse.json();
+        // Handle non-OK responses
+        if (!checkResponse.ok) {
+          console.error('❌ Check endpoint returned status:', checkResponse.status);
+          // If check fails, still allow registration to proceed (backend will validate)
+          console.warn('⚠️ Skipping transaction verification - will validate on server');
+        } else {
+          // Only parse JSON if response is OK
+          const checkData = await checkResponse.json();
 
-      if (!checkResponse.ok || !checkData.success) {
-        // Build error message from check response
-        if (checkData.errors && Array.isArray(checkData.errors)) {
-          const errorMessages = checkData.errors.map((e: any) => e.message).join('\n');
-          throw new Error(errorMessages);
+          if (!checkData.success) {
+            // Build error message from check response
+            if (checkData.errors && Array.isArray(checkData.errors)) {
+              const errorMessages = checkData.errors.map((e: any) => e.message).join('\n');
+              throw new Error(errorMessages);
+            }
+            throw new Error(checkData.message || 'Failed to verify Transaction ID and UTR ID');
+          }
+
+          console.log('✅ Transaction ID and UTR ID are available');
         }
-        throw new Error(checkData.message || 'Failed to verify Transaction ID and UTR ID');
+      } catch (checkErr) {
+        console.warn('⚠️ Transaction check error (will validate on server):', checkErr);
+        // Don't block registration if check fails - backend will validate
       }
-
-      console.log('✅ Transaction ID and UTR ID are available');
 
       // Prepare form data with normalized email and transaction/UTR IDs
       const registrationData = {
