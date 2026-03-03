@@ -1020,8 +1020,8 @@ export function AdminDashboard({ onLogout }: Props) {
               : 'bg-white/40 border-gray-300'
           }`}>
             {(() => {
-              // Search by both _id and registration_id to support both View button and approve/reject flows
-              const reg = filteredRegistrations.find(r => r._id === expandedId || r.registration_id === expandedId);
+              // Search through ALL registrations (not just filtered) so detail view stays open during workflow
+              const reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
               if (!reg) return null;
 
               const totalHeadCount = (reg.team_members?.length || 0) + 1;
