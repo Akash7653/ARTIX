@@ -1564,30 +1564,39 @@ app.get('/api/admin/registrations', async (req, res) => {
     console.log('🔍 DEBUG: registrations from DB:', registrations.length, 'items');
     console.log('🔍 DEBUG: first registration:', registrations[0] ? JSON.stringify(registrations[0]).substring(0, 200) : 'empty');
 
-    // Format response
-    const formattedData = registrations.map(reg => ({
-      _id: reg._id,
-      registration_id: reg.registration_id,
-      verification_id: reg.verification_id || null,
-      full_name: reg.full_name,
-      email: reg.email,
-      phone: reg.phone,
-      college_name: reg.college_name,
-      year_of_study: reg.year_of_study,
-      branch: reg.branch,
-      roll_number: reg.roll_number,
-      selected_events: reg.selected_events || [],
-      total_amount: reg.total_amount,
-      transaction_id: reg.transaction_id,
-      utr_id: reg.utr_id,
-      approval_status: reg.approval_status,
-      selected_for_event: reg.selected_for_event,
-      team_members: reg.team_members || [],
-      created_at: reg.created_at,
-      notification_sent: reg.notification_sent || false,
-      whatsapp_sent: reg.notification_sent || false,
-      entry_verified_at: reg.entry_verified_at || null
-    }));
+    // Format response - Transform team members to proper field names
+    const formattedData = registrations.map(reg => {
+      // Transform team_members field names from frontend format to backend format
+      const transformedTeamMembers = (reg.team_members || []).map(member => ({
+        member_name: member.name || member.member_name || '',
+        member_branch: member.branch || member.member_branch || '',
+        member_phone: member.phone || member.member_phone || ''
+      }));
+      
+      return {
+        _id: reg._id,
+        registration_id: reg.registration_id,
+        verification_id: reg.verification_id || null,
+        full_name: reg.full_name,
+        email: reg.email,
+        phone: reg.phone,
+        college_name: reg.college_name,
+        year_of_study: reg.year_of_study,
+        branch: reg.branch,
+        roll_number: reg.roll_number,
+        selected_events: reg.selected_events || [],
+        total_amount: reg.total_amount,
+        transaction_id: reg.transaction_id,
+        utr_id: reg.utr_id,
+        approval_status: reg.approval_status,
+        selected_for_event: reg.selected_for_event,
+        team_members: transformedTeamMembers,
+        created_at: reg.created_at,
+        notification_sent: reg.notification_sent || false,
+        whatsapp_sent: reg.notification_sent || false,
+        entry_verified_at: reg.entry_verified_at || null
+      };
+    });
 
     console.log('🔍 DEBUG: formattedData:', formattedData.length, 'items');
     console.log('🔍 DEBUG: formatted first item:', formattedData[0]);
@@ -1802,7 +1811,6 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
       '',
       '👤 *Participant Information:*',
       `Name: ${registration.full_name}`,
-      `College: ${registration.college_name || 'N/A'}`,
       `Branch: ${registration.branch}`,
       `Year: ${registration.year_of_study}`,
       `Phone: ${formatPhoneForDisplay(registration.phone)}`,
@@ -1812,8 +1820,12 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     // Add team details if team exists
     if (registration.team_members && registration.team_members.length > 0) {
       lines.push('👥 *Team Details:*');
-      registration.team_members.forEach((member, idx) => {
-        lines.push(`  Team Member ${idx + 1}: ${member.member_name}`);
+      registration.team_members.forEach((member) => {
+        // Support both field name formats for compatibility
+        const memberName = member.member_name || member.name || 'N/A';
+        const memberBranch = member.member_branch || member.branch || 'N/A';
+        const memberPhone = member.member_phone || member.phone || 'N/A';
+        lines.push(`  ${memberName} - ${memberBranch} - ${memberPhone}`);
       });
       lines.push('');
     }
@@ -1823,6 +1835,8 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     if (registration.selected_events && registration.selected_events.length > 0) {
       const eventString = registration.selected_events.join(', ');
       lines.push(`Events: ${eventString}`);
+    } else {
+      lines.push('Events: No events selected');
     }
     lines.push(`Total Amount: ₹${registration.total_amount || '0'}`);
     lines.push(`Registration ID: ${registration.registration_id}`);

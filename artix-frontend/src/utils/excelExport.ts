@@ -38,10 +38,9 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       'Name': reg.full_name,
       'Email': reg.email,
       'Phone': reg.phone,
-      'College': reg.college,
       'Branch': reg.branch,
       'Year': reg.year,
-      'Events': (reg.selected_events || []).join(', '),
+      'Events': (reg.selected_events || []).join(', ') || 'N/A',
       'Amount (₹)': reg.total_amount || 0,
       'Transaction ID': reg.transaction_id || 'N/A',
       'UTR ID': reg.utr_id || 'N/A',
@@ -49,7 +48,7 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       'Entry Status': reg.entry_status || 'N/A',
       'Team Size': (reg.team_members?.length || 0) + 1,
       'Notification Sent': reg.notification_sent ? 'Yes' : 'No',
-      'Created Date': reg.created_at ? new Date(reg.created_at).toLocaleDateString() : 'N/A'
+      'Registration Date': reg.created_at ? new Date(reg.created_at).toLocaleDateString('en-IN') : 'N/A'
     }));
 
     const ws1 = XLSX.utils.json_to_sheet(registrationSummary);
@@ -61,7 +60,6 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       { wch: 20 }, // Name
       { wch: 25 }, // Email
       { wch: 12 }, // Phone
-      { wch: 25 }, // College
       { wch: 12 }, // Branch
       { wch: 6 },  // Year
       { wch: 30 }, // Events
@@ -72,7 +70,7 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       { wch: 12 }, // Entry Status
       { wch: 10 }, // Team Size
       { wch: 15 }, // Notification Sent
-      { wch: 15 }  // Created Date
+      { wch: 15 }  // Registration Date
     ];
     ws1['!cols'] = colWidths;
 
@@ -87,7 +85,6 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
         'Team Lead': reg.full_name,
         'Email': reg.email,
         'Phone': reg.phone,
-        'College': reg.college,
         'Branch': reg.branch,
         'Year': reg.year,
         'Role': 'Team Leader'
@@ -101,7 +98,6 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
             'Team Lead': reg.full_name,
             'Email': member.email,
             'Phone': member.phone,
-            'College': '(Team Member)',
             'Branch': member.branch,
             'Year': member.year,
             'Role': 'Team Member'
@@ -116,7 +112,6 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       { wch: 20 },
       { wch: 25 },
       { wch: 12 },
-      { wch: 25 },
       { wch: 12 },
       { wch: 6 },
       { wch: 15 }
