@@ -939,6 +939,9 @@ export function AdminDashboard({ onLogout }: Props) {
                   }`}>Phone</th>
                   <th className={`px-6 py-4 text-left text-sm font-semibold ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Events</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>Status</th>
                   <th className={`px-6 py-4 text-left text-sm font-semibold ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
@@ -964,6 +967,32 @@ export function AdminDashboard({ onLogout }: Props) {
                     </td>
                     <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.email}</td>
                     <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.phone}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex flex-wrap gap-2">
+                        {reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
+                          reg.selected_events
+                            .filter(event => event && String(event).trim() !== '' && String(event) !== 'undefined')
+                            .map((event, i) => {
+                              const eventStr = String(event).trim();
+                              const eventName = eventStr.length > 0 ? eventStr.replace(/_/g, ' ').toUpperCase() : null;
+                              return eventName ? (
+                                <span key={i} className={`px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${
+                                  darkMode
+                                    ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                    : 'bg-blue-100 text-blue-700 border-blue-300'
+                                }`}>
+                                  {eventName}
+                                </span>
+                              ) : null;
+                            })
+                            .filter(Boolean)
+                        ) : (
+                          <span className={`text-xs italic ${
+                            darkMode ? 'text-gray-500' : 'text-gray-500'
+                          }`}>—</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         reg.approval_status === 'pending'
