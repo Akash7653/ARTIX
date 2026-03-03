@@ -740,17 +740,23 @@ async function registerHandler(req, res) {
     } else if (selectedIndividualEvents) {
       // Handle both string and array inputs
       if (typeof selectedIndividualEvents === 'string') {
-        selectedEventsArray = selectedIndividualEvents.split(',').filter(e => e.trim());
+        const rawArray = selectedIndividualEvents.split(',').filter(e => e.trim());
+        selectedEventsArray = rawArray;
+        console.log(`🎯 [PARSE] Split string into array:`, rawArray);
       } else if (Array.isArray(selectedIndividualEvents)) {
         selectedEventsArray = selectedIndividualEvents;
+        console.log(`🎯 [PARSE] Already an array:`, selectedIndividualEvents);
+      } else {
+        console.warn(`🎯 [PARSE] Unknown type for selectedIndividualEvents:`, typeof selectedIndividualEvents);
       }
+    } else {
+      console.warn(`🎯 [PARSE] No selectedIndividualEvents or selectedCombo provided`);
     }
 
-    console.log(`🎯 Selected events:`, selectedEventsArray);
-    console.log(`🎯 Selected events array:`, selectedEventsArray);
-    console.log(`🎯 Selected events count:`, selectedEventsArray.length);
+    console.log(`🎯 [STORE] Final selected_events to store:`, selectedEventsArray);
+    console.log(`🎯 [STORE] Event count: ${selectedEventsArray.length}`);
     if (selectedEventsArray.length === 0) {
-      console.warn(`⚠️ Registration ${registrationId} has no events selected`);
+      console.warn(`⚠️ [WARN] Registration ${registrationId} has no events selected - totalAmount=${totalAmount}`);
     }
 
     // Create registration document WITHOUT verification_id
@@ -779,10 +785,18 @@ async function registerHandler(req, res) {
       team_members: parsedTeamMembers.length > 0 ? parsedTeamMembers : null
     };
 
-    console.log(`💾 Inserting registration document...`);
+    console.log(`💾 [INSERT] Inserting registration document with events:`, {
+      registration_id: registrationId,
+      selected_events: registrationDoc.selected_events,
+      events_count: registrationDoc.selected_events.length,
+      event_type: registrationDoc.event_type
+    });
 
     // Insert registration
-    const result = await registrationsCollection.insertOne(registrationDoc);
+    const result = await registrationsCollection.insertOne(registrationDoc);  
+    
+    // Verify it was inserted correctly
+    console.log(`💾 [VERIFY] Inserted with ID:`, result.insertedId);
     logRegistration('Registration created successfully', { 
       registrationId,
       email: normalizedEmail,
@@ -1645,11 +1659,21 @@ app.get('/api/admin/registrations', async (req, res) => {
       };
     });
 
-    console.log('🔍 DEBUG: formattedData:', formattedData.length, 'items');
+    console.log('🔍 [RESPONSE] formatted registrations count:', formattedData.length);
     if (formattedData[0]) {
-      console.log('🔍 DEBUG: formatted first item created_at:', formattedData[0].created_at);
-      console.log('🔍 DEBUG: formatted first item selected_events:', formattedData[0].selected_events);
+      console.log('🔍 [RESPONSE] First registration data:', {
+        registration_id: formattedData[0].registration_id,
+        created_at: formattedData[0].created_at,
+        selected_events: formattedData[0].selected_events,
+        selected_events_count: Array.isArray(formattedData[0].selected_events) ? formattedData[0].selected_events.length : 0
+      });
     }
+    // Log all registrations' event counts
+    const eventCounts = formattedData.map(r => ({
+      reg_id: r.registration_id,
+      event_count: Array.isArray(r.selected_events) ? r.selected_events.length : 0
+    }));
+    console.log('🔍 [RESPONSE] Event counts:', eventCounts);
 
     logAdmin('Registrations retrieved successfully', {
       page,

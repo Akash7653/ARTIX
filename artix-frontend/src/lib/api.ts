@@ -10,7 +10,17 @@ export const api = {
     form.append('yearOfStudy', formData.yearOfStudy);
     form.append('branch', formData.branch);
     form.append('rollNumber', formData.rollNumber);
-    form.append('selectedIndividualEvents', formData.selectedIndividualEvents.join(','));
+    
+    // Debug: Log selected events before sending
+    const eventsString = formData.selectedIndividualEvents.join(',');
+    console.log('🚀 API: Sending registration with events:', {
+      eventsArray: formData.selectedIndividualEvents,
+      eventsCount: formData.selectedIndividualEvents.length,
+      eventsString: eventsString,
+      totalAmount: formData.totalAmount
+    });
+    
+    form.append('selectedIndividualEvents', eventsString);
     form.append('selectedCombo', formData.selectedCombo);
     form.append('teamMembers', JSON.stringify(formData.teamMembers));
     form.append('totalAmount', formData.totalAmount.toString());

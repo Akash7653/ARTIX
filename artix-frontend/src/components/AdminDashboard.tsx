@@ -1083,13 +1083,14 @@ export function AdminDashboard({ onLogout }: Props) {
               if (!reg) return null;
 
               // Log the registration data for debugging
-              console.log('📊 Admin detail view - Registration data:', {
+              console.log('📊 [DETAIL VIEW] Registration data received:', {
                 registration_id: reg.registration_id,
                 created_at: reg.created_at,
                 created_at_type: typeof reg.created_at,
                 selected_events: reg.selected_events,
                 selected_events_type: Array.isArray(reg.selected_events) ? 'array' : typeof reg.selected_events,
-                selected_events_length: Array.isArray(reg.selected_events) ? reg.selected_events.length : 'N/A'
+                selected_events_length: Array.isArray(reg.selected_events) ? reg.selected_events.length : 0,
+                selected_events_raw: JSON.stringify(reg.selected_events)
               });
 
               const totalHeadCount = (reg.team_members?.length || 0) + 1;
@@ -1226,9 +1227,21 @@ export function AdminDashboard({ onLogout }: Props) {
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         {(() => {
                           const events = Array.isArray(reg.selected_events) ? reg.selected_events : [];
+                          console.log('📋 [EVENTS RENDER] Processing events:', {
+                            registration_id: reg.registration_id,
+                            events_input: events,
+                            is_array: Array.isArray(events),
+                            count: events.length
+                          });
+                          
                           const validEvents = events
                             .filter(e => e && String(e).trim() !== '' && String(e) !== 'undefined')
                             .map(e => String(e).trim());
+                          
+                          console.log('📋 [EVENTS RENDER] After filtering:', {
+                            valid_count: validEvents.length,
+                            valid_events: validEvents
+                          });
                           
                           if (validEvents.length === 0) {
                             return (
