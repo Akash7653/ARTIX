@@ -20,11 +20,11 @@ class FieldFilter {
       // Admin responses - full data
       admin: {
         registrations: [
-          '_id', 'registration_id', 'participant_name', 'email', 'phone_number',
-          'team_members', 'team_size', 'college_name', 'department', 'year_of_study',
-          'event_name', 'selected_for_event', 'entry_verified_at', 'approval_status',
-          'total_amount', 'payment_status', 'uploaded_files', 'registration_date',
-          'updated_at'
+          '_id', 'registration_id', 'verification_id', 'full_name', 'email', 'phone',
+          'college_name', 'branch', 'year_of_study', 'roll_number', 'selected_events',
+          'team_members', 'total_amount', 'transaction_id', 'utr_id',
+          'approval_status', 'selected_for_event', 'entry_verified_at', 
+          'notification_sent', 'whatsapp_sent', 'created_at', 'updated_at'
         ],
         events: ['_id', 'event_name', 'event_date', 'registration_deadline', 'price', 'max_participants', 'description'],
       },

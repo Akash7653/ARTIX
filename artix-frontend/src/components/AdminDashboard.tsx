@@ -29,6 +29,7 @@ interface Registration {
   team_members: TeamMember[];
   created_at: string;
   notification_sent: boolean;
+  whatsapp_sent?: boolean;
   entry_verified_at?: string;
 }
 
@@ -353,7 +354,12 @@ export function AdminDashboard({ onLogout }: Props) {
     }
 
     lines.push('Event Details:');
-    lines.push(`Events: ${reg.selected_events.join(', ')}`);
+    // Fix: Check if selected_events exists and is an array before joining
+    if (reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0) {
+      lines.push(`Events: ${reg.selected_events.join(', ')}`);
+    } else {
+      lines.push('Events: No specific events selected');
+    }
     lines.push(`Total Amount: Rs ${reg.total_amount}`);
     lines.push(`Registration ID: ${reg.registration_id}`);
     lines.push('');
@@ -863,6 +869,9 @@ export function AdminDashboard({ onLogout }: Props) {
                   }`}>Amount</th>
                   <th className={`px-6 py-4 text-left text-sm font-semibold ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>WhatsApp</th>
+                  <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>Actions</th>
                 </tr>
               </thead>
@@ -893,6 +902,15 @@ export function AdminDashboard({ onLogout }: Props) {
                     <td className={`px-6 py-4 text-sm font-semibold ${
                       darkMode ? 'text-purple-400' : 'text-purple-700'
                     }`}>₹{reg.total_amount.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 w-fit ${
+                        reg.notification_sent
+                          ? darkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-800'
+                          : darkMode ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-200 text-gray-800'
+                      }`}>
+                        {reg.notification_sent ? '✅ Sent' : '⏳ Pending'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}

@@ -1535,15 +1535,8 @@ app.get('/api/admin/registrations', async (req, res) => {
     const approvalStatus = req.query.approval_status;
     const searchQuery = req.query.search;
     
-    // Build cache key based on filters
-    const cacheKey = `registrations_${page}_${limit}_${approvalStatus || 'all'}_${searchQuery || 'none'}`;
-    
-    // Check if data exists in cache
-    const cachedData = registrationCache.get(cacheKey);
-    if (cachedData) {
-      logAdmin('Registrations served from cache', { cacheKey });
-      return res.json(cachedData);
-    }
+    // IMPORTANT: ALWAYS fetch latest data (no caching for real-time admin dashboard)
+    console.log(`📋 Fetching fresh registrations - page ${page}, limit ${limit}`);
     
     // Build filter object
     let filter = {};
@@ -1604,6 +1597,7 @@ app.get('/api/admin/registrations', async (req, res) => {
       team_members: reg.team_members || [],
       created_at: reg.created_at,
       notification_sent: reg.notification_sent || false,
+      whatsapp_sent: reg.notification_sent || false,
       entry_verified_at: reg.entry_verified_at || null
     }));
 
@@ -1640,11 +1634,9 @@ app.get('/api/admin/registrations', async (req, res) => {
     console.log('🔍 DEBUG: responseData object:', responseData);
     console.log('🔍 DEBUG: responseData.data array length:', responseData.data.length);
     console.log('🔍 DEBUG: responseData.success:', responseData.success);
-    console.log('🔍 DEBUG: JSON.stringify attempt:', JSON.stringify(responseData).substring(0, 200));
 
-    // Cache the response
-    registrationCache.set(cacheKey, responseData);
-    logAdmin('Registrations cached for future requests', { cacheKey });
+    // DISABLED CACHING: Always fetch latest data for real-time admin dashboard
+    // registrationCache.set(cacheKey, responseData);
 
     res.json(responseData);
 
@@ -2589,6 +2581,12 @@ app.post('/api/admin/clear-database', async (req, res) => {
     teamMembersCollection = db.collection('team_members');
     await teamMembersCollection.createIndex({ registration_id: 1 });
     console.log('✅ Recreated team_members collection with indexes');
+
+    // CLEAR ALL CACHES
+    console.log('🧹 Clearing all caches...');
+    registrationCache.clear();
+    statsCache.clear();
+    console.log('✅ All caches cleared');
 
     console.log('🗑️  DATABASE CLEARED AND RECREATED SUCCESSFULLY');
 
