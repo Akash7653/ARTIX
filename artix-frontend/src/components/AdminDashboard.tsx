@@ -196,7 +196,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
   const handleReject = async (registrationId: string) => {
     try {
-      const baseUrl = '/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       
       console.log(`❌ Rejecting registration: ${registrationId}`);

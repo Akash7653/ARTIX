@@ -1789,7 +1789,7 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
       return res.status(400).json({ error: 'Participant phone number not found' });
     }
 
-    const adminPhone = '+919398176430';
+    const adminPhone = '+918919068236';
 
     // Generate full formatted message like whatsappHelper.ts does
     const formatPhoneForDisplay = (phone) => {
