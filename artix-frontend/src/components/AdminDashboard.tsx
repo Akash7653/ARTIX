@@ -222,6 +222,8 @@ export function AdminDashboard({ onLogout }: Props) {
       const result = await response.json();
       console.log(`✅ Rejection response:`, result);
       
+      // Collapse view and reload - registration is now rejected
+      setExpandedId(null);
       setMessage('❌ Participant Rejected');
       setMessageType('success');
       setTimeout(loadData, 500);
@@ -272,6 +274,8 @@ export function AdminDashboard({ onLogout }: Props) {
       // FIXED: Do NOT open WhatsApp automatically
       // Users should click "Send WhatsApp Message" button in Step 3 instead
       
+      // Keep expanded view throughout the workflow
+      setExpandedId(registrationId);
       setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" in Step 3 to send the message.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
@@ -421,7 +425,9 @@ export function AdminDashboard({ onLogout }: Props) {
       if (response.ok) {
         setMessage('✅ WhatsApp message marked as sent!');
         setMessageType('success');
-        setTimeout(() => setMessage(''), 3000);
+        
+        // Keep expanded view throughout the workflow
+        setExpandedId(reg.registration_id);
         
         // Remove from pending set
         setPendingWhatsAppSend(prev => {
@@ -431,6 +437,7 @@ export function AdminDashboard({ onLogout }: Props) {
         });
         
         setTimeout(loadData, 1000);
+        setTimeout(() => setMessage(''), 3000);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error';
         console.error('❌ Error marking WhatsApp sent:', errorMsg);
@@ -478,6 +485,8 @@ export function AdminDashboard({ onLogout }: Props) {
             window.open(waLink, '_blank');
             
             // Add to pending set - show the confirmation button
+            // Keep expanded view and show the pending state
+            setExpandedId(reg.registration_id);
             setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
             setMessage('📱 WhatsApp opened - Please send the message and then click "Confirm Sent" button');
             setMessageType('info');
@@ -485,6 +494,7 @@ export function AdminDashboard({ onLogout }: Props) {
           }
         } else {
           // Add to pending set for manual confirmation
+          setExpandedId(reg.registration_id);
           setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
           setMessage('📱 Message prepared - Please send manually and click "Confirm Sent"');
           setMessageType('info');
@@ -1010,7 +1020,8 @@ export function AdminDashboard({ onLogout }: Props) {
               : 'bg-white/40 border-gray-300'
           }`}>
             {(() => {
-              const reg = filteredRegistrations.find(r => r._id === expandedId);
+              // Search by both _id and registration_id to support both View button and approve/reject flows
+              const reg = filteredRegistrations.find(r => r._id === expandedId || r.registration_id === expandedId);
               if (!reg) return null;
 
               const totalHeadCount = (reg.team_members?.length || 0) + 1;
