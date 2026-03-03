@@ -740,12 +740,16 @@ async function registerHandler(req, res) {
     } else if (selectedIndividualEvents) {
       // Handle both string and array inputs
       if (typeof selectedIndividualEvents === 'string') {
-        const rawArray = selectedIndividualEvents.split(',').filter(e => e.trim());
+        const rawArray = selectedIndividualEvents
+          .split(',')
+          .map(e => e.trim())
+          .filter(e => e && e !== 'undefined' && e !== 'null' && e !== '');
         selectedEventsArray = rawArray;
         console.log(`🎯 [PARSE] Split string into array:`, rawArray);
       } else if (Array.isArray(selectedIndividualEvents)) {
-        selectedEventsArray = selectedIndividualEvents;
-        console.log(`🎯 [PARSE] Already an array:`, selectedIndividualEvents);
+        // Filter out invalid values from array
+        selectedEventsArray = selectedIndividualEvents.filter(e => e && String(e) !== 'undefined' && String(e) !== 'null');
+        console.log(`🎯 [PARSE] Already an array:`, selectedEventsArray);
       } else {
         console.warn(`🎯 [PARSE] Unknown type for selectedIndividualEvents:`, typeof selectedIndividualEvents);
       }
@@ -1626,11 +1630,16 @@ app.get('/api/admin/registrations', async (req, res) => {
       // Convert Date to ISO string for proper JSON serialization
       const createdAtISO = createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString();
       
-      // Ensure selected_events is an array
+      // Ensure selected_events is an array and filter out invalid values
       let selectedEvents = reg.selected_events || [];
       if (!Array.isArray(selectedEvents)) {
         selectedEvents = [];
       }
+      // Clean up invalid event values (like 'undefined', 'null', empty strings)
+      selectedEvents = selectedEvents.filter(e => {
+        const strVal = String(e).trim();
+        return strVal && strVal !== 'undefined' && strVal !== 'null' && strVal !== '';
+      });
       
       return {
         _id: reg._id,

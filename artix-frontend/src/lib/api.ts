@@ -12,12 +12,14 @@ export const api = {
     form.append('rollNumber', formData.rollNumber);
     
     // Debug: Log selected events before sending
-    const eventsString = formData.selectedIndividualEvents.join(',');
+    const eventsArray = Array.isArray(formData.selectedIndividualEvents) ? formData.selectedIndividualEvents : [];
+    const eventsString = eventsArray.join(',');
     console.log('🚀 API: Sending registration with events:', {
-      eventsArray: formData.selectedIndividualEvents,
-      eventsCount: formData.selectedIndividualEvents.length,
+      eventsArray: eventsArray,
+      eventsCount: eventsArray.length,
       eventsString: eventsString,
-      totalAmount: formData.totalAmount
+      totalAmount: formData.totalAmount,
+      formDataType: typeof formData.selectedIndividualEvents
     });
     
     form.append('selectedIndividualEvents', eventsString);
