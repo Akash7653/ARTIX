@@ -129,6 +129,19 @@ export function AdminDashboard({ onLogout }: Props) {
       }
       
       console.log('📋 Setting registrations:', registrationsArray.length, 'items');
+      if (registrationsArray.length > 0) {
+        console.log('📋 First registration details:', {
+          registration_id: registrationsArray[0].registration_id,
+          created_at: registrationsArray[0].created_at,
+          created_at_type: typeof registrationsArray[0].created_at,
+          selected_events: registrationsArray[0].selected_events,
+          selected_events_type: Array.isArray(registrationsArray[0].selected_events) ? 'array' : typeof registrationsArray[0].selected_events
+        });
+        // Log all registrations' created_at values
+        registrationsArray.forEach((reg, i) => {
+          console.log(`📋 Registration ${i} (${reg.registration_id}): created_at="${reg.created_at}", events=${JSON.stringify(reg.selected_events)}`);
+        });
+      }
       setRegistrations(registrationsArray);
       
     } catch (err) {

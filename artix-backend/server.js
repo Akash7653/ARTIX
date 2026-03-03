@@ -1604,6 +1604,9 @@ app.get('/api/admin/registrations', async (req, res) => {
         createdAt = new Date();
       }
       
+      // Convert Date to ISO string for proper JSON serialization
+      const createdAtISO = createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString();
+      
       // Ensure selected_events is an array
       let selectedEvents = reg.selected_events || [];
       if (!Array.isArray(selectedEvents)) {
@@ -1628,7 +1631,7 @@ app.get('/api/admin/registrations', async (req, res) => {
         approval_status: reg.approval_status,
         selected_for_event: reg.selected_for_event,
         team_members: transformedTeamMembers,
-        created_at: createdAt,
+        created_at: createdAtISO,
         notification_sent: reg.notification_sent || false,
         whatsapp_sent: reg.notification_sent || false,
         entry_verified_at: reg.entry_verified_at || null,
