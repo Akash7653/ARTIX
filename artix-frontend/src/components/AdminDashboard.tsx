@@ -1062,6 +1062,16 @@ export function AdminDashboard({ onLogout }: Props) {
               const reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
               if (!reg) return null;
 
+              // Log the registration data for debugging
+              console.log('📊 Admin detail view - Registration data:', {
+                registration_id: reg.registration_id,
+                created_at: reg.created_at,
+                created_at_type: typeof reg.created_at,
+                selected_events: reg.selected_events,
+                selected_events_type: Array.isArray(reg.selected_events) ? 'array' : typeof reg.selected_events,
+                selected_events_length: Array.isArray(reg.selected_events) ? reg.selected_events.length : 'N/A'
+              });
+
               const totalHeadCount = (reg.team_members?.length || 0) + 1;
 
               return (

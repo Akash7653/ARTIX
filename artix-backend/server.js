@@ -1583,7 +1583,10 @@ app.get('/api/admin/registrations', async (req, res) => {
       .toArray();
 
     console.log('🔍 DEBUG: registrations from DB:', registrations.length, 'items');
-    console.log('🔍 DEBUG: first registration:', registrations[0] ? JSON.stringify(registrations[0]).substring(0, 200) : 'empty');
+    if (registrations[0]) {
+      console.log('🔍 DEBUG: first registration created_at:', registrations[0].created_at, 'type:', typeof registrations[0].created_at);
+      console.log('🔍 DEBUG: first registration selected_events:', registrations[0].selected_events);
+    }
 
     // Format response - Transform team members to proper field names
     const formattedData = registrations.map(reg => {
@@ -1593,6 +1596,19 @@ app.get('/api/admin/registrations', async (req, res) => {
         member_branch: member.branch || member.member_branch || '',
         member_phone: member.phone || member.member_phone || ''
       }));
+      
+      // Ensure created_at is properly set - add current date if missing
+      let createdAt = reg.created_at;
+      if (!createdAt) {
+        console.warn(`⚠️ Registration ${reg.registration_id} missing created_at, using current time`);
+        createdAt = new Date();
+      }
+      
+      // Ensure selected_events is an array
+      let selectedEvents = reg.selected_events || [];
+      if (!Array.isArray(selectedEvents)) {
+        selectedEvents = [];
+      }
       
       return {
         _id: reg._id,
@@ -1605,14 +1621,14 @@ app.get('/api/admin/registrations', async (req, res) => {
         year_of_study: reg.year_of_study,
         branch: reg.branch,
         roll_number: reg.roll_number,
-        selected_events: reg.selected_events || [],
+        selected_events: selectedEvents,
         total_amount: reg.total_amount,
         transaction_id: reg.transaction_id,
         utr_id: reg.utr_id,
         approval_status: reg.approval_status,
         selected_for_event: reg.selected_for_event,
         team_members: transformedTeamMembers,
-        created_at: reg.created_at,
+        created_at: createdAt,
         notification_sent: reg.notification_sent || false,
         whatsapp_sent: reg.notification_sent || false,
         entry_verified_at: reg.entry_verified_at || null,
@@ -1622,7 +1638,10 @@ app.get('/api/admin/registrations', async (req, res) => {
     });
 
     console.log('🔍 DEBUG: formattedData:', formattedData.length, 'items');
-    console.log('🔍 DEBUG: formatted first item:', formattedData[0]);
+    if (formattedData[0]) {
+      console.log('🔍 DEBUG: formatted first item created_at:', formattedData[0].created_at);
+      console.log('🔍 DEBUG: formatted first item selected_events:', formattedData[0].selected_events);
+    }
 
     logAdmin('Registrations retrieved successfully', {
       page,
