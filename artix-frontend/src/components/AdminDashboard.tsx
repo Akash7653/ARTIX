@@ -1072,12 +1072,12 @@ export function AdminDashboard({ onLogout }: Props) {
                         <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.full_name}</p>
                       </div>
                       <div>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>College</p>
-                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.college_name}</p>
-                      </div>
-                      <div>
                         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Branch / Year</p>
                         <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.branch} ({reg.year_of_study})</p>
+                      </div>
+                      <div>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Registration Date</p>
+                        <p className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{reg.created_at ? new Date(reg.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</p>
                       </div>
                     </div>
                   </div>
