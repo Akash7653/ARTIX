@@ -61,6 +61,7 @@ export function AdminDashboard({ onLogout }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
+  const [pendingWhatsAppSend, setPendingWhatsAppSend] = useState<Set<string>>(new Set());
   const [verificationIdInput, setVerificationIdInput] = useState<{ [key: string]: string }>({});
   const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
   const [entryVerificationId, setEntryVerificationId] = useState('');
@@ -166,9 +167,23 @@ export function AdminDashboard({ onLogout }: Props) {
       const result = await response.json();
       console.log(`✅ Approval response:`, result);
       
+      // Keep expanded ID to prevent collapse
+      setExpandedId(registrationId);
       setMessage(`✅ Approved! Now enter the Verification ID.`);
       setMessageType('success');
-      setTimeout(loadData, 500);
+      
+      // Reload data but keep expanded view
+      setTimeout(() => {
+        loadData();
+        // Scroll to expanded element after data loads
+        setTimeout(() => {
+          const expandedElement = document.querySelector(`[data-registration-id="${registrationId}"]`);
+          if (expandedElement) {
+            expandedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 600);
+      }, 500);
+      
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -385,6 +400,54 @@ export function AdminDashboard({ onLogout }: Props) {
     }
   };
 
+  const handleConfirmWhatsAppSent = async (reg: Registration) => {
+    try {
+      setSendingNotification(reg.registration_id);
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      console.log(`📱 Marking WhatsApp as sent for ${reg.registration_id}`);
+      
+      const response = await fetch(`${baseUrl}/admin/mark-whatsapp-sent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ registrationId: reg.registration_id })
+      });
+
+      const data = await response.json();
+      console.log('📱 WhatsApp marked as sent:', data);
+
+      if (response.ok) {
+        setMessage('✅ WhatsApp message marked as sent!');
+        setMessageType('success');
+        setTimeout(() => setMessage(''), 3000);
+        
+        // Remove from pending set
+        setPendingWhatsAppSend(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(reg.registration_id);
+          return newSet;
+        });
+        
+        setTimeout(loadData, 1000);
+      } else {
+        const errorMsg = data.error || data.message || 'Unknown error';
+        console.error('❌ Error marking WhatsApp sent:', errorMsg);
+        setMessage('❌ ' + errorMsg);
+        setMessageType('error');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (err) {
+      console.error('❌ Error:', err);
+      setMessage('❌ ' + (err instanceof Error ? err.message : 'Error marking WhatsApp sent'));
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setSendingNotification(null);
+    }
+  };
+
   const handleSendWhatsAppDirect = async (reg: Registration) => {
     try {
       setSendingNotification(reg.registration_id);
@@ -407,19 +470,26 @@ export function AdminDashboard({ onLogout }: Props) {
           const waLink = data.details.waLink;
           const participantName = data.details.participantName || 'participant';
           const confirmOpen = window.confirm(
-            `✅ WhatsApp ready!\n\nParticipant: ${participantName}\nPhone: ${reg.phone}\n\nClick OK to open WhatsApp Web to send the message.`
+            `✅ WhatsApp ready!\n\nParticipant: ${participantName}\nPhone: ${reg.phone}\n\nClick OK to open WhatsApp Web to send the message.\n\nAfter sending, click the 'Confirm Sent' button below.`
           );
           
           if (confirmOpen) {
             // Open WhatsApp Web in new tab
             window.open(waLink, '_blank');
-            alert('✅ WhatsApp opened! Please send the message to ' + participantName);
+            
+            // Add to pending set - show the confirmation button
+            setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
+            setMessage('📱 WhatsApp opened - Please send the message and then click "Confirm Sent" button');
+            setMessageType('info');
+            setTimeout(() => setMessage(''), 5000);
           }
         } else {
-          alert('✅ ' + (data.message || 'Message ready to send'));
+          // Add to pending set for manual confirmation
+          setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
+          setMessage('📱 Message prepared - Please send manually and click "Confirm Sent"');
+          setMessageType('info');
+          setTimeout(() => setMessage(''), 3000);
         }
-        // Reload data to update notification status
-        setTimeout(loadData, 1500);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error occurred';
         console.error('❌ WhatsApp Error:', errorMsg);
@@ -873,7 +943,7 @@ export function AdminDashboard({ onLogout }: Props) {
               </thead>
               <tbody>
                 {filteredRegistrations.map((reg) => (
-                  <tr key={reg._id} className={`border-b transition ${
+                  <tr key={reg._id} data-registration-id={reg.registration_id} className={`border-b transition ${
                     darkMode
                       ? 'border-gray-700/30 hover:bg-gray-800/30'
                       : 'border-gray-300 hover:bg-gray-200/30'
@@ -1011,20 +1081,23 @@ export function AdminDashboard({ onLogout }: Props) {
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         <div className="flex flex-wrap gap-2">
                           {reg && reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
-                            reg.selected_events.map((event, i) => {
-                              // Ensure event is a valid string
-                              const eventStr = event && (typeof event === 'string' ? event : String(event));
-                              const eventName = eventStr ? eventStr.replace(/_/g, ' ').toUpperCase() : 'Unknown';
-                              return (
-                                <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
-                                  darkMode
-                                    ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
-                                    : 'bg-blue-100 text-blue-700 border-blue-300'
-                                }`}>
-                                  🎯 {eventName}
-                                </span>
-                              );
-                            })
+                            reg.selected_events
+                              .filter(event => event && String(event).trim() !== '' && String(event) !== 'undefined')
+                              .map((event, i) => {
+                                // Ensure event is a valid string
+                                const eventStr = String(event).trim();
+                                const eventName = eventStr.length > 0 ? eventStr.replace(/_/g, ' ').toUpperCase() : null;
+                                return eventName ? (
+                                  <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
+                                    darkMode
+                                      ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                      : 'bg-blue-100 text-blue-700 border-blue-300'
+                                  }`}>
+                                    🎯 {eventName}
+                                  </span>
+                                ) : null;
+                              })
+                              .filter(Boolean)
                           ) : (
                             <span className={`text-xs px-3 py-1 rounded-full italic ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                               ℹ️ No events selected
@@ -1180,24 +1253,49 @@ export function AdminDashboard({ onLogout }: Props) {
                       </div>
 
                       <div className="flex gap-3 flex-wrap items-center">
-                        <button
-                          onClick={() => handleSendWhatsAppDirect(reg)}
-                          disabled={sendingNotification === reg.registration_id}
-                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
-                            darkMode
-                              ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
-                              : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
-                          }`}
-                        >
-                          <MessageCircle className="w-6 h-6" />
-                          {sendingNotification === reg.registration_id ? 'Sending...' : 'Send WhatsApp Message'}
-                        </button>
+                        {!pendingWhatsAppSend.has(reg.registration_id) ? (
+                          <>
+                            <button
+                              onClick={() => handleSendWhatsAppDirect(reg)}
+                              disabled={sendingNotification === reg.registration_id}
+                              className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
+                                darkMode
+                                  ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
+                                  : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
+                              }`}
+                            >
+                              <MessageCircle className="w-6 h-6" />
+                              {sendingNotification === reg.registration_id ? 'Sending...' : 'Send WhatsApp Message'}
+                            </button>
 
-                        <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
-                          darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
-                        }`}>
-                          ⏳ Pending
-                        </div>
+                            <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
+                              darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
+                            }`}>
+                              ⏳ Pending
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleConfirmWhatsAppSent(reg)}
+                              disabled={sendingNotification === reg.registration_id}
+                              className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
+                                darkMode
+                                  ? 'bg-blue-600/40 text-blue-200 border-blue-500 hover:bg-blue-600/50'
+                                  : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600'
+                              }`}
+                            >
+                              <CheckCircle2 className="w-6 h-6" />
+                              {sendingNotification === reg.registration_id ? 'Confirming...' : 'Confirm Sent'}
+                            </button>
+
+                            <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
+                              darkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500' : 'bg-blue-100 text-blue-700 border-blue-300'
+                            }`}>
+                              📱 Ready to Send - Click 'Confirm Sent' after sending on WhatsApp
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

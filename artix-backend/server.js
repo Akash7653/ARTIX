@@ -1906,6 +1906,60 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
   }
 });
 
+// Mark WhatsApp as sent by admin
+app.post('/api/admin/mark-whatsapp-sent', async (req, res) => {
+  try {
+    const { registrationId } = req.body;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    // Update notification_sent flag in database
+    const updateResult = await registrationsCollection.updateOne(
+      { _id: registration._id },
+      {
+        $set: {
+          notification_sent: true,
+          whatsapp_sent: true,
+          notification_sent_at: new Date(),
+          notification_method: 'whatsapp_web_manual',
+          admin_confirmed: true
+        }
+      }
+    );
+
+    logWhatsApp('WhatsApp manually confirmed as sent', { 
+      registrationId,
+      participantName: registration.full_name,
+      phone: registration.phone
+    });
+
+    res.json({
+      success: true,
+      message: '✅ WhatsApp message confirmed as sent!',
+      registrationId,
+      participantName: registration.full_name
+    });
+  } catch (err) {
+    logError('Mark WhatsApp sent endpoint failed', err, { 
+      registrationId: req.body?.registrationId 
+    });
+    res.status(500).json({ 
+      error: 'Failed to mark WhatsApp as sent', 
+      details: err.message 
+    });
+  }
+});
+
 // Diagnostic endpoint: Check Twilio configuration
 app.get('/api/admin/twilio-status', (req, res) => {
   try {
