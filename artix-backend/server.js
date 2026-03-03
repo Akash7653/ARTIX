@@ -747,6 +747,11 @@ async function registerHandler(req, res) {
     }
 
     console.log(`🎯 Selected events:`, selectedEventsArray);
+    console.log(`🎯 Selected events array:`, selectedEventsArray);
+    console.log(`🎯 Selected events count:`, selectedEventsArray.length);
+    if (selectedEventsArray.length === 0) {
+      console.warn(`⚠️ Registration ${registrationId} has no events selected`);
+    }
 
     // Create registration document WITHOUT verification_id
     const registrationDoc = {

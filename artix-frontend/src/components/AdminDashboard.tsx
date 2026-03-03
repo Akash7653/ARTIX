@@ -338,7 +338,14 @@ export function AdminDashboard({ onLogout }: Props) {
       const result = await response.json();
       console.log(`✅ Entry verified:`, result);
       
-      setMessage(`✅ Entry Verified! ${result.participant?.full_name || 'Participant'} from ${result.participant?.college_name || 'N/A'}`);
+      // Create a better message
+      const participantName = result.participant?.full_name || 'Participant';
+      const branch = result.participant?.branch ? ` (${result.participant.branch})` : '';
+      const eventInfo = result.participant?.selected_events?.length > 0 
+        ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
+        : '';
+      
+      setMessage(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`);
       setMessageType('success');
       setEntryVerificationId('');
       setTimeout(loadData, 500);
