@@ -1090,10 +1090,36 @@ export function AdminDashboard({ onLogout }: Props) {
                           {(() => {
                             try {
                               if (!reg.created_at) return 'N/A';
-                              const date = new Date(reg.created_at);
+                              let date;
+                              // Try parsing different date formats
+                              if (typeof reg.created_at === 'string') {
+                                date = new Date(reg.created_at);
+                                // Check if it's a valid date
+                                if (isNaN(date.getTime())) {
+                                  // Try parsing Unix timestamp if it's a number string
+                                  const timestamp = parseInt(reg.created_at);
+                                  if (!isNaN(timestamp)) {
+                                    date = new Date(timestamp);
+                                  } else {
+                                    return 'N/A';
+                                  }
+                                }
+                              } else if (typeof reg.created_at === 'number') {
+                                date = new Date(reg.created_at);
+                              } else {
+                                return 'N/A';
+                              }
+                              
                               if (isNaN(date.getTime())) return 'N/A';
-                              return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+                              return date.toLocaleDateString('en-IN', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              });
                             } catch (e) {
+                              console.error('Date parsing error:', e, reg.created_at);
                               return 'N/A';
                             }
                           })()}
@@ -1168,31 +1194,36 @@ export function AdminDashboard({ onLogout }: Props) {
                     }`}>
                       <div>
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
-                        <div className="flex flex-wrap gap-2">
-                          {reg && reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
-                            reg.selected_events
-                              .filter(event => event && String(event).trim() !== '' && String(event) !== 'undefined')
-                              .map((event, i) => {
-                                // Ensure event is a valid string
-                                const eventStr = String(event).trim();
-                                const eventName = eventStr.length > 0 ? eventStr.replace(/_/g, ' ').toUpperCase() : null;
-                                return eventName ? (
-                                  <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
-                                    darkMode
-                                      ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
-                                      : 'bg-blue-100 text-blue-700 border-blue-300'
-                                  }`}>
-                                    🎯 {eventName}
-                                  </span>
-                                ) : null;
-                              })
-                              .filter(Boolean)
-                          ) : (
-                            <span className={`text-xs px-3 py-1 rounded-full italic ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                              ℹ️ No events selected
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const events = Array.isArray(reg.selected_events) ? reg.selected_events : [];
+                          const validEvents = events
+                            .filter(e => e && String(e).trim() !== '' && String(e) !== 'undefined')
+                            .map(e => String(e).trim());
+                          
+                          if (validEvents.length === 0) {
+                            return (
+                              <span className={`text-xs px-3 py-1 rounded-full italic inline-block ${
+                                darkMode ? 'text-gray-500' : 'text-gray-500'
+                              }`}>
+                                ℹ️ No events selected
+                              </span>
+                            );
+                          }
+                          
+                          return (
+                            <div className="flex flex-wrap gap-2">
+                              {validEvents.map((event, i) => (
+                                <span key={i} className={`px-3 py-1 rounded-full text-xs border font-semibold ${
+                                  darkMode
+                                    ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                    : 'bg-blue-100 text-blue-700 border-blue-300'
+                                }`}>
+                                  🎯 {event.replace(/_/g, ' ').toUpperCase()}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {reg.team_members && reg.team_members.length > 0 && (
