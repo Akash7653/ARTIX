@@ -153,5 +153,22 @@ export const api = {
     }
 
     return await response.json();
+  },
+
+  // Keep-alive ping to prevent Render backend from going to sleep
+  keepAlive: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET'
+      });
+      if (response.ok) {
+        console.log('✅ Backend keep-alive ping successful');
+        return true;
+      }
+    } catch (error) {
+      // Silent fail - don't disturb user if ping fails
+      console.log('Backend keep-alive ping skipped (may be offline)');
+      return false;
+    }
   }
 };
