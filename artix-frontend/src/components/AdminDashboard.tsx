@@ -968,29 +968,30 @@ export function AdminDashboard({ onLogout }: Props) {
                     <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.email}</td>
                     <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{reg.phone}</td>
                     <td className="px-6 py-4 text-sm">
-                      <div className="flex flex-wrap gap-2">
-                        {reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0 ? (
-                          reg.selected_events
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const events = Array.isArray(reg.selected_events) ? reg.selected_events : [];
+                          const validEvents = events
                             .filter(event => event && String(event).trim() !== '' && String(event) !== 'undefined')
-                            .map((event, i) => {
-                              const eventStr = String(event).trim();
-                              const eventName = eventStr.length > 0 ? eventStr.replace(/_/g, ' ').toUpperCase() : null;
-                              return eventName ? (
-                                <span key={i} className={`px-2 py-1 rounded text-xs font-semibold border whitespace-nowrap ${
-                                  darkMode
-                                    ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
-                                    : 'bg-blue-100 text-blue-700 border-blue-300'
-                                }`}>
-                                  {eventName}
-                                </span>
-                              ) : null;
-                            })
-                            .filter(Boolean)
-                        ) : (
-                          <span className={`text-xs italic ${
-                            darkMode ? 'text-gray-500' : 'text-gray-500'
-                          }`}>—</span>
-                        )}
+                            .map(event => String(event).trim().replace(/_/g, ' ').toUpperCase())
+                            .filter(Boolean);
+                          
+                          return validEvents.length > 0 ? (
+                            validEvents.map((event, i) => (
+                              <span key={i} className={`px-2 py-1 rounded text-xs font-semibold border ${
+                                darkMode
+                                  ? 'bg-blue-500/30 text-blue-300 border-blue-500/50'
+                                  : 'bg-blue-100 text-blue-700 border-blue-300'
+                              }`}>
+                                {event}
+                              </span>
+                            ))
+                          ) : (
+                            <span className={`text-xs italic ${
+                              darkMode ? 'text-gray-500' : 'text-gray-500'
+                            }`}>No events</span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -1008,13 +1009,21 @@ export function AdminDashboard({ onLogout }: Props) {
                       darkMode ? 'text-purple-400' : 'text-purple-700'
                     }`}>₹{reg.total_amount.toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 w-fit ${
-                        reg.notification_sent
-                          ? darkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-800'
-                          : darkMode ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-200 text-gray-800'
-                      }`}>
-                        {reg.notification_sent ? '✅ Sent' : '⏳ Pending'}
-                      </span>
+                      {reg.approval_status === 'rejected' ? (
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 w-fit ${
+                          darkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-800'
+                        }`}>
+                          ❌ Not Sent
+                        </span>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 w-fit ${
+                          reg.notification_sent
+                            ? darkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-800'
+                            : darkMode ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-200 text-gray-800'
+                        }`}>
+                          {reg.notification_sent ? '✅ Sent' : '⏳ Pending'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button
