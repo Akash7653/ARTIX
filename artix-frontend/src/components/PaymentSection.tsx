@@ -144,7 +144,8 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
         selectedIndividualEvents: formData.selectedIndividualEvents,
         totalAmount,
         transactionId: transactionId.trim(),
-        utrId: utrId.trim()
+        utrId: utrId.trim(),
+        selectedCombo: null // Remove combo field
       };
 
       // Call API

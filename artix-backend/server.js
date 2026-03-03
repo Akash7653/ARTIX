@@ -606,7 +606,6 @@ async function registerHandler(req, res) {
       branch,
       rollNumber,
       selectedIndividualEvents,
-      selectedCombo,
       teamMembers,
       totalAmount,
       transactionId,
@@ -733,11 +732,9 @@ async function registerHandler(req, res) {
       console.warn('⚠️ Could not delete temp file:', e.message);
     }
 
-    // Parse selected events properly
+    // Parse selected events properly (individual events only - combos removed)
     let selectedEventsArray = [];
-    if (selectedCombo) {
-      selectedEventsArray = [selectedCombo];
-    } else if (selectedIndividualEvents) {
+    if (selectedIndividualEvents) {
       // Handle both string and array inputs
       if (typeof selectedIndividualEvents === 'string') {
         const rawArray = selectedIndividualEvents
@@ -754,7 +751,7 @@ async function registerHandler(req, res) {
         console.warn(`🎯 [PARSE] Unknown type for selectedIndividualEvents:`, typeof selectedIndividualEvents);
       }
     } else {
-      console.warn(`🎯 [PARSE] No selectedIndividualEvents or selectedCombo provided`);
+      console.warn(`🎯 [PARSE] No selectedIndividualEvents provided`);
     }
 
     console.log(`🎯 [STORE] Final selected_events to store:`, selectedEventsArray);
@@ -774,7 +771,7 @@ async function registerHandler(req, res) {
       branch,
       roll_number: rollNumber,
       selected_events: selectedEventsArray,
-      event_type: selectedCombo ? 'combo' : 'individual',
+      event_type: 'individual', // Individual events only - combos removed
       total_amount: parseInt(totalAmount),
       payment_screenshot_base64: paymentImageBase64,
       payment_screenshot_mimetype: paymentImageMimeType,

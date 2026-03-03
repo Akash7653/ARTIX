@@ -23,10 +23,6 @@ export const api = {
     });
     
     form.append('selectedIndividualEvents', eventsString);
-    // Only append selectedCombo if it has a value (avoid sending "undefined" string)
-    if (formData.selectedCombo) {
-      form.append('selectedCombo', formData.selectedCombo);
-    }
     form.append('teamMembers', JSON.stringify(formData.teamMembers));
     form.append('totalAmount', formData.totalAmount.toString());
     form.append('transactionId', formData.transactionId || '');

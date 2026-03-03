@@ -4,12 +4,6 @@ export interface IndividualEvent {
   price: number;
 }
 
-export interface ComboOption {
-  id: string;
-  name: string;
-  price: number;
-}
-
 export interface TeamMember {
   name: string;
   branch: string;
@@ -26,7 +20,6 @@ export interface RegistrationFormData {
   rollNumber: string;
   section: string;
   selectedIndividualEvents: string[];
-  selectedCombo?: string; // Add missing combo field
   teamSize: number;
   teamMembers: TeamMember[];
   paymentScreenshot: File | null;
@@ -39,4 +32,5 @@ export const INDIVIDUAL_EVENTS: IndividualEvent[] = [
   { id: 'project_expo', name: 'Project Expo', price: 150 },
 ];
 
-export const COMBO_OPTIONS: ComboOption[] = [];
+// Combos removed - users select individual events only
+// export const COMBO_OPTIONS: ComboOption[] = [];
