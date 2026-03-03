@@ -32,7 +32,7 @@ export function EventEntryVerification({ onLogout }: { onLogout: () => void }) {
 
     setLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL;
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(`${baseUrl}/admin/verify-entry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

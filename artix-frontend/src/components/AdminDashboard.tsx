@@ -84,11 +84,12 @@ export function AdminDashboard({ onLogout }: Props) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
-      const token = localStorage.getItem('adminToken');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      // Use environment variable for API URL (works across all environments)
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       
       console.log('📊 Loading admin data from:', baseUrl);
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       const statsRes = await fetch(`${baseUrl}/admin/stats`, { headers });
       console.log('📊 Stats fetch status:', statsRes.status, statsRes.statusText);
@@ -139,7 +140,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
   const handleApprove = async (registrationId: string) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       
       console.log(`👤 Approving registration: ${registrationId}`);
@@ -180,7 +181,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
   const handleReject = async (registrationId: string) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = '/api';
       const token = localStorage.getItem('adminToken');
       
       console.log(`❌ Rejecting registration: ${registrationId}`);
@@ -231,7 +232,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
     setSettingVerificationId(registrationId);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       
       console.log(`🔐 Setting verification ID for: ${registrationId}`);
       console.log(`🔐 Verification ID: ${verificationId}`);
@@ -284,7 +285,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
     setVerifyingEntry(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       
       console.log(`✅ Verifying entry with ID: ${verificationId}`);
       
@@ -368,7 +369,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
   const handleSendNotification = async (registrationId: string, method: string) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(`${baseUrl}/admin/confirm-and-notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -388,7 +389,7 @@ export function AdminDashboard({ onLogout }: Props) {
     try {
       setSendingNotification(reg.registration_id);
       
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       console.log(`📱 Sending WhatsApp to ${reg.phone} via API: ${baseUrl}/admin/send-whatsapp-to-participant`);
       
       const response = await fetch(`${baseUrl}/admin/send-whatsapp-to-participant`, {
@@ -729,7 +730,7 @@ export function AdminDashboard({ onLogout }: Props) {
               }
 
               try {
-                const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+                const baseUrl = '/api';
                 const response = await fetch(`${baseUrl}/admin/clear-database`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },

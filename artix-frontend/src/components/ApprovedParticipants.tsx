@@ -39,7 +39,7 @@ interface Props {
 }
 
 export default function ApprovedParticipants({ onLogout }: Props) {
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+  const baseUrl = import.meta.env.VITE_API_URL || '/api';
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);

@@ -106,7 +106,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
 
       // Check if Transaction ID or UTR ID already exist in database
       console.log('🔍 Checking if Transaction ID and UTR ID are available...');
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://artix-2yda.onrender.com/api';
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const checkResponse = await fetch(`${baseUrl}/check-transaction-utr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
