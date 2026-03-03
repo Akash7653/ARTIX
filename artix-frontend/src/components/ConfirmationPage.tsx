@@ -60,7 +60,7 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
           <h3 className={`text-lg md:text-xl font-bold mb-6 ${
             darkMode ? 'text-gray-200' : 'text-gray-800'
           }`}>Your Information</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6">
             <div>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Name</p>
               <p className={`text-lg font-semibold mt-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -79,7 +79,46 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
                 {formData.phone}
               </p>
             </div>
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>College</p>
+              <p className={`text-lg font-semibold mt-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {formData.collegeName}
+              </p>
+            </div>
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Branch</p>
+              <p className={`text-lg font-semibold mt-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {formData.branch}
+              </p>
+            </div>
+            <div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Year</p>
+              <p className={`text-lg font-semibold mt-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                {formData.yearOfStudy}
+              </p>
+            </div>
           </div>
+          
+          {/* Selected Events */}
+          {formData.selectedIndividualEvents && formData.selectedIndividualEvents.length > 0 && (
+            <div>
+              <p className={`text-sm font-semibold mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>🎯 Selected Events</p>
+              <div className="flex flex-wrap gap-2">
+                {formData.selectedIndividualEvents.map((eventId, idx) => {
+                  const eventDisplay = eventId.replace(/_/g, ' ').toUpperCase();
+                  return (
+                    <span key={idx} className={`px-3 py-2 rounded-lg text-sm font-semibold border-2 ${
+                      darkMode
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        : 'bg-blue-100 text-blue-800 border-blue-300'
+                    }`}>
+                      ✅ {eventDisplay}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Instructions */}
