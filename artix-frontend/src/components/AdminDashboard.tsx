@@ -800,7 +800,7 @@ export function AdminDashboard({ onLogout }: Props) {
               }
 
               try {
-                const baseUrl = '/api';
+                const baseUrl = import.meta.env.VITE_API_URL || '/api';
                 const response = await fetch(`${baseUrl}/admin/clear-database`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },

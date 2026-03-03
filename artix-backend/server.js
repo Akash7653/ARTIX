@@ -304,6 +304,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Catch-all route for /api to provide helpful information
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'ARTIX Backend API is running',
+    status: 'operational',
+    version: '1.0.0',
+    availableEndpoints: [
+      'GET /api/health - Health check',
+      'POST /api/register - Register new participant',
+      'GET /api/registration/:registrationId - Get registration details',
+      'GET /api/admin/stats - Get admin dashboard statistics',
+      'GET /api/admin/registrations - Get all registrations',
+      'POST /api/admin/registrations/:id/approve - Approve registration',
+      'POST /api/admin/clear-database - Clear all data',
+      'POST /api/admin/send-whatsapp-to-participant - Send WhatsApp message',
+      'GET /api/admin/config - Get admin configuration'
+    ],
+    documentation: 'For API documentation, contact admin'
+  });
+});
+
 // Error handler for multer upload errors
 const handleUploadError = (err, req, res, callback) => {
   if (err) {
