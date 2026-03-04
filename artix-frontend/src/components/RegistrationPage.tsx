@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ParticipantDetailsForm } from './ParticipantDetailsForm';
 import { EventSelection } from './EventSelection';
 import { TeamMembersSection } from './TeamMembersSection';
@@ -10,7 +10,10 @@ import type { RegistrationFormData } from '../types/registration';
 
 export function RegistrationPage({ fromLandingPage = false }) {
   const [showLanding, setShowLanding] = useState(fromLandingPage ? false : true);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('artix_darkMode');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [formData, setFormData] = useState<RegistrationFormData>({
     fullName: '',
@@ -29,6 +32,11 @@ export function RegistrationPage({ fromLandingPage = false }) {
 
   const [registrationId, setRegistrationId] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
+
+  // Save darkMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('artix_darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
   const updateFormData = (updates: Partial<RegistrationFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
