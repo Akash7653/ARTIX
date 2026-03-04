@@ -62,13 +62,27 @@ export function RegistrationPage({ fromLandingPage = false }) {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
+    <div className={`min-h-screen transition-colors duration-300 relative overflow-hidden ${
       darkMode
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-        : 'bg-gradient-to-br from-white via-blue-50 to-white'
+        ? 'bg-black'
+        : 'bg-white'
     }`}>
+      {/* Video Background */}
+      <video 
+        autoPlay 
+        muted 
+        loop 
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
+      </video>
+      
+      {/* Dark Overlay for text readability */}
+      <div className={`absolute inset-0 ${darkMode ? 'bg-black/70' : 'bg-white/50'}`}></div>
+      
       {/* Theme Toggle */}
-      <div className="fixed top-4 right-4 z-50 md:top-6 md:right-6">
+      <div className="fixed top-4 right-4 z-[100] md:top-6 md:right-6">
         <button
           onClick={() => setDarkMode(!darkMode)}
           className={`p-3 md:p-4 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl ${
@@ -82,35 +96,33 @@ export function RegistrationPage({ fromLandingPage = false }) {
         </button>
       </div>
 
-      <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
+      <div className="max-w-4xl mx-auto py-8 px-4 relative z-20">
         {/* Back Button */}
         <button
           onClick={() => fromLandingPage ? handleGoBack() : setShowLanding(true)}
           className={`mb-6 flex items-center gap-2 px-5 py-3 text-lg font-semibold rounded-lg transition-all duration-300 ${
             darkMode
-              ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-400'
+              ? 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 border border-gray-700'
+              : 'bg-white/40 text-gray-700 hover:bg-gray-300 border border-gray-400'
           }`}
         >
           ← Back {fromLandingPage ? 'to Landing Page' : 'to Home'}
         </button>
 
         <header className="text-center mb-12">
-          {/* ARTIX Logo */}
-          <div className="mb-6 flex justify-center">
-            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-32 object-contain drop-shadow-lg rounded-lg" />
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-24 md:h-28 object-contain drop-shadow-lg rounded-lg" />
+            <h1 className={`text-5xl md:text-6xl font-bold transition-colors duration-300 ${
+              darkMode
+                ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-400'
+                : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
+            }`}>
+              ARTIX 2K26
+            </h1>
           </div>
-
-          <h1 className={`text-6xl md:text-7xl font-bold mb-6 transition-colors duration-300 ${
-            darkMode
-              ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
-              : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-700'
-          }`}>
-            ARTIX 2K26
-          </h1>
-          <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-100'}`}>
             <p className={`text-2xl lg:text-3xl font-semibold ${
-              darkMode ? 'text-blue-400' : 'text-blue-600'
+              darkMode ? 'text-blue-300' : 'text-blue-200'
             }`}>
               Department of Internet of Things (IoT)
             </p>
@@ -182,13 +194,27 @@ function LandingPage2({
   onOpenAdminModal: () => void;
 }) {
   return (
-    <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 overflow-hidden ${
+    <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 overflow-hidden relative ${
       darkMode
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
-        : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+        ? 'bg-black'
+        : 'bg-white'
     }`}>
+      {/* Video Background */}
+      <video 
+        autoPlay 
+        muted 
+        loop 
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
+      </video>
+      
+      {/* Dark Overlay for text readability */}
+      <div className={`absolute inset-0 ${darkMode ? 'bg-black/60' : 'bg-white/40'}`}></div>
+      
       {/* Admin Button */}
-      <div className="fixed top-4 left-4 z-50 md:top-6 md:left-6">
+      <div className="fixed top-4 left-4 z-[100] md:top-6 md:left-6">
         <button
           onClick={onOpenAdminModal}
           className={`inline-flex items-center gap-2 px-4 py-3 md:px-6 md:py-4 rounded-lg font-bold text-lg md:text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
