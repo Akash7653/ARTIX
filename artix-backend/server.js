@@ -16,11 +16,17 @@ import logger, { logRegistration, logWhatsApp, logAdmin, logError } from './util
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.js';
 import { validateUploadFile, generateSafeFilename } from './utils/fileValidator.js';
-import { registrationCache, statsCache } from './utils/cache.js';
+import { registrationCache, statsCache, multiTierCache } from './utils/cache.js';
 import { createOptimizationMiddleware } from './utils/responseOptimizer.js';
 import { createAdminRoutes } from './routes/adminRoutes.js';
 import { PerformanceMonitoringSystem } from './utils/performanceMonitor.js';
 import { createMonitoringRoutes } from './routes/monitoringRoutes.js';
+import {
+  connectionPool,
+  adaptiveRateLimiter,
+  systemLoadMonitor,
+  loadBalancer
+} from './utils/loadOptimizer.js';
 
 dotenv.config();
 
@@ -176,6 +182,42 @@ const verifyJWT = (req, res, next) => {
   }
 };
 
+/**
+ * Performance Tracking Middleware
+ * Tracks request metrics and system load for high-load optimization
+ */
+const performanceTrackingMiddleware = (req, res, next) => {
+  const startTime = Date.now();
+  const startMem = process.memoryUsage().heapUsed / 1024 / 1024; // MB
+
+  // Track original res.json to capture response size
+  const originalJson = res.json;
+  res.json = function(data) {
+    const duration = Date.now() - startTime;
+    const responseSize = JSON.stringify(data).length;
+    const memUsed = (process.memoryUsage().heapUsed / 1024 / 1024) - startMem;
+
+    // Record system metrics
+    systemLoadMonitor.recordMetric({
+      responseTime: duration,
+      memoryUsage: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
+      cpuUsage: 0, // Would need OS module for actual CPU usage
+      errorRate: res.statusCode >= 400 ? 1 : 0
+    });
+
+    // Update rate limiter with load info
+    adaptiveRateLimiter.updateServerLoad(
+      connectionPool.stats.activeConnections,
+      0,
+      (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
+    );
+
+    return originalJson.call(this, data);
+  };
+
+  next();
+};
+
 // Swagger UI Setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   swaggerOptions: {
@@ -187,6 +229,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 logger.info('Swagger UI available at /api-docs');
+
+// Apply performance tracking middleware globally
+app.use(performanceTrackingMiddleware);
 
 // File upload setup
 const uploadsDir = path.join(__dirname, 'uploads');

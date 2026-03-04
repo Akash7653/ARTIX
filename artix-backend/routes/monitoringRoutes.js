@@ -2,9 +2,17 @@
  * Performance Monitoring Routes
  * Exposes performance metrics and health data
  * Week 4: Real-time Performance Insights
+ * Enhanced: ARTIX High-Load Optimization (400+ registrations)
  */
 
 import { Router } from 'express';
+import {
+  connectionPool,
+  adaptiveRateLimiter,
+  requestBatcher,
+  loadBalancer,
+  systemLoadMonitor
+} from '../utils/loadOptimizer.js';
 
 /**
  * Create monitoring routes
@@ -412,4 +420,102 @@ function convertMonitoringToCSV(exportData) {
   return lines.join('\n');
 }
 
-export default createMonitoringRoutes;
+/**
+ * GET /api/monitor/load
+ * Get load optimization metrics (connection pool, rate limiting, batching)
+ */
+router.get('/load', (req, res) => {
+  try {
+    const loadMetrics = {
+      connectionPool: connectionPool.getStats(),
+      adaptiveRateLimiter: adaptiveRateLimiter.getStats(),
+      requestBatcher: requestBatcher.getStats(),
+      loadBalancer: loadBalancer.getStats(),
+      systemLoad: systemLoadMonitor.getHealthStatus(),
+      timestamp: new Date()
+    };
+
+    res.json({
+      success: true,
+      load: loadMetrics
+    });
+
+    logger?.info('Load metrics endpoint accessed');
+  } catch (err) {
+    logger?.error('Load metrics error', { error: err.message });
+    res.status(500).json({
+      success: false,
+      error: 'Load metrics failed',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/monitor/system
+ * Get system-level performance metrics
+ */
+router.get('/system', (req, res) => {
+  try {
+    const averageMetrics = systemLoadMonitor.getAverageMetrics(5);
+    const healthStatus = systemLoadMonitor.getHealthStatus();
+
+    res.json({
+      success: true,
+      system: {
+        health: healthStatus,
+        averageMetrics: averageMetrics || { message: 'No metrics data yet' },
+        timestamp: new Date()
+      }
+    });
+
+    logger?.info('System metrics endpoint accessed');
+  } catch (err) {
+    logger?.error('System metrics error', { error: err.message });
+    res.status(500).json({
+      success: false,
+      error: 'System metrics failed',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/monitor/comprehensive
+ * Get all monitoring data in one request
+ */
+router.get('/comprehensive', (req, res) => {
+  try {
+    const allMetrics = {
+      performance: monitoringSystem.getHealthReport(),
+      load: {
+        connectionPool: connectionPool.getStats(),
+        adaptiveRateLimiter: adaptiveRateLimiter.getStats(),
+        requestBatcher: requestBatcher.getStats(),
+        loadBalancer: loadBalancer.getStats()
+      },
+      system: {
+        health: systemLoadMonitor.getHealthStatus(),
+        averageMetrics: systemLoadMonitor.getAverageMetrics(5)
+      },
+      timestamp: new Date(),
+      serverStatus: 'operational'
+    };
+
+    res.json({
+      success: true,
+      metrics: allMetrics
+    });
+
+    logger?.info('Comprehensive metrics endpoint accessed');
+  } catch (err) {
+    logger?.error('Comprehensive metrics error', { error: err.message });
+    res.status(500).json({
+      success: false,
+      error: 'Comprehensive metrics failed',
+      message: err.message
+    });
+  }
+});
+
+  return router;
