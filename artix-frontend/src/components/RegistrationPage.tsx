@@ -510,16 +510,16 @@ function LandingPage2({
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-row gap-2 md:gap-6 justify-center items-center px-2 md:px-0 flex-wrap">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center px-2 md:px-0">
           <button
             onClick={onStart}
-            className={`flex-1 md:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-2.5 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-base md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-105 md:hover:scale-110 shadow-lg whitespace-nowrap min-h-10 sm:min-h-12 md:min-h-14 flex items-center justify-center ${
+            className={`px-6 md:px-12 lg:px-14 py-3 md:py-4 lg:py-5 text-base sm:text-lg md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap w-full md:w-auto ${
               darkMode
                 ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
                 : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
             }`}
           >
-            Start Reg →
+            Start Registration →
           </button>
 
           {/* Problem Statements Button */}
@@ -527,15 +527,14 @@ function LandingPage2({
             href="https://artixs-problemstatements-zk5x.vercel.app/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`flex-1 md:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-6 md:px-8 lg:px-10 py-2.5 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-105 md:hover:scale-110 shadow-xl whitespace-nowrap min-h-10 sm:min-h-12 md:min-h-14 ${
+            className={`inline-flex items-center justify-center gap-2 px-4 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 text-sm sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap w-full md:w-auto ${
               darkMode
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
                 : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
             }`}
           >
-            <span className="text-sm sm:text-base">📋</span>
-            <span className="hidden sm:inline">View Projects</span>
-            <span className="sm:hidden">Projects</span>
+            <span>📋</span>
+            <span>View Problem Statements</span>
           </a>
         </div>
 
