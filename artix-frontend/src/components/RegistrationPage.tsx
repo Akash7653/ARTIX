@@ -266,7 +266,7 @@ function LandingPage2({
       {/* Content */}
       <div className="relative z-10 max-w-3xl mx-auto text-center">
         {/* IoT esSENCE Logo */}
-        <div className="mb-12 animate-fade-in relative">
+        <div className="mb-8 md:mb-12 pt-4 md:pt-0 animate-fade-in relative">
           <div className="inline-flex items-center justify-center">
             {/* Circular glow background */}
             <div className={`absolute w-40 h-40 md:w-48 md:h-48 rounded-full ${
@@ -313,20 +313,20 @@ function LandingPage2({
         </p>
 
         {/* Event Details */}
-        <div className="flex flex-col md:flex-row gap-6 justify-center mb-14">
-          <div className={`px-8 py-4 rounded-lg backdrop-blur-sm transition-all duration-300 text-lg lg:text-xl font-semibold ${
+        <div className="flex flex-col md:flex-row gap-3 md:gap-6 justify-center mb-14 px-2 md:px-0">
+          <div className={`px-3 md:px-6 py-2 md:py-3 rounded-lg backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm md:text-base lg:text-lg font-semibold whitespace-nowrap md:whitespace-normal ${
             darkMode
               ? 'bg-gray-800/40 border border-gray-700/50'
               : 'bg-white/40 border border-gray-300/50'
           }`}>
-            <p className={darkMode ? 'text-blue-400' : 'text-blue-600'}>📅 March 16-17, 2026</p>
+            <p className={darkMode ? 'text-blue-400' : 'text-blue-600'}>📅 Mar 16-17</p>
           </div>
-          <div className={`px-8 py-4 rounded-lg backdrop-blur-sm transition-all duration-300 text-lg lg:text-xl font-semibold ${
+          <div className={`px-3 md:px-6 py-2 md:py-3 rounded-lg backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm md:text-base lg:text-lg font-semibold whitespace-nowrap md:whitespace-normal ${
             darkMode
               ? 'bg-gray-800/40 border border-gray-700/50'
               : 'bg-white/40 border border-gray-300/50'
           }`}>
-            <p className={darkMode ? 'text-purple-400' : 'text-purple-600'}>📍 Malla Reddy Engineering College</p>
+            <p className={darkMode ? 'text-purple-400' : 'text-purple-600'}>📍 MREC</p>
           </div>
         </div>
 
@@ -510,16 +510,16 @@ function LandingPage2({
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8 justify-center items-center">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center px-2 md:px-0">
           <button
             onClick={onStart}
-            className={`px-14 py-5 text-2xl lg:text-3xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg ${
+            className={`px-6 md:px-12 lg:px-14 py-3 md:py-4 lg:py-5 text-base sm:text-lg md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap w-full md:w-auto ${
               darkMode
                 ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
                 : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
             }`}
           >
-            Start Registration →
+            Start Reg →
           </button>
 
           {/* Problem Statements Button */}
@@ -527,14 +527,14 @@ function LandingPage2({
             href="https://artixs-problemstatements-zk5x.vercel.app/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`inline-flex items-center justify-center gap-3 px-10 py-5 text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl ${
+            className={`inline-flex items-center justify-center gap-2 px-4 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 text-sm sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap w-full md:w-auto ${
               darkMode
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
                 : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
             }`}
           >
             <span>📋</span>
-            <span>View Problem Statements</span>
+            <span>View Projects</span>
           </a>
         </div>
 
