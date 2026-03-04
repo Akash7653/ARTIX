@@ -131,22 +131,6 @@ export function RegistrationPage({ fromLandingPage = false }) {
           </div>
         </header>
 
-        {/* Animation Video */}
-        <div className="mb-12 rounded-xl overflow-hidden drop-shadow-lg border-2" style={{
-          borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)'
-        }}>
-          <video 
-            autoPlay 
-            muted 
-            loop 
-            playsInline
-            className="w-full h-auto max-h-96"
-          >
-            <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-
         <div className="space-y-6">
           <ParticipantDetailsForm
             formData={formData}
