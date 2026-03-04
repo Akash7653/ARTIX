@@ -29,7 +29,7 @@ export function TeamMembersSection({ formData, updateFormData }: Props) {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-bold text-blue-400">Project Expo Team Details</h2>
         <a 
-          href="https://artixs-problemstatements-zk5x.vercel.app/" 
+          href="https://artixs.vercel.app/" 
           target="_blank" 
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg whitespace-nowrap text-sm md:text-base"
