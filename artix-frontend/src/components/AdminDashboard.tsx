@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
+import { PerformanceMonitoring } from './PerformanceMonitoring';
 
 interface TeamMember {
   member_name: string;
@@ -803,6 +804,15 @@ export function AdminDashboard({ onLogout }: Props) {
             </div>
           </div>
         )}
+
+        {/* Performance Monitoring Panel */}
+        <div className={`mb-8 rounded-xl p-6 border ${
+          darkMode
+            ? 'bg-gray-800/40 border-gray-700/50'
+            : 'bg-white/40 border-gray-300/50'
+        }`}>
+          <PerformanceMonitoring darkMode={darkMode} />
+        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8 flex-wrap">
