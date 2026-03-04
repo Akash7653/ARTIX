@@ -330,6 +330,185 @@ function LandingPage2({
           </div>
         </div>
 
+        {/* Tech Innovation & Event Highlights Section */}
+        <div className="mb-16 space-y-10">
+          {/* Tech Innovation Vision */}
+          <div className="text-center mb-12 px-4">
+            <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors duration-300 ${
+              darkMode
+                ? 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500'
+                : 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700'
+            }`}>
+              🚀 Tech Innovation & IoT Ideology
+            </h2>
+            <p className={`text-lg md:text-xl max-w-2xl mx-auto transition-colors duration-300 ${
+              darkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Explore cutting-edge Internet of Things technologies, smart solutions, and innovative projects that are shaping the future of connected devices and intelligent systems.
+            </p>
+          </div>
+
+          {/* Event Highlights Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 mb-12">
+            {/* Card 1: Project Expo */}
+            <div className={`group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+              darkMode ? 'bg-gradient-to-br from-blue-900/40 to-cyan-900/40 border border-blue-700/50' : 'bg-gradient-to-br from-blue-100/40 to-cyan-100/40 border border-blue-300/50'
+            } p-8 backdrop-blur-md`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-cyan-500/0 group-hover:via-blue-500/30 transition-all duration-500"></div>
+              <div className="relative z-10">
+                <h3 className={`text-3xl mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>💡</h3>
+                <h4 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Project Expo</h4>
+                <p className={`transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>Showcase your innovative IoT projects and prototypes. Compete with brilliant minds and win exciting prizes.</p>
+              </div>
+            </div>
+
+            {/* Card 2: Innovation Track */}
+            <div className={`group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+              darkMode ? 'bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-purple-700/50' : 'bg-gradient-to-br from-purple-100/40 to-pink-100/40 border border-purple-300/50'
+            } p-8 backdrop-blur-md`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-pink-500/0 group-hover:via-purple-500/30 transition-all duration-500"></div>
+              <div className="relative z-10">
+                <h3 className={`text-3xl mb-4 ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>⚙️</h3>
+                <h4 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Tech Workshops</h4>
+                <p className={`transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>Learn from industry experts about IoT applications, machine learning, and automation technologies.</p>
+              </div>
+            </div>
+
+            {/* Card 3: Networking */}
+            <div className={`group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer ${
+              darkMode ? 'bg-gradient-to-br from-cyan-900/40 to-teal-900/40 border border-cyan-700/50' : 'bg-gradient-to-br from-cyan-100/40 to-teal-100/40 border border-cyan-300/50'
+            } p-8 backdrop-blur-md`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-teal-500/0 group-hover:via-cyan-500/30 transition-all duration-500"></div>
+              <div className="relative z-10">
+                <h3 className={`text-3xl mb-4 ${darkMode ? 'text-cyan-300' : 'text-cyan-600'}`}>🤝</h3>
+                <h4 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Networking Events</h4>
+                <p className={`transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>Connect with innovators, entrepreneurs, and tech enthusiasts from across the region.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chief Guests Section */}
+        <div className="mb-16 px-4">
+          <h2 className={`text-4xl md:text-5xl font-bold text-center mb-12 transition-colors duration-300 ${
+            darkMode
+              ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500'
+              : 'text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-700'
+          }`}>
+            👑 Chief Guests & Speakers
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Guest 1: Karthik */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 hover:scale-105 ${
+              darkMode
+                ? 'bg-gradient-to-b from-slate-800/60 to-slate-900/60 border border-slate-700/50'
+                : 'bg-gradient-to-b from-slate-100/60 to-slate-200/60 border border-slate-300/50'
+            } backdrop-blur-md overflow-hidden`}>
+              <div className={`relative pt-8 px-6 pb-4 ${
+                darkMode ? 'bg-gradient-to-b from-blue-500/20 to-transparent' : 'bg-gradient-to-b from-blue-400/20 to-transparent'
+              }`}>
+                <div className={`w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 ${
+                  darkMode ? 'border-blue-500/50' : 'border-blue-400/50'
+                } group-hover:scale-110 transition-transform duration-300`}>
+                  <img 
+                    src="/Karthik-founder- offashshoot.jpeg" 
+                    alt="Karthik" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="px-6 pb-6 text-center">
+                <h3 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Karthik</h3>
+                <p className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-orange-400' : 'text-orange-600'
+                }`}>Founder of FashShoot</p>
+                <p className={`text-sm transition-colors duration-300 ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Leading innovator in digital fashion technology and e-commerce solutions</p>
+              </div>
+            </div>
+
+            {/* Guest 2: Dodla Megha */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 hover:scale-105 ${
+              darkMode
+                ? 'bg-gradient-to-b from-slate-800/60 to-slate-900/60 border border-slate-700/50'
+                : 'bg-gradient-to-b from-slate-100/60 to-slate-200/60 border border-slate-300/50'
+            } backdrop-blur-md overflow-hidden`}>
+              <div className={`relative pt-8 px-6 pb-4 ${
+                darkMode ? 'bg-gradient-to-b from-purple-500/20 to-transparent' : 'bg-gradient-to-b from-purple-400/20 to-transparent'
+              }`}>
+                <div className={`w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 ${
+                  darkMode ? 'border-purple-500/50' : 'border-purple-400/50'
+                } group-hover:scale-110 transition-transform duration-300`}>
+                  <img 
+                    src="/dodla-megha.jpeg" 
+                    alt="Dodla Megha" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="px-6 pb-6 text-center">
+                <h3 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Dodla Megha</h3>
+                <p className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-purple-400' : 'text-purple-600'
+                }`}>Tech Industry Leader</p>
+                <p className={`text-sm transition-colors duration-300 ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Visionary entrepreneur with expertise in IoT and sustainable technology solutions</p>
+              </div>
+            </div>
+
+            {/* Guest 3: Deepak Mourya */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 hover:scale-105 ${
+              darkMode
+                ? 'bg-gradient-to-b from-slate-800/60 to-slate-900/60 border border-slate-700/50'
+                : 'bg-gradient-to-b from-slate-100/60 to-slate-200/60 border border-slate-300/50'
+            } backdrop-blur-md overflow-hidden`}>
+              <div className={`relative pt-8 px-6 pb-4 ${
+                darkMode ? 'bg-gradient-to-b from-cyan-500/20 to-transparent' : 'bg-gradient-to-b from-cyan-400/20 to-transparent'
+              }`}>
+                <div className={`w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 ${
+                  darkMode ? 'border-cyan-500/50' : 'border-cyan-400/50'
+                } group-hover:scale-110 transition-transform duration-300`}>
+                  <img 
+                    src="/Deepak-mourya.jpeg" 
+                    alt="Deepak Mourya" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="px-6 pb-6 text-center">
+                <h3 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Deepak Mourya</h3>
+                <p className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-cyan-400' : 'text-cyan-600'
+                }`}>Founder of Happysundays</p>
+                <p className={`text-sm transition-colors duration-300 ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Innovative entrepreneur revolutionizing digital experiences and lifestyle technology</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* CTA Button */}
         <button
           onClick={onStart}
