@@ -261,21 +261,10 @@ function LandingPage2({
 
       {/* Content */}
       <div className="relative z-10 max-w-3xl mx-auto text-center">
-        {/* ARTIX Logo */}
+        {/* IoT eSSence Logo */}
         <div className="mb-8 animate-fade-in">
           <div className="inline-block">
-            <svg width="100" height="100" viewBox="0 0 100 100" className="drop-shadow-xl">
-              {/* Blue Triangle (ARTIX) */}
-              <polygon points="50,10 90,80 10,80" fill="url(#landingArtixGradient)" />
-              {/* Triangle outline */}
-              <polygon points="50,10 90,80 10,80" fill="none" stroke="url(#landingArtixGradient)" strokeWidth="2" />
-              <defs>
-                <linearGradient id="landingArtixGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={darkMode ? '#3b82f6' : '#2563eb'} />
-                  <stop offset="100%" stopColor={darkMode ? '#8b5cf6' : '#7c3aed'} />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/iot-essence.jpeg" alt="IoT eSSence Logo" className="h-32 md:h-40 object-contain drop-shadow-xl rounded-lg" />
           </div>
         </div>
 
