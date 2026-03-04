@@ -85,7 +85,7 @@ export function AdminScanner() {
 
         {/* Footer */}
         <div className="mt-12 text-center text-gray-400 text-sm">
-          <p className="mb-2">🎉 ARTIX 2K26 Event Management</p>
+          <p className="mb-2">🎉 IoT esSENCE 2K26 Event Management</p>
           <p className="text-xs text-gray-500">Secure Admin Portal</p>
         </div>
       </div>

@@ -622,7 +622,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
               Admin Access
             </h1>
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Dashboard</p>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>IoT esSENCE 2K26 Dashboard</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
@@ -690,7 +690,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
             <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
               Admin Dashboard
             </h1>
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Registration Management</p>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>IoT esSENCE 2K26 Registration Management</p>
           </div>
           <div className="flex gap-3 items-center">
             <button

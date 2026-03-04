@@ -284,7 +284,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
               {/* Watermark overlay */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 z-10">
                 <div className="text-6xl font-bold text-cyan-500 transform -rotate-45">
-                  ARTIX 2K26
+                  IoT esSENCE 2K26
                 </div>
               </div>
 

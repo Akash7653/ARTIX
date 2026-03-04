@@ -29,7 +29,7 @@ export function ConfirmationPage({ registrationId, formData }: Props) {
           </h1>
           <p className={`text-lg md:text-xl lg:text-2xl ${
             darkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Your registration for ARTIX 2K26 is confirmed</p>
+          }`}>Your registration for IoT esSENCE 2K26 is confirmed</p>
         </div>
 
         {/* Awaiting Approval Message - Always Shown */}

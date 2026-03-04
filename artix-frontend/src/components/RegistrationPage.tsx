@@ -123,7 +123,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
               ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-400'
               : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
           }`}>
-            ARTIX 2K26
+            IoT esSENCE 2K26
           </h1>
           <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-100'}`}>
             <p className={`text-2xl lg:text-3xl font-semibold ${
@@ -265,7 +265,7 @@ function LandingPage2({
 
       {/* Content */}
       <div className="relative z-10 max-w-3xl mx-auto text-center">
-        {/* IoT eSSence Logo */}
+        {/* IoT esSENCE Logo */}
         <div className="mb-12 animate-fade-in relative">
           <div className="inline-flex items-center justify-center">
             {/* Circular glow background */}
@@ -281,7 +281,7 @@ function LandingPage2({
             }`}>
               <img 
                 src="/iot-essence.jpeg" 
-                alt="IoT eSSence Logo" 
+                alt="IoT esSENCE Logo" 
                 className="w-full h-full rounded-full object-cover opacity-95 hover:opacity-100 transition-opacity duration-300 shadow-lg" 
                 style={{ filter: 'drop-shadow(0 0 30px rgba(59, 130, 246, 0.5))' }} 
               />
@@ -295,14 +295,14 @@ function LandingPage2({
             ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400'
             : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600'
         }`}>
-          ARTIX 2K26
+          IoT esSENCE 2K26
         </h1>
 
         {/* Subtitle */}
         <p className={`text-2xl font-semibold mb-10 transition-colors duration-300 ${
           darkMode ? 'text-gray-300' : 'text-gray-700'
         }`}>
-          IoT eSSence 2K26
+          IoT esSENCE 2K26
         </p>
 
         {/* Description */}
