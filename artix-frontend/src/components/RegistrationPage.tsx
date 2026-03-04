@@ -266,9 +266,26 @@ function LandingPage2({
       {/* Content */}
       <div className="relative z-10 max-w-3xl mx-auto text-center">
         {/* IoT eSSence Logo */}
-        <div className="mb-8 animate-fade-in">
-          <div className="inline-block">
-            <img src="/iot-essence.jpeg" alt="IoT eSSence Logo" className="h-32 md:h-40 object-contain opacity-90 hover:opacity-100 transition-opacity duration-300" style={{ filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))' }} />
+        <div className="mb-12 animate-fade-in relative">
+          <div className="inline-flex items-center justify-center">
+            {/* Circular glow background */}
+            <div className={`absolute w-40 h-40 md:w-48 md:h-48 rounded-full ${
+              darkMode ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/10' : 'bg-gradient-to-br from-blue-400/20 to-cyan-400/10'
+            } blur-2xl`}></div>
+            
+            {/* Circular logo container */}
+            <div className={`relative w-36 h-36 md:w-44 md:h-44 rounded-full p-2 ${
+              darkMode 
+                ? 'bg-gradient-to-br from-blue-600/30 to-cyan-600/20 border-2 border-blue-500/40' 
+                : 'bg-gradient-to-br from-blue-500/30 to-cyan-500/20 border-2 border-blue-400/40'
+            }`}>
+              <img 
+                src="/iot-essence.jpeg" 
+                alt="IoT eSSence Logo" 
+                className="w-full h-full rounded-full object-cover opacity-95 hover:opacity-100 transition-opacity duration-300 shadow-lg" 
+                style={{ filter: 'drop-shadow(0 0 30px rgba(59, 130, 246, 0.5))' }} 
+              />
+            </div>
           </div>
         </div>
 
