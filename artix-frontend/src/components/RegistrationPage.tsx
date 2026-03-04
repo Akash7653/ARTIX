@@ -527,7 +527,7 @@ function LandingPage2({
             href="https://artixs-problemstatements-zk5x.vercel.app/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-8 lg:px-10 py-3 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap ${
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-8 lg:px-10 py-3.5 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap ${
               darkMode
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
                 : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
@@ -535,7 +535,7 @@ function LandingPage2({
           >
             <span>📋</span>
             <span className="hidden xs:inline">View Problem Statements</span>
-            <span className="xs:hidden">Problem Statements</span>
+            <span className="xs:hidden">View Problems</span>
           </a>
         </div>
 
