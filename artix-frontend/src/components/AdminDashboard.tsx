@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send, ChevronUp } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
 import { PerformanceMonitoring } from './PerformanceMonitoring';
 import { ErrorViewer } from './ErrorViewer';
@@ -69,6 +69,7 @@ export function AdminDashboard({ onLogout }: Props) {
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
 
   const handleLogin = (e: React.FormEvent) => {
@@ -586,6 +587,15 @@ export function AdminDashboard({ onLogout }: Props) {
     loadData();
   }, []);
 
+  // Auto-scroll to expanded details
+  useEffect(() => {
+    if (expandedId && expandedDetailsRef.current) {
+      setTimeout(() => {
+        expandedDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [expandedId]);
+
   const filteredRegistrations = registrations.filter(reg =>
     reg.registration_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     reg.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1092,7 +1102,7 @@ export function AdminDashboard({ onLogout }: Props) {
 
         {/* Expanded Row Details */}
         {expandedId && (
-          <div className={`mt-6 rounded-xl p-6 border-2 ${
+          <div ref={expandedDetailsRef} className={`mt-6 rounded-xl p-6 border-2 ${
             darkMode
               ? 'bg-gray-800/40 border-gray-700/50'
               : 'bg-white/40 border-gray-300'
@@ -1503,6 +1513,23 @@ export function AdminDashboard({ onLogout }: Props) {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Hide Button - Scroll back to registrations */}
+                  <div className="flex justify-center pt-6 mt-8 border-t-2" style={{
+                    borderColor: darkMode ? 'rgba(107, 114, 128, 0.3)' : 'rgba(209, 213, 219, 0.5)'
+                  }}>
+                    <button
+                      onClick={() => setExpandedId(null)}
+                      className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold hover:scale-105 border-2 ${
+                        darkMode
+                          ? 'bg-gray-700/40 text-gray-200 border-gray-600 hover:bg-gray-700/60'
+                          : 'bg-gray-400/30 text-gray-700 border-gray-400 hover:bg-gray-400/50'
+                      }`}
+                    >
+                      <ChevronUp className="w-5 h-5" />
+                      Hide Details &amp; Return to Registrations
+                    </button>
+                  </div>
                 </div>
               );
             })()}
