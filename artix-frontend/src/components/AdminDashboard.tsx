@@ -694,16 +694,6 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
           </div>
           <div className="flex gap-3 items-center">
             <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-lg transition font-semibold border ${
-                darkMode
-                  ? 'bg-gray-700/40 border-gray-600/50 text-yellow-300 hover:bg-gray-600/40'
-                  : 'bg-gray-200/40 border-gray-300/50 text-gray-800 hover:bg-gray-300/40'
-              }`}
-            >
-              {darkMode ? '☀️ Light' : '🌙 Dark'}
-            </button>
-            <button
               onClick={() => {
                 setIsAuthenticated(false);
                 onLogout();
