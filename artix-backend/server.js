@@ -860,8 +860,9 @@ async function registerHandler(req, res) {
     // Insert registration
     const result = await registrationsCollection.insertOne(registrationDoc);  
     
-    // Invalidate admin caches since new data was added
-    adminCache.invalidateAll();
+    // Cache will expire naturally via TTL - no need to invalidate
+    // Stats cache will show updated count within 15 seconds
+    // Registrations cache will refresh within 30 seconds
     
     // Verify it was inserted correctly
     console.log(`💾 [VERIFY] Inserted with ID:`, result.insertedId);
@@ -1122,8 +1123,9 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       }
     );
 
-    // Invalidate admin caches since data changed
-    adminCache.invalidateAll();
+    // Cache will expire naturally via TTL - no need to invalidate
+    // Stats will refresh within 15 seconds
+    // Registrations will refresh within 30 seconds
 
     console.log(`✅ Update result: matchedCount=${updateResult.matchedCount}, modifiedCount=${updateResult.modifiedCount}`);
 
@@ -1217,8 +1219,9 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       updateDoc
     );
 
-    // Invalidate admin caches since data changed
-    adminCache.invalidateAll();
+    // Cache will expire naturally via TTL - no need to invalidate
+    // Stats will refresh within 15 seconds
+    // Registrations will refresh within 30 seconds
 
     console.log(`✅ ${finalApprovalStatus === 'approved' ? 'Approved' : 'Rejected'}: ${registrationId}`);
     logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
@@ -2219,8 +2222,9 @@ app.post('/api/admin/verify-entry', async (req, res) => {
       }
     );
 
-    // Invalidate admin caches since data changed
-    adminCache.invalidateAll();
+    // Cache will expire naturally via TTL - no need to invalidate  
+    // Stats will refresh within 15 seconds
+    // Registrations will refresh within 30 seconds
 
     console.log(`✅ Entry verified: ${registration.registration_id}`);
 
