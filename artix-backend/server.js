@@ -27,6 +27,7 @@ import {
   systemLoadMonitor,
   loadBalancer
 } from './utils/loadOptimizer.js';
+import adminCache from './utils/adminCache.js';
 
 dotenv.config();
 
@@ -74,6 +75,9 @@ async function connectDB() {
     } catch (e) {
       // Index might not exist, that's fine
     }
+    
+    // Initialize admin cache with collections
+    adminCache.registrationsCollection = registrationsCollection;
     
     logger.info('Connected to MongoDB with optimized indexes');
   } catch (err) {
@@ -841,6 +845,9 @@ async function registerHandler(req, res) {
     // Insert registration
     const result = await registrationsCollection.insertOne(registrationDoc);  
     
+    // Invalidate admin caches since new data was added
+    adminCache.invalidateAll();
+    
     // Verify it was inserted correctly
     console.log(`💾 [VERIFY] Inserted with ID:`, result.insertedId);
     logRegistration('Registration created successfully', { 
@@ -1100,6 +1107,9 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       }
     );
 
+    // Invalidate admin caches since data changed
+    adminCache.invalidateAll();
+
     console.log(`✅ Update result: matchedCount=${updateResult.matchedCount}, modifiedCount=${updateResult.modifiedCount}`);
 
     // Verify it was saved
@@ -1191,6 +1201,9 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       { _id: registration._id },
       updateDoc
     );
+
+    // Invalidate admin caches since data changed
+    adminCache.invalidateAll();
 
     console.log(`✅ ${finalApprovalStatus === 'approved' ? 'Approved' : 'Rejected'}: ${registrationId}`);
     logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
@@ -1416,91 +1429,10 @@ app.get('/api/health', (req, res) => {
 // 7. Get Statistics (for admin)
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    // IMPORTANT: ALWAYS fetch latest stats (no caching for admin dashboard)
-    console.log('📊 Fetching fresh statistics from database...');
-    
-    if (!registrationsCollection) {
-      console.error('❌ Registrations collection not initialized');
-      return res.status(500).json({ error: 'Database not initialized' });
-    }
-
-    const totalRegistrations = await registrationsCollection.countDocuments();
-    console.log(`✅ Total Registrations: ${totalRegistrations}`);
-    
-    const approvedEntries = await registrationsCollection.countDocuments({ 
-      approval_status: 'approved',
-      selected_for_event: true
-    });
-    console.log(`✅ Approved Entries (Selected): ${approvedEntries}`);
-
-    const rejectedEntries = await registrationsCollection.countDocuments({ 
-      approval_status: 'rejected'
-    });
-    console.log(`✅ Rejected Entries: ${rejectedEntries}`);
-    
-    const pendingEntries = await registrationsCollection.countDocuments({ 
-      approval_status: 'pending'
-    });
-    console.log(`✅ Pending Entries: ${pendingEntries}`);
-    
-    // Revenue ONLY from approved and selected entries
-    const approvedRevenueResult = await registrationsCollection.aggregate([
-      {
-        $match: {
-          approval_status: 'approved',
-          selected_for_event: true
-        }
-      },
-      { 
-        $group: { 
-          _id: null, 
-          total: { $sum: '$total_amount' } 
-        } 
-      }
-    ]).toArray();
-    const approvedRevenue = approvedRevenueResult[0]?.total || 0;
-    console.log(`✅ Approved Revenue: ₹${approvedRevenue}`);
-
-    // Total pending revenue (not yet confirmed)
-    const pendingRevenueResult = await registrationsCollection.aggregate([
-      {
-        $match: {
-          approval_status: 'pending'
-        }
-      },
-      { 
-        $group: { 
-          _id: null, 
-          total: { $sum: '$total_amount' } 
-        } 
-      }
-    ]).toArray();
-    const pendingRevenue = pendingRevenueResult[0]?.total || 0;
-    console.log(`✅ Pending Revenue: ₹${pendingRevenue}`);
-
-    // Count verified entries (entry_verified_at is not null)
-    const verifiedEntries = await registrationsCollection.countDocuments({
-      entry_verified_at: { $exists: true, $ne: null }
-    });
-    console.log(`✅ Verified Entries: ${verifiedEntries}`);
-
-    const statsData = {
-      totalRegistrations,
-      approvedEntries,
-      rejectedEntries,
-      pendingEntries,
-      verifiedEntries,
-      approvedRevenue,
-      pendingRevenue,
-      totalRevenue: approvedRevenue + pendingRevenue,
-      timestamp: new Date().toISOString()
-    };
-
-    // DISABLED CACHING: Always fetch fresh data for real-time stats
-    // statsCache.set(cacheKey, statsData);
-
+    // Use optimized admin cache (single aggregation pipeline, 15-second TTL)
+    const forceRefresh = req.query.refresh === 'true';
+    const statsData = await adminCache.getStats(forceRefresh);
     res.json(statsData);
-
   } catch (err) {
     console.error('❌ Stats error:', err);
     console.error('Error details:', err.message);
@@ -1602,15 +1534,11 @@ app.get('/api/admin/registrations', async (req, res) => {
   try {
     // Get pagination parameters
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50)); // Max 100, min 1
-    const skip = (page - 1) * limit;
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
     
     // Get filter parameters
     const approvalStatus = req.query.approval_status;
     const searchQuery = req.query.search;
-    
-    // IMPORTANT: ALWAYS fetch latest data (no caching for real-time admin dashboard)
-    console.log(`📋 Fetching fresh registrations - page ${page}, limit ${limit}`);
     
     // Build filter object
     let filter = {};
@@ -1618,66 +1546,36 @@ app.get('/api/admin/registrations', async (req, res) => {
       filter.approval_status = approvalStatus;
     }
     
-    if (searchQuery && searchQuery.trim().length > 0) {
-      const searchRegex = new RegExp(searchQuery.trim(), 'i'); // Case-insensitive regex
-      filter.$or = [
-        { full_name: { $regex: searchRegex } },
-        { email: { $regex: searchRegex } },
-        { phone: { $regex: searchRegex } },
-        { registration_id: { $regex: searchRegex } }
-      ];
-    }
+    // Use optimized admin cache (30-second TTL per page, reduces DB queries)
+    const forceRefresh = req.query.refresh === 'true';
+    const cacheResult = await adminCache.getRegistrations(page, limit, filter, searchQuery || '', forceRefresh);
     
-    logAdmin('Fetching registrations from database', {
+    logAdmin('Fetching registrations', {
       page,
       limit,
       approvalStatus: approvalStatus || 'all',
-      hasSearch: !!searchQuery
+      hasSearch: !!searchQuery,
+      fromCache: !forceRefresh
     });
-    
-    // Get total count for pagination
-    const totalCount = await registrationsCollection.countDocuments(filter);
-    const pages = Math.ceil(totalCount / limit);
-    
-    // Fetch registrations with sorting and pagination
-    const registrations = await registrationsCollection
-      .find(filter)
-      .skip(skip)
-      .limit(limit)
-      .sort({ created_at: -1 })
-      .toArray();
 
-    console.log('🔍 DEBUG: registrations from DB:', registrations.length, 'items');
-    if (registrations[0]) {
-      console.log('🔍 DEBUG: first registration created_at:', registrations[0].created_at, 'type:', typeof registrations[0].created_at);
-      console.log('🔍 DEBUG: first registration selected_events:', registrations[0].selected_events);
-    }
-
-    // Format response - Transform team members to proper field names
-    const formattedData = registrations.map(reg => {
-      // Transform team_members field names from frontend format to backend format
+    // Format response - Transform data (same logic as before)
+    const formattedData = cacheResult.registrations.map(reg => {
       const transformedTeamMembers = (reg.team_members || []).map(member => ({
         member_name: member.name || member.member_name || '',
         member_branch: member.branch || member.member_branch || '',
         member_phone: member.phone || member.member_phone || ''
       }));
       
-      // Ensure created_at is properly set - add current date if missing
       let createdAt = reg.created_at;
       if (!createdAt) {
-        console.warn(`⚠️ Registration ${reg.registration_id} missing created_at, using current time`);
         createdAt = new Date();
       }
-      
-      // Convert Date to ISO string for proper JSON serialization
       const createdAtISO = createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString();
       
-      // Ensure selected_events is an array and filter out invalid values
       let selectedEvents = reg.selected_events || [];
       if (!Array.isArray(selectedEvents)) {
         selectedEvents = [];
       }
-      // Clean up invalid event values (like 'undefined', 'null', empty strings)
       selectedEvents = selectedEvents.filter(e => {
         const strVal = String(e).trim();
         return strVal && strVal !== 'undefined' && strVal !== 'null' && strVal !== '';
@@ -1710,40 +1608,17 @@ app.get('/api/admin/registrations', async (req, res) => {
       };
     });
 
-    console.log('🔍 [RESPONSE] formatted registrations count:', formattedData.length);
-    if (formattedData[0]) {
-      console.log('🔍 [RESPONSE] First registration data:', {
-        registration_id: formattedData[0].registration_id,
-        created_at: formattedData[0].created_at,
-        selected_events: formattedData[0].selected_events,
-        selected_events_count: Array.isArray(formattedData[0].selected_events) ? formattedData[0].selected_events.length : 0
-      });
-    }
-    // Log all registrations' event counts
-    const eventCounts = formattedData.map(r => ({
-      reg_id: r.registration_id,
-      event_count: Array.isArray(r.selected_events) ? r.selected_events.length : 0
-    }));
-    console.log('🔍 [RESPONSE] Event counts:', eventCounts);
-
-    logAdmin('Registrations retrieved successfully', {
-      page,
-      totalCount,
-      returningCount: registrations.length,
-      totalPages: pages
-    });
-
     const responseData = {
       success: true,
       data: formattedData,
       pagination: {
         page,
         limit,
-        total: totalCount,
-        pages,
-        hasMore: page < pages,
+        total: cacheResult.totalCount,
+        pages: cacheResult.pages,
+        hasMore: page < cacheResult.pages,
         hasPrevious: page > 1,
-        nextPage: page < pages ? page + 1 : null,
+        nextPage: page < cacheResult.pages ? page + 1 : null,
         previousPage: page > 1 ? page - 1 : null
       },
       filters: {
@@ -1751,14 +1626,6 @@ app.get('/api/admin/registrations', async (req, res) => {
         search: searchQuery || null
       }
     };
-
-    // Debug logging before sending response
-    console.log('🔍 DEBUG: responseData object:', responseData);
-    console.log('🔍 DEBUG: responseData.data array length:', responseData.data.length);
-    console.log('🔍 DEBUG: responseData.success:', responseData.success);
-
-    // DISABLED CACHING: Always fetch latest data for real-time admin dashboard
-    // registrationCache.set(cacheKey, responseData);
 
     res.json(responseData);
 
@@ -2336,6 +2203,9 @@ app.post('/api/admin/verify-entry', async (req, res) => {
         }
       }
     );
+
+    // Invalidate admin caches since data changed
+    adminCache.invalidateAll();
 
     console.log(`✅ Entry verified: ${registration.registration_id}`);
 
