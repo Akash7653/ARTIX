@@ -98,18 +98,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
         <header className="text-center mb-12">
           {/* ARTIX Logo */}
           <div className="mb-6 flex justify-center">
-            <svg width="120" height="120" viewBox="0 0 100 100" className="drop-shadow-lg">
-              {/* Blue Triangle (main) */}
-              <polygon points="50,10 90,80 10,80" fill="url(#artixGradient)" />
-              {/* Triangle outline */}
-              <polygon points="50,10 90,80 10,80" fill="none" stroke="url(#artixGradient)" strokeWidth="2" />
-              <defs>
-                <linearGradient id="artixGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={darkMode ? '#3b82f6' : '#2563eb'} />
-                  <stop offset="100%" stopColor={darkMode ? '#8b5cf6' : '#7c3aed'} />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-32 object-contain drop-shadow-lg rounded-lg" />
           </div>
 
           <h1 className={`text-6xl md:text-7xl font-bold mb-6 transition-colors duration-300 ${
@@ -129,6 +118,22 @@ export function RegistrationPage({ fromLandingPage = false }) {
             <p className="text-xl lg:text-2xl">📍 Malla Reddy Engineering College</p>
           </div>
         </header>
+
+        {/* Animation Video */}
+        <div className="mb-12 rounded-xl overflow-hidden drop-shadow-lg border-2" style={{
+          borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)'
+        }}>
+          <video 
+            autoPlay 
+            muted 
+            loop 
+            playsInline
+            className="w-full h-auto"
+          >
+            <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
 
         <div className="space-y-6">
           <ParticipantDetailsForm
