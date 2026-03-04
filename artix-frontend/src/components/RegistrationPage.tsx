@@ -123,8 +123,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
             }`}>
               Department of Internet of Things (IoT)
             </p>
-            <p className="text-xl lg:text-2xl">📅 16th & 17th March 2026</p>
-            <p className="text-xl lg:text-2xl">📍 Malla Reddy Engineering College</p>
+            <p className="text-xl lg:text-2xl font-semibold">Event Registration Form</p>
           </div>
         </header>
 
