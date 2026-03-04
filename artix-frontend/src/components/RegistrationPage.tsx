@@ -522,17 +522,34 @@ function LandingPage2({
           </div>
         </div>
 
-        {/* CTA Button */}
-        <button
-          onClick={onStart}
-          className={`px-14 py-5 text-2xl lg:text-3xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg ${
-            darkMode
-              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
-              : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
-          }`}
-        >
-          Start Registration →
-        </button>
+        {/* CTA Buttons */}
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 justify-center items-center">
+          <button
+            onClick={onStart}
+            className={`px-14 py-5 text-2xl lg:text-3xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg ${
+              darkMode
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
+                : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
+            }`}
+          >
+            Start Registration →
+          </button>
+
+          {/* Problem Statements Button */}
+          <a 
+            href="https://artixs-problemstatements-zk5x.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className={`inline-flex items-center justify-center gap-3 px-10 py-5 text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl ${
+              darkMode
+                ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
+                : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
+            }`}
+          >
+            <span>📋</span>
+            <span>View Problem Statements</span>
+          </a>
+        </div>
 
 
       </div>
