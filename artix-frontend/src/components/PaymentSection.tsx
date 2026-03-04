@@ -458,7 +458,7 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
           <button
             type="submit"
             disabled={!formData.paymentScreenshot || !transactionId || !utrId || isSubmitting}
-            className={`w-full py-4 rounded-lg font-bold text-lg transition-all relative group overflow-hidden hover:shadow-lg ${
+            className={`w-full py-5 md:py-6 rounded-lg font-bold text-lg md:text-2xl transition-all relative group overflow-hidden hover:shadow-lg ${
               !formData.paymentScreenshot || !transactionId || !utrId
                 ? 'opacity-50 cursor-not-allowed bg-gray-500'
                 : darkMode
