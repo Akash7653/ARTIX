@@ -513,7 +513,7 @@ function LandingPage2({
         <div className="flex flex-row gap-2 sm:gap-4 md:gap-6 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
           <button
             onClick={onStart}
-            className={`flex-1 sm:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-3 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap ${
+            className={`flex-1 sm:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-4 sm:py-5 md:py-6 lg:py-7 text-sm sm:text-lg md:text-2xl lg:text-3xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap ${
               darkMode
                 ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
                 : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
@@ -527,7 +527,7 @@ function LandingPage2({
             href="https://artixs-problemstatements-zk5x.vercel.app/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-4 md:px-8 lg:px-10 py-3.5 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl ${
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-4 md:px-8 lg:px-10 py-4 sm:py-5 md:py-6 lg:py-7 text-sm sm:text-lg md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl ${
               darkMode
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
                 : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
