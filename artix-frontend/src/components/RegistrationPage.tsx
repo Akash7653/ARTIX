@@ -314,19 +314,19 @@ function LandingPage2({
 
         {/* Event Details */}
         <div className="flex flex-col md:flex-row gap-3 md:gap-6 justify-center mb-14 px-2 md:px-0">
-          <div className={`px-3 md:px-6 py-2 md:py-3 rounded-lg backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm md:text-base lg:text-lg font-semibold whitespace-nowrap md:whitespace-normal ${
+          <div className={`px-4 md:px-8 py-3 md:py-4 rounded-lg backdrop-blur-sm transition-all duration-300 text-sm sm:text-base md:text-lg lg:text-2xl font-semibold whitespace-nowrap md:whitespace-normal ${
             darkMode
               ? 'bg-gray-800/40 border border-gray-700/50'
               : 'bg-white/40 border border-gray-300/50'
           }`}>
             <p className={darkMode ? 'text-blue-400' : 'text-blue-600'}>📅 Mar 16-17</p>
           </div>
-          <div className={`px-3 md:px-6 py-2 md:py-3 rounded-lg backdrop-blur-sm transition-all duration-300 text-xs sm:text-sm md:text-base lg:text-lg font-semibold whitespace-nowrap md:whitespace-normal ${
+          <div className={`px-4 md:px-8 py-3 md:py-4 rounded-lg backdrop-blur-sm transition-all duration-300 text-sm sm:text-base md:text-lg lg:text-2xl font-semibold whitespace-nowrap md:whitespace-normal ${
             darkMode
               ? 'bg-gray-800/40 border border-gray-700/50'
               : 'bg-white/40 border border-gray-300/50'
           }`}>
-            <p className={darkMode ? 'text-purple-400' : 'text-purple-600'}>📍 MREC</p>
+            <p className={darkMode ? 'text-purple-400' : 'text-purple-600'}>📍 MREC-Sports Block Auditorium</p>
           </div>
         </div>
 
@@ -513,7 +513,7 @@ function LandingPage2({
         <div className="flex flex-row gap-2 sm:gap-4 md:gap-6 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
           <button
             onClick={onStart}
-            className={`flex-1 sm:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-2.5 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-base md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap ${
+            className={`flex-1 sm:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-3 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-xl lg:text-2xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap ${
               darkMode
                 ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-xl hover:shadow-blue-500/50'
                 : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:shadow-xl hover:shadow-purple-500/50'
@@ -527,7 +527,7 @@ function LandingPage2({
             href="https://artixs-problemstatements-zk5x.vercel.app/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-8 lg:px-10 py-2.5 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap ${
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-8 lg:px-10 py-3 sm:py-4 md:py-5 lg:py-6 text-xs sm:text-base md:text-lg lg:text-xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-xl whitespace-nowrap ${
               darkMode
                 ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-400 hover:to-red-500'
                 : 'bg-gradient-to-r from-orange-600 to-red-700 text-white hover:shadow-2xl hover:shadow-orange-500/50 hover:from-orange-500 hover:to-red-600'
