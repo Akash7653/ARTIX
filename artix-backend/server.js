@@ -64,7 +64,7 @@ async function connectDB() {
     await registrationsCollection.createIndex({ created_at: -1 }); // For sorting recent first
     await registrationsCollection.createIndex({ full_name: 1 }); // For searching by name
     await registrationsCollection.createIndex({ phone: 1 }); // For searching by phone
-    await registrationsCollection.createIndex({ email: 1 }); // For searching by email
+    // Note: email index already created as unique above, no need for duplicate non-unique index
     
     // Compound index for efficient pagination with status filter
     await registrationsCollection.createIndex({ approval_status: 1, created_at: -1 });
