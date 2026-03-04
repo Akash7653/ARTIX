@@ -242,4 +242,4 @@ class AdminCache {
   }
 }
 
-module.exports = new AdminCache();
+export default new AdminCache();
