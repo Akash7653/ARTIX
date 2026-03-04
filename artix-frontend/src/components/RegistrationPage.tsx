@@ -56,7 +56,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
           onToggleTheme={() => setDarkMode(!darkMode)}
           onOpenAdminModal={() => setShowAdminModal(true)}
         />
-        <AdminModal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} />
+        <AdminModal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} darkMode={darkMode} />
       </>
     );
   }
