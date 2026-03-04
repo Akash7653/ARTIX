@@ -62,24 +62,11 @@ export function RegistrationPage({ fromLandingPage = false }) {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 relative overflow-hidden ${
+    <div className={`min-h-screen transition-colors duration-300 ${
       darkMode
-        ? 'bg-black'
-        : 'bg-white'
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+        : 'bg-gradient-to-br from-white via-blue-50 to-white'
     }`}>
-      {/* Video Background */}
-      <video 
-        autoPlay 
-        muted 
-        loop 
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
-      </video>
-      
-      {/* Dark Overlay for text readability */}
-      <div className={`absolute inset-0 ${darkMode ? 'bg-black/70' : 'bg-white/50'}`}></div>
       {/* Theme Toggle */}
       <div className="fixed top-4 right-4 z-50 md:top-6 md:right-6">
         <button
@@ -109,19 +96,21 @@ export function RegistrationPage({ fromLandingPage = false }) {
         </button>
 
         <header className="text-center mb-12">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-24 object-contain drop-shadow-lg rounded-lg" />
-            <h1 className={`text-6xl md:text-7xl font-bold transition-colors duration-300 ${
-              darkMode
-                ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-400'
-                : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
-            }`}>
-              ARTIX 2K26
-            </h1>
+          {/* ARTIX Logo */}
+          <div className="mb-6 flex justify-center">
+            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-32 object-contain drop-shadow-lg rounded-lg" />
           </div>
-          <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-100'}`}>
+
+          <h1 className={`text-6xl md:text-7xl font-bold mb-6 transition-colors duration-300 ${
+            darkMode
+              ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
+              : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-700'
+          }`}>
+            ARTIX 2K26
+          </h1>
+          <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             <p className={`text-2xl lg:text-3xl font-semibold ${
-              darkMode ? 'text-blue-300' : 'text-blue-200'
+              darkMode ? 'text-blue-400' : 'text-blue-600'
             }`}>
               Department of Internet of Things (IoT)
             </p>
@@ -130,7 +119,21 @@ export function RegistrationPage({ fromLandingPage = false }) {
           </div>
         </header>
 
-        {/* Remove Animation Video section - it's now background */}
+        {/* Animation Video */}
+        <div className="mb-12 rounded-xl overflow-hidden drop-shadow-lg border-2" style={{
+          borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)'
+        }}>
+          <video 
+            autoPlay 
+            muted 
+            loop 
+            playsInline
+            className="w-full h-auto max-h-96"
+          >
+            <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
 
         <div className="space-y-6">
           <ParticipantDetailsForm
@@ -179,24 +182,11 @@ function LandingPage2({
   onOpenAdminModal: () => void;
 }) {
   return (
-    <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 overflow-hidden relative ${
+    <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 overflow-hidden ${
       darkMode
-        ? 'bg-black'
-        : 'bg-white'
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
+        : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
     }`}>
-      {/* Video Background */}
-      <video 
-        autoPlay 
-        muted 
-        loop 
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
-      </video>
-      
-      {/* Dark Overlay for text readability */}
-      <div className={`absolute inset-0 ${darkMode ? 'bg-black/60' : 'bg-white/40'}`}></div>
       {/* Admin Button */}
       <div className="fixed top-4 left-4 z-50 md:top-6 md:left-6">
         <button
@@ -229,7 +219,7 @@ function LandingPage2({
       </div>
 
       {/* Animated Background Gradient */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {darkMode ? (
           <>
             <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl animate-float"></div>
