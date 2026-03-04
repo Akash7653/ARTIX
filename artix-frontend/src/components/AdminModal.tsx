@@ -45,7 +45,7 @@ export function AdminModal({ isOpen, onClose, darkMode = true }: Props) {
   if (isLoggedIn) {
     return (
       <div className="fixed inset-0 z-[999]">
-        <AdminDashboard onLogout={() => {
+        <AdminDashboard darkMode={darkMode} onLogout={() => {
           setIsLoggedIn(false);
           setEmail('');
           setPassword('');

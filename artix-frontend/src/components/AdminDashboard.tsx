@@ -49,9 +49,10 @@ const ADMIN_PASSWORD = '23J41A69A3';
 
 interface Props {
   onLogout: () => void;
+  darkMode?: boolean;
 }
 
-export function AdminDashboard({ onLogout }: Props) {
+export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,7 +69,6 @@ export function AdminDashboard({ onLogout }: Props) {
   const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
 
