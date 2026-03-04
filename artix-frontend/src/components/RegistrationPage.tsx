@@ -260,7 +260,7 @@ function LandingPage2({
         {/* IoT eSSence Logo */}
         <div className="mb-8 animate-fade-in">
           <div className="inline-block">
-            <img src="/iot-essence.jpeg" alt="IoT eSSence Logo" className="h-32 md:h-40 object-contain drop-shadow-xl rounded-lg" />
+            <img src="/iot-essence.jpeg" alt="IoT eSSence Logo" className="h-32 md:h-40 object-contain opacity-90 hover:opacity-100 transition-opacity duration-300" style={{ filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))' }} />
           </div>
         </div>
 
