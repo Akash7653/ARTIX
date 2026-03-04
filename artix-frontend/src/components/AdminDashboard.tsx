@@ -684,33 +684,13 @@ export function AdminDashboard({ onLogout }: Props) {
         : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
     }`}>
       <div className="max-w-7xl mx-auto">
-        {/* Animation Video Banner */}
-        <div className="mb-8 rounded-xl overflow-hidden drop-shadow-lg border-2" style={{
-          borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)',
-          maxHeight: '400px'
-        }}>
-          <video 
-            autoPlay 
-            muted 
-            loop 
-            playsInline
-            className="w-full h-full object-cover"
-          >
-            <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-
         {/* Header */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-20 object-contain drop-shadow-lg rounded-lg" />
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
-                Admin Dashboard
-              </h1>
-              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Registration Management</p>
-            </div>
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
+              Admin Dashboard
+            </h1>
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ARTIX 2K26 Registration Management</p>
           </div>
           <div className="flex gap-3 items-center">
             <button
