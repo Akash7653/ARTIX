@@ -110,16 +110,13 @@ export function RegistrationPage({ fromLandingPage = false }) {
         </button>
 
         <header className="text-center mb-12">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <img src="/artix logo.jpeg" alt="ARTIX Logo" className="h-24 md:h-28 object-contain drop-shadow-lg rounded-lg" />
-            <h1 className={`text-5xl md:text-6xl font-bold transition-colors duration-300 ${
-              darkMode
-                ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-400'
-                : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
-            }`}>
-              ARTIX 2K26
-            </h1>
-          </div>
+          <h1 className={`text-5xl md:text-6xl font-bold transition-colors duration-300 mb-6 ${
+            darkMode
+              ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-400'
+              : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500'
+          }`}>
+            ARTIX 2K26
+          </h1>
           <div className={`space-y-3 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-100'}`}>
             <p className={`text-2xl lg:text-3xl font-semibold ${
               darkMode ? 'text-blue-300' : 'text-blue-200'
