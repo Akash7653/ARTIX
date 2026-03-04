@@ -255,7 +255,7 @@ export function ErrorViewer({ darkMode }: Props) {
           <strong>Why participants see "failed to fetch":</strong>
         </p>
         <ul className="list-disc list-inside space-y-1">
-          <li>Network timeout (backend taking >30 seconds)</li>
+          <li>Network timeout (backend taking &gt;30 seconds)</li>
           <li>Internet connection interruption</li>
           <li>Rate limiting triggered</li>
           <li>Backend overload or crash</li>
