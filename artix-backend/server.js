@@ -2661,18 +2661,12 @@ async function startServer() {
   }
 }
 
-// Export app for Vercel serverless + ensure DB connection
-export { app, connectDB };
+startServer();
 
-// Only start server locally (not in Vercel environment)
-if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
-  startServer();
-
-  // Graceful shutdown
-  process.on('SIGINT', async () => {
-    console.log('\n📛 Shutting down...');
-    logger.info('Server shutdown initiated');
-    await client.close();
-    process.exit(0);
-  });
-}
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n📛 Shutting down...');
+  logger.info('Server shutdown initiated');
+  await client.close();
+  process.exit(0);
+});
