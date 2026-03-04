@@ -163,14 +163,8 @@ class AdminCache {
     // Build filter with search
     let dbFilter = { ...filter };
     if (searchQuery && searchQuery.trim()) {
-      const searchRegex = new RegExp(searchQuery.trim(), 'i');
-      dbFilter.$or = dbFilter.$or || [];
-      dbFilter.$or.push(
-        { full_name: { $regex: searchRegex } },
-        { email: { $regex: searchRegex } },
-        { phone: { $regex: searchRegex } },
-        { registration_id: { $regex: searchRegex } }
-      );
+      // Use MongoDB text search instead of regex (much faster with text index)
+      dbFilter.$text = { $search: searchQuery.trim() };
     }
 
     try {

@@ -64,9 +64,24 @@ async function connectDB() {
     await registrationsCollection.createIndex({ created_at: -1 }); // For sorting recent first
     await registrationsCollection.createIndex({ full_name: 1 }); // For searching by name
     await registrationsCollection.createIndex({ phone: 1 }); // For searching by phone
+    await registrationsCollection.createIndex({ email: 1 }); // For searching by email
     
     // Compound index for efficient pagination with status filter
     await registrationsCollection.createIndex({ approval_status: 1, created_at: -1 });
+    
+    // Text index for fast searching across multiple fields
+    try {
+      await registrationsCollection.createIndex({
+        full_name: 'text',
+        email: 'text',
+        phone: 'text',
+        registration_id: 'text',
+        college_name: 'text'
+      });
+      logger.info('✓ Text index created for search optimization');
+    } catch (e) {
+      logger.info('ℹ Text index already exists or error creating it');
+    }
     
     // Drop verification_id index if exists (to prevent null duplicate errors)
     try {
