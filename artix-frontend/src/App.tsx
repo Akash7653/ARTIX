@@ -3,9 +3,15 @@ import { RegistrationPage } from './components/RegistrationPage';
 import { AdminScanner } from './components/AdminScanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { api } from './lib/api';
+import { setupErrorTracking } from './utils/errorTracker';
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    // Initialize error tracking
+    setupErrorTracking();
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => {
