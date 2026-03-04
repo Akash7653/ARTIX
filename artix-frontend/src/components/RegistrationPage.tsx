@@ -351,32 +351,19 @@ function LandingPage2({
           {/* Event Highlights Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 mb-12">
             {/* Card 1: Project Expo */}
-            <div className={`group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 ${
+            <div className={`group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer ${
               darkMode ? 'bg-gradient-to-br from-blue-900/40 to-cyan-900/40 border border-blue-700/50' : 'bg-gradient-to-br from-blue-100/40 to-cyan-100/40 border border-blue-300/50'
-            } p-8 backdrop-blur-md flex flex-col`}>
+            } p-8 backdrop-blur-md`}>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-cyan-500/0 group-hover:via-blue-500/30 transition-all duration-500"></div>
-              <div className="relative z-10 flex-1">
+              <div className="relative z-10">
                 <h3 className={`text-3xl mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>💡</h3>
                 <h4 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>Project Expo</h4>
-                <p className={`transition-colors duration-300 mb-6 ${
+                <p className={`transition-colors duration-300 ${
                   darkMode ? 'text-gray-300' : 'text-gray-700'
                 }`}>Showcase your innovative IoT projects and prototypes. Compete with brilliant minds and win exciting prizes.</p>
               </div>
-              <a 
-                href="https://artixs-problemstatements-zk5x.vercel.app/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className={`relative z-10 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-110 ${
-                  darkMode
-                    ? 'bg-blue-600/50 text-blue-200 hover:bg-blue-500 border border-blue-500/50'
-                    : 'bg-blue-500/50 text-white hover:bg-blue-400 border border-blue-400/50'
-                }`}
-              >
-                <span>📋</span>
-                <span>View Problem Statements</span>
-              </a>
             </div>
 
             {/* Card 2: Innovation Track */}

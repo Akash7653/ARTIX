@@ -26,7 +26,18 @@ export function TeamMembersSection({ formData, updateFormData }: Props) {
 
   return (
     <div className="glass-card p-4 md:p-8 rounded-2xl animate-fade-in">
-      <h2 className="text-2xl md:text-3xl font-bold text-blue-400 mb-6 md:mb-8">Project Expo Team Details</h2>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 md:mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-400">Project Expo Team Details</h2>
+        <a 
+          href="https://artixs-problemstatements-zk5x.vercel.app/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg whitespace-nowrap text-sm md:text-base"
+        >
+          <span>📋</span>
+          <span>View Projects</span>
+        </a>
+      </div>
 
       <div className="mb-6 md:mb-6 md:mb-8">
         <label className="block text-gray-300 mb-2 md:mb-3 text-base md:text-lg font-semibold">Team Size *</label>
