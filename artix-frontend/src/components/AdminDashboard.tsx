@@ -687,7 +687,7 @@ export function AdminDashboard({ onLogout }: Props) {
         {/* Animation Video Banner */}
         <div className="mb-8 rounded-xl overflow-hidden drop-shadow-lg border-2" style={{
           borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(37, 99, 235, 0.3)',
-          maxHeight: '300px'
+          maxHeight: '400px'
         }}>
           <video 
             autoPlay 

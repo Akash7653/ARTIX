@@ -128,7 +128,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
             muted 
             loop 
             playsInline
-            className="w-full h-auto"
+            className="w-full h-auto max-h-96"
           >
             <source src="/assets/videos/iot-animation.mp4" type="video/mp4" />
             Your browser does not support the video tag.
