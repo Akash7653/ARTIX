@@ -122,16 +122,16 @@ export function LandingPage() {
             Register now to secure your spot. Early bird registrations get exclusive benefits and merchandise.
           </Body>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center sm:gap-8">
             <button
               onClick={navigateToRegister}
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl"
+              className="w-full sm:w-64 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl"
             >
               Register Now
             </button>
             <button
               onClick={() => setShowColorSelector(!showColorSelector)}
-              className="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
             >
               {showColorSelector ? 'Hide' : 'Customize'} Theme
             </button>
