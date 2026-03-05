@@ -10,6 +10,7 @@ import type { RegistrationFormData } from '../types/registration';
 
 export function RegistrationPage({ fromLandingPage = false }) {
   const [showLanding, setShowLanding] = useState(fromLandingPage ? false : true);
+  const [pageLoading, setPageLoading] = useState(!fromLandingPage);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('artix_darkMode');
     return saved !== null ? JSON.parse(saved) : true;
@@ -37,6 +38,14 @@ export function RegistrationPage({ fromLandingPage = false }) {
   useEffect(() => {
     localStorage.setItem('artix_darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
+
+  // Hide loading animation after page mounts
+  useEffect(() => {
+    if (pageLoading && !showLanding) {
+      const timer = setTimeout(() => setPageLoading(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [pageLoading, showLanding]);
 
   const updateFormData = (updates: Partial<RegistrationFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -70,7 +79,7 @@ export function RegistrationPage({ fromLandingPage = false }) {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 relative overflow-hidden ${
+    <div className={`min-h-screen overflow-y-auto transition-colors duration-300 relative ${
       darkMode
         ? 'bg-black'
         : 'bg-white'
@@ -88,6 +97,24 @@ export function RegistrationPage({ fromLandingPage = false }) {
       
       {/* Dark Overlay for text readability */}
       <div className={`absolute inset-0 ${darkMode ? 'bg-black/70' : 'bg-white/50'}`}></div>
+
+      {/* Loading Animation */}
+      {pageLoading && !showLanding && (
+        <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+          darkMode ? 'bg-black/60' : 'bg-white/60'
+        } backdrop-blur-sm transition-opacity duration-500 ${pageLoading ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="text-center">
+            <div className={`w-20 h-20 mb-6 rounded-full border-4 animate-spin ${
+              darkMode
+                ? 'border-gray-700 border-t-blue-500'
+                : 'border-gray-300 border-t-blue-600'
+            }`}></div>
+            <p className={`text-xl font-bold ${
+              darkMode ? 'text-blue-400' : 'text-blue-600'
+            }`}>Loading...</p>
+          </div>
+        </div>
+      )}
       
       {/* Theme Toggle */}
       <div className="fixed top-4 right-4 z-[100] md:top-6 md:right-6">
