@@ -678,7 +678,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 p-4 md:p-8 ${
+    <div className={`min-h-screen overflow-y-auto transition-colors duration-300 p-4 md:p-8 ${
       darkMode
         ? 'bg-gradient-to-br from-gray-900 via-black to-gray-950'
         : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
