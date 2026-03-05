@@ -678,7 +678,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   }
 
   return (
-    <div className={`min-h-screen overflow-y-auto transition-colors duration-300 p-4 md:p-8 ${
+    <div className={`min-h-screen transition-colors duration-300 p-4 md:p-8 ${
       darkMode
         ? 'bg-gradient-to-br from-gray-900 via-black to-gray-950'
         : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
@@ -717,32 +717,6 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className={`fixed inset-0 flex items-center justify-center z-50 ${
-            darkMode ? 'bg-black/40' : 'bg-white/40'
-          } backdrop-blur-sm`}>
-            <div className={`text-center p-8 rounded-2xl border-2 ${
-              darkMode
-                ? 'bg-gray-800/80 border-gray-700'
-                : 'bg-white/80 border-gray-300'
-            }`}>
-              <div className="flex justify-center mb-6">
-                <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
-                  darkMode
-                    ? 'border-gray-600 border-t-blue-500'
-                    : 'border-gray-300 border-t-blue-600'
-                }`}></div>
-              </div>
-              <p className={`text-lg font-bold ${
-                darkMode ? 'text-blue-400' : 'text-blue-600'
-              }`}>Loading Dashboard</p>
-              <p className={`text-sm mt-2 ${
-                darkMode ? 'text-gray-400' : 'text-gray-600'
-              }`}>Fetching registrations...</p>
-            </div>
-          </div>
-        )}
-
         {/* Message */}
         {message && (
           <div className={`mb-6 p-4 rounded-lg font-semibold animate-slide-in border transition-all ${
