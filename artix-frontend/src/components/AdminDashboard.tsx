@@ -678,12 +678,22 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   }
 
   return (
-    <div className={`h-screen overflow-y-auto transition-colors duration-300 p-4 md:p-8 ${
+    <div className={`min-h-screen transition-colors duration-300 p-4 md:p-8 ${
       darkMode
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
-        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+        ? 'bg-gradient-to-br from-gray-900 via-black to-gray-950'
+        : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
     }`}>
-      <div className="max-w-7xl mx-auto">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-0 opacity-40">
+        {darkMode && (
+          <>
+            <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl"></div>
+          </>
+        )}
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <div>
