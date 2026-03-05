@@ -400,8 +400,8 @@ function LandingPage2({
           </div>
         </div>
 
-        {/* Chief Guests Section */}
-        <div className="mb-16 px-4">
+{/* Chief Guests Section */}
+        <div className="mb-8 px-4">
           <h2 className={`text-4xl md:text-5xl font-bold text-center mb-12 transition-colors duration-300 ${
             darkMode
               ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500'
@@ -510,7 +510,7 @@ function LandingPage2({
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-row gap-2 sm:gap-4 md:gap-6 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
+        <div className="flex flex-row gap-6 sm:gap-8 md:gap-10 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
           <button
             onClick={onStart}
             className={`min-w-fit sm:flex-none px-3 sm:px-6 md:px-12 lg:px-14 py-4 sm:py-5 md:py-6 lg:py-7 text-sm sm:text-lg md:text-2xl lg:text-3xl font-bold rounded-full transition-all duration-300 hover:scale-110 shadow-lg whitespace-nowrap ${
