@@ -183,11 +183,11 @@ function LandingPage2({
 }) {
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Auto-hide loading animation after 800ms
+  // Auto-hide loading animation after 2 seconds with better timing
   useEffect(() => {
     const timer = setTimeout(() => {
       setPageLoading(false);
-    }, 800);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -199,12 +199,69 @@ function LandingPage2({
     }`}>
       {/* Lightning/Zip Icon Loading Animation */}
       {pageLoading && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity duration-500"
-          style={{ opacity: pageLoading ? 1 : 0, pointerEvents: pageLoading ? 'auto' : 'none' }}>
-          <div className={`text-9xl md:text-[150px] animate-pulse transition-transform duration-500 ${ 
-            pageLoading ? 'scale-100' : 'scale-0'
-          }`}>
-            ⚡
+        <div className="fixed inset-0 z-[200] flex items-center justify-center transition-opacity duration-1000"
+          style={{ 
+            opacity: pageLoading ? 1 : 0, 
+            pointerEvents: pageLoading ? 'auto' : 'none',
+            backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)'
+          }}>
+          {/* Animated background circles */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute w-40 h-40 md:w-56 md:h-56 rounded-full animate-pulse-glow" 
+              style={{
+                background: darkMode 
+                  ? 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)'
+                  : 'radial-gradient(circle, rgba(96, 165, 250, 0.2) 0%, transparent 70%)',
+                animation: 'spin 8s linear infinite'
+              }}>
+            </div>
+            <div className="absolute w-64 h-64 md:w-80 md:h-80 rounded-full opacity-50 animate-pulse-glow-slow" 
+              style={{
+                background: darkMode
+                  ? 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)'
+                  : 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%)',
+                animation: 'spin 12s linear infinite reverse'
+              }}>
+            </div>
+          </div>
+
+          {/* Main lightning icon with enhanced effects */}
+          <div className="relative z-10 text-center">
+            {/* Glow effect background */}
+            <div className="absolute inset-0 w-32 h-32 md:w-40 md:h-40 mx-auto my-auto rounded-full filter blur-2xl"
+              style={{
+                background: darkMode
+                  ? 'radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%)'
+                  : 'radial-gradient(circle, rgba(96, 165, 250, 0.5) 0%, transparent 70%)',
+              }}>
+            </div>
+
+            {/* Lightning icon with spin animation */}
+            <div className="relative animate-spin-Lightning" style={{ animationDuration: '2s' }}>
+              <div className="text-9xl md:text-[180px] drop-shadow-2xl select-none"
+                style={{
+                  textShadow: darkMode
+                    ? '0 0 30px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.4)'
+                    : '0 0 20px rgba(96, 165, 250, 0.6), 0 0 40px rgba(96, 165, 250, 0.3)',
+                  filter: darkMode ? 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.6))' : 'drop-shadow(0 0 10px rgba(96, 165, 250, 0.4))',
+                }}>
+                ⚡
+              </div>
+            </div>
+
+            {/* Loading text */}
+            <p className={`mt-8 md:mt-10 text-lg md:text-2xl font-bold tracking-widest animate-pulse ${
+              darkMode ? 'text-blue-400' : 'text-blue-600'
+            }`}>
+              LOADING
+            </p>
+            
+            {/* Animated dots */}
+            <div className="flex gap-2 justify-center mt-4">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            </div>
           </div>
         </div>
       )}
@@ -610,11 +667,59 @@ function LandingPage2({
             filter: drop-shadow(0 0 15px rgba(0, 206, 209, 0.8));
           }
         }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes spin-Lightning {
+          0% {
+            transform: rotate(0deg) scale(1);
+          }
+          50% {
+            transform: rotate(180deg) scale(1.05);
+          }
+          100% {
+            transform: rotate(360deg) scale(1);
+          }
+        }
+        @keyframes pulse-glow {
+          0%, 100% {
+            opacity: 0.6;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.1);
+          }
+        }
+        @keyframes pulse-glow-slow {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(0.9);
+          }
+        }
         .animate-float {
           animation: float 6s ease-in-out infinite;
         }
         .animate-fade-in {
           animation: fade-in 0.8s ease-out forwards;
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .animate-pulse-glow-slow {
+          animation: pulse-glow-slow 3s ease-in-out infinite;
+        }
+        .animate-spin-Lightning {
+          animation: spin-Lightning 2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
         }
       `}</style>
     </div>
