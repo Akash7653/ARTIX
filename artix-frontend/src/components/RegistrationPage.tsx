@@ -183,11 +183,11 @@ function LandingPage2({
 }) {
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Auto-hide loading animation after 1.2 seconds - faster loading
+  // Auto-hide loading animation after 1.6 seconds - allow background to render
   useEffect(() => {
     const timer = setTimeout(() => {
       setPageLoading(false);
-    }, 1200);
+    }, 1600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -199,11 +199,11 @@ function LandingPage2({
     }`}>
       {/* Lightning/Zip Icon Loading Animation */}
       {pageLoading && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center transition-opacity duration-500"
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center transition-opacity duration-300"
           style={{ 
             opacity: pageLoading ? 1 : 0, 
             pointerEvents: pageLoading ? 'auto' : 'none',
-            backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.85)'
+            backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.98)'
           }}>
           
           {/* Small Logo */}
