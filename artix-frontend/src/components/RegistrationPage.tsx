@@ -199,7 +199,7 @@ function LandingPage2({
       </video>
       
       {/* Dark Overlay for text readability */}
-      <div className={`absolute inset-0 ${darkMode ? 'bg-black/60' : 'bg-white/40'}`}></div>
+      <div className={`absolute inset-0 ${darkMode ? 'bg-black/35' : 'bg-white/15'}`}></div>
       
       {/* Admin Button */}
       <div className="fixed top-4 left-4 z-[100] md:top-6 md:left-6">
@@ -400,8 +400,8 @@ function LandingPage2({
           </div>
         </div>
 
-{/* Chief Guests Section */}
-        <div className="mb-8 px-4">
+        {/* Chief Guests Section */}
+        <div className="mb-10 px-4">
           <h2 className={`text-4xl md:text-5xl font-bold text-center mb-12 transition-colors duration-300 ${
             darkMode
               ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500'
