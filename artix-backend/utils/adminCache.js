@@ -168,11 +168,16 @@ class AdminCache {
     }
 
     try {
-      // Parallel count + fetch
+      // Parallel count + fetch with query projection (exclude large base64 fields)
       const [totalCount, registrations] = await Promise.all([
         this.registrationsCollection.countDocuments(dbFilter),
         this.registrationsCollection
           .find(dbFilter)
+          .project({
+            // Exclude large base64 fields - reduces payload by ~90%
+            payment_screenshot_base64: 0,
+            payment_screenshot_mimetype: 0
+          })
           .skip(skip)
           .limit(limit)
           .sort({ created_at: -1 })

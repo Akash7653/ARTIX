@@ -776,11 +776,12 @@ async function registerHandler(req, res) {
       }
     }
 
-    // Convert payment screenshot to base64
+    // Convert payment screenshot to base64 (async to avoid blocking)
     console.log(`📸 Converting image to base64...`);
     let paymentImageBase64, paymentImageMimeType;
     try {
-      const paymentImageBuffer = fs.readFileSync(req.file.path);
+      // Use async file read instead of sync
+      const paymentImageBuffer = await fs.promises.readFile(req.file.path);
       paymentImageBase64 = paymentImageBuffer.toString('base64');
       paymentImageMimeType = req.file.mimetype || 'image/jpeg';
       console.log(`✅ Image converted: ${paymentImageBase64.length} chars, mimetype: ${paymentImageMimeType}`);
@@ -789,9 +790,9 @@ async function registerHandler(req, res) {
       throw new Error('Failed to process payment image');
     }
 
-    // Clean up uploaded file from filesystem
+    // Clean up uploaded file from filesystem (async)
     try {
-      fs.unlinkSync(req.file.path);
+      await fs.promises.unlink(req.file.path);
     } catch (e) {
       console.warn('⚠️ Could not delete temp file:', e.message);
     }
@@ -874,7 +875,7 @@ async function registerHandler(req, res) {
       teamMemberCount: parsedTeamMembers.length
     });
 
-    // Create payment record
+    // Create payment record and team members in parallel
     const paymentDoc = {
       registration_id: registrationId,
       amount: parseInt(totalAmount),
@@ -883,22 +884,29 @@ async function registerHandler(req, res) {
       payment_status: 'pending',
       created_at: new Date()
     };
-    await paymentsCollection.insertOne(paymentDoc);
-    logRegistration('Payment record created', { registrationId, amount: totalAmount });
 
-    // Insert team members if any
-    if (parsedTeamMembers.length > 0) {
-      const teamDocsToInsert = parsedTeamMembers.map((member, index) => ({
-        registration_id: registrationId,
-        member_name: member.name,
-        member_branch: member.branch,
-        member_phone: member.phone,
-        is_team_leader: index === 0,
-        member_order: index + 1
-      }));
-      await teamMembersCollection.insertMany(teamDocsToInsert);
-      console.log(`✅ Team members inserted: ${teamDocsToInsert.length}`);
-    }
+    // Prepare team members if any
+    const teamInsertPromise = (async () => {
+      if (parsedTeamMembers.length > 0) {
+        const teamDocsToInsert = parsedTeamMembers.map((member, index) => ({
+          registration_id: registrationId,
+          member_name: member.name,
+          member_branch: member.branch,
+          member_phone: member.phone,
+          is_team_leader: index === 0,
+          member_order: index + 1
+        }));
+        await teamMembersCollection.insertMany(teamDocsToInsert);
+        console.log(`✅ Team members inserted: ${teamDocsToInsert.length}`);
+      }
+    })();
+
+    // Execute payment insert and team insert in parallel
+    await Promise.all([
+      paymentsCollection.insertOne(paymentDoc),
+      teamInsertPromise
+    ]);
+    logRegistration('Payment record created', { registrationId, amount: totalAmount });
 
     res.status(201).json({
       success: true,
@@ -1090,64 +1098,68 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
     }
 
-    const registration = await registrationsCollection.findOne({
-      registration_id: registrationId
-    });
-
-    if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    console.log(`✅ Found registration for ${registrationId}, approval_status: ${registration.approval_status}`);
-
-    if (registration.approval_status !== 'approved') {
-      return res.status(400).json({ error: 'Registration must be approved first' });
-    }
-
-    if (registration.verification_id) {
-      console.log(`⚠️ Verification ID already exists for ${registrationId}: ${registration.verification_id}`);
-      return res.status(400).json({ error: 'Verification ID already assigned' });
-    }
-
-    const trimmedVerifId = verificationId.trim();
-    console.log(`💾 Saving verification_id="${trimmedVerifId}" for registration_id="${registrationId}"`);
-
-    // Set the verification ID
-    const updateResult = await registrationsCollection.updateOne(
-      { _id: registration._id },
+    // Use findOneAndUpdate to avoid multiple round-trips (find + update + verify)
+    const registration = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        approval_status: 'approved',
+        verification_id: null  // Only update if not already set
+      },
       {
         $set: {
-          verification_id: trimmedVerifId,
+          verification_id: verificationId.trim(),
           verification_id_set_at: new Date()
         }
-      }
+      },
+      { returnDocument: 'after' }  // Get updated document
     );
+
+    if (!registration.value) {
+      // Check why update failed - use findOne for error diagnosis only
+      const checkReg = await registrationsCollection.findOne({
+        registration_id: registrationId
+      });
+
+      if (!checkReg) {
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+
+      if (checkReg.approval_status !== 'approved') {
+        return res.status(400).json({ error: 'Registration must be approved first' });
+      }
+
+      if (checkReg.verification_id) {
+        console.log(`⚠️ Verification ID already exists for ${registrationId}: ${checkReg.verification_id}`);
+        return res.status(400).json({ error: 'Verification ID already assigned' });
+      }
+
+      return res.status(400).json({ error: 'Could not update registration' });
+    }
+
+    const updatedReg = registration.value;
+    const trimmedVerifId = verificationId.trim();
+    
+    console.log(`✅ Verification ID set for registration_id="${registrationId}", verif_id="${trimmedVerifId}"`);
 
     // Cache will expire naturally via TTL - no need to invalidate
     // Stats will refresh within 15 seconds
     // Registrations will refresh within 30 seconds
 
-    console.log(`✅ Update result: matchedCount=${updateResult.matchedCount}, modifiedCount=${updateResult.modifiedCount}`);
-
-    // Verify it was saved
-    const updatedReg = await registrationsCollection.findOne({ _id: registration._id });
-    console.log(`✅ Verified: verification_id now = "${updatedReg?.verification_id}"`);
-
-    // Generate formatted WhatsApp message and wa.me link
+    // Generate formatted WhatsApp message
     const whatsappMessage = generateApprovalMessage(
-      registration.full_name,
+      updatedReg.full_name,
       trimmedVerifId,
-      registration.college_name || 'N/A',
-      registration.branch,
-      registration.year_of_study,
-      registration.phone,
-      registration.selected_events,
-      registration.total_amount,
+      updatedReg.college_name || 'N/A',
+      updatedReg.branch,
+      updatedReg.year_of_study,
+      updatedReg.phone,
+      updatedReg.selected_events,
+      updatedReg.total_amount,
       registrationId
     );
 
     const encodedMessage = encodeURIComponent(whatsappMessage);
-    const whatsappLink = `https://wa.me/${registration.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+    const whatsappLink = `https://wa.me/${updatedReg.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
 
     console.log(`✅ Verification ID set for ${registrationId}: ${trimmedVerifId}`);
     console.log(`📱 WhatsApp link generated:`, whatsappLink);
@@ -1158,7 +1170,7 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       registration: {
         registration_id: registrationId,
         verification_id: trimmedVerifId,
-        phone: registration.phone
+        phone: updatedReg.phone
       },
       whatsapp: {
         link: whatsappLink,
@@ -1192,32 +1204,41 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       return res.status(400).json({ error: 'Please specify approved: true or false' });
     }
 
-    const registration = await registrationsCollection.findOne({
-      registration_id: registrationId
-    });
+    // Use findOneAndUpdate to avoid find + update pattern
+    const approvalDate = new Date();
+    const result = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        approval_status: 'pending'  // Only update if still pending
+      },
+      {
+        $set: {
+          approval_status: finalApprovalStatus,
+          approval_date: approvalDate,
+          selected_for_event: finalApprovalStatus === 'approved'
+        }
+      },
+      { returnDocument: 'before' }  // Get original document
+    );
+
+    const registration = result.value;
 
     if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
+      // Check why update failed
+      const checkReg = await registrationsCollection.findOne({
+        registration_id: registrationId
+      });
 
-    if (registration.approval_status === 'approved' || registration.approval_status === 'rejected') {
-      return res.status(400).json({ error: 'This entry has already been reviewed' });
-    }
-
-    // Update approval status
-    const approvalDate = new Date();
-    const updateDoc = {
-      $set: {
-        approval_status: finalApprovalStatus,
-        approval_date: approvalDate,
-        selected_for_event: finalApprovalStatus === 'approved'
+      if (!checkReg) {
+        return res.status(404).json({ error: 'Registration not found' });
       }
-    };
 
-    await registrationsCollection.updateOne(
-      { _id: registration._id },
-      updateDoc
-    );
+      if (checkReg.approval_status !== 'pending') {
+        return res.status(400).json({ error: 'This entry has already been reviewed' });
+      }
+
+      return res.status(400).json({ error: 'Could not update approval status' });
+    }
 
     // Cache will expire naturally via TTL - no need to invalidate
     // Stats will refresh within 15 seconds
@@ -1785,13 +1806,42 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
-    const registration = await registrationsCollection.findOne({
-      registration_id: registrationId
-    });
+    // Use findOneAndUpdate to get registration and update notification flag in one query
+    const result = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        notification_sent: false  // Only update if not already sent
+      },
+      {
+        $set: {
+          notification_sent: true,
+          notification_sent_at: new Date(),
+          notification_method: 'whatsapp_web',
+          admin_notified: true
+        }
+      },
+      { returnDocument: 'before' }  // Get the original document before update
+    );
+
+    const registration = result.value;
 
     if (!registration) {
-      logWhatsApp('WhatsApp send attempt for non-existent registration', { registrationId });
-      return res.status(404).json({ error: 'Registration not found' });
+      // Check why update failed
+      const checkReg = await registrationsCollection.findOne({
+        registration_id: registrationId
+      });
+
+      if (!checkReg) {
+        logWhatsApp('WhatsApp send attempt for non-existent registration', { registrationId });
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+
+      if (checkReg.notification_sent) {
+        logWhatsApp('WhatsApp already sent to participant', { registrationId });
+        return res.status(400).json({ error: 'WhatsApp message already sent to this participant' });
+      }
+
+      return res.status(400).json({ error: 'Could not send notification' });
     }
 
     if (!registration.phone) {
@@ -1868,29 +1918,11 @@ app.post('/api/admin/send-whatsapp-to-participant', whatsappLimiter, async (req,
     const encodedMessage = encodeURIComponent(message);
     const waLink = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
 
-    logWhatsApp('WhatsApp message prepared for sending', { 
+    logWhatsApp('WhatsApp message prepared and notification flag updated', { 
       registrationId,
       participantName: registration.full_name,
       phone: registration.phone,
       messageLength: message.length
-    });
-    
-    // Update notification_sent flag in database
-    await registrationsCollection.updateOne(
-      { _id: registration._id },
-      {
-        $set: {
-          notification_sent: true,
-          notification_sent_at: new Date(),
-          notification_method: 'whatsapp_web',
-          admin_notified: true
-        }
-      }
-    );
-
-    logWhatsApp('Notification flag updated in database', { 
-      registrationId,
-      phone: registration.phone
     });
 
     res.json({
