@@ -95,16 +95,11 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       
       if (result.success && result.data) {
         console.log(`✅ Full registration details loaded with payment screenshot`);
-        // Store the full registration data including base64
+        // Store ONLY the full registration data - don't update registrations array to prevent collapse
         setFullRegistrationData(prev => ({
           ...prev,
           [registrationId]: result.data
         }));
-        
-        // Also update the registrations array with the full data
-        setRegistrations(prev => prev.map(reg => 
-          reg.registration_id === registrationId ? { ...reg, ...result.data } : reg
-        ));
       }
     } catch (err) {
       console.error('❌ Error fetching full registration details:', err);
@@ -635,6 +630,18 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
     }
   }, [expandedId]);
 
+  // Fetch full registration details when expanding
+  useEffect(() => {
+    if (expandedId) {
+      // Find the registration ID from expandedId (which is _id)
+      const reg = registrations.find(r => r._id === expandedId);
+      if (reg && !fullRegistrationData[reg.registration_id]) {
+        // Only fetch if we don't already have the full data
+        fetchFullRegistrationDetails(reg.registration_id);
+      }
+    }
+  }, [expandedId, registrations, fullRegistrationData]);
+
   const filteredRegistrations = registrations.filter(reg =>
     reg.registration_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     reg.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1121,14 +1128,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button
-                        onClick={() => {
-                          const newExpandedId = expandedId === reg._id ? null : reg._id;
-                          setExpandedId(newExpandedId);
-                          // Fetch full details with payment screenshot when expanding
-                          if (newExpandedId === reg._id) {
-                            fetchFullRegistrationDetails(reg.registration_id);
-                          }
-                        }}
+                        onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
                         className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
                           darkMode
                             ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
@@ -1251,32 +1251,36 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
                         : 'bg-gray-100/50'
                     }`}>
                       {/* Payment Screenshot */}
-                      {reg.payment_screenshot_base64 && (
-                        <div>
-                          <p className={`text-sm mb-2 font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Payment Screenshot</p>
-                          <img
-                            src={`data:${reg.payment_screenshot_mimetype || 'image/jpeg'};base64,${reg.payment_screenshot_base64}`}
-                            alt="Payment screenshot"
-                            className={`rounded-lg max-w-sm border-2 cursor-pointer transition hover:scale-105 ${darkMode ? 'border-gray-600' : 'border-gray-400'}`}
-                            onClick={() => {
-                              // Allow fullscreen view by opening in new tab
-                              const canvas = document.createElement('canvas');
-                              const ctx = canvas.getContext('2d');
-                              const img = new Image();
-                              img.onload = function() {
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                ctx.drawImage(img, 0, 0);
-                                const link = document.createElement('a');
-                                link.href = canvas.toDataURL(reg.payment_screenshot_mimetype || 'image/jpeg');
-                                link.download = `payment-${reg.registration_id}.jpg`;
-                                link.click();
-                              };
-                              img.src = `data:${reg.payment_screenshot_mimetype || 'image/jpeg'};base64,${reg.payment_screenshot_base64}`;
-                            }}
-                          />
-                        </div>
-                      )}
+                      {(() => {
+                        // Use full registration data if available, otherwise use regular reg data
+                        const fullReg = fullRegistrationData[reg.registration_id] || reg;
+                        return fullReg.payment_screenshot_base64 && (
+                          <div>
+                            <p className={`text-sm mb-2 font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Payment Screenshot</p>
+                            <img
+                              src={`data:${fullReg.payment_screenshot_mimetype || 'image/jpeg'};base64,${fullReg.payment_screenshot_base64}`}
+                              alt="Payment screenshot"
+                              className={`rounded-lg max-w-sm border-2 cursor-pointer transition hover:scale-105 ${darkMode ? 'border-gray-600' : 'border-gray-400'}`}
+                              onClick={() => {
+                                // Allow fullscreen view by opening in new tab
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                const img = new Image();
+                                img.onload = function() {
+                                  canvas.width = img.width;
+                                  canvas.height = img.height;
+                                  ctx.drawImage(img, 0, 0);
+                                  const link = document.createElement('a');
+                                  link.href = canvas.toDataURL(fullReg.payment_screenshot_mimetype || 'image/jpeg');
+                                  link.download = `payment-${reg.registration_id}.jpg`;
+                                  link.click();
+                                };
+                                img.src = `data:${fullReg.payment_screenshot_mimetype || 'image/jpeg'};base64,${fullReg.payment_screenshot_base64}`;
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Transaction ID</p>
