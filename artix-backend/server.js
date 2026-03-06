@@ -369,6 +369,16 @@ app.get('/', (req, res) => {
   });
 });
 
+// API Health Check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'API is operational',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Health Check with API prefix
 app.get('/api/health', (req, res) => {
   res.json({
@@ -671,6 +681,8 @@ app.post('/api/register', registrationLimiter, (req, res, next) => {
 
 // Registration handler function
 async function registerHandler(req, res) {
+  let uploadedFilePath = null;
+  
   try {
     const {
       fullName,
@@ -686,6 +698,11 @@ async function registerHandler(req, res) {
       transactionId,
       utrId
     } = req.body;
+
+    // Store the file path for cleanup in case of error
+    if (req.file) {
+      uploadedFilePath = req.file.path;
+    }
 
     // Validation - Check required fields
     if (!fullName || !fullName.trim()) {
@@ -791,19 +808,25 @@ async function registerHandler(req, res) {
     console.log(`📸 Converting image to base64...`);
     let paymentImageBase64, paymentImageMimeType;
     try {
+      // Verify file exists first
+      if (!fs.existsSync(uploadedFilePath)) {
+        throw new Error('Uploaded file not found at ' + uploadedFilePath);
+      }
+      
       // Use async file read instead of sync
-      const paymentImageBuffer = await fs.promises.readFile(req.file.path);
+      const paymentImageBuffer = await fs.promises.readFile(uploadedFilePath);
       paymentImageBase64 = paymentImageBuffer.toString('base64');
       paymentImageMimeType = req.file.mimetype || 'image/jpeg';
       console.log(`✅ Image converted: ${paymentImageBase64.length} chars, mimetype: ${paymentImageMimeType}`);
     } catch (e) {
       console.error('❌ Failed to read/convert image:', e);
-      throw new Error('Failed to process payment image');
+      throw new Error('Failed to process payment image: ' + e.message);
     }
 
     // Clean up uploaded file from filesystem (async)
     try {
-      await fs.promises.unlink(req.file.path);
+      await fs.promises.unlink(uploadedFilePath);
+      uploadedFilePath = null; // Clear reference since file is deleted
     } catch (e) {
       console.warn('⚠️ Could not delete temp file:', e.message);
     }
@@ -926,16 +949,19 @@ async function registerHandler(req, res) {
     });
 
   } catch (err) {
+    console.error('❌ Registration error in handler:', err.message);
+    
     logError('Registration processing failed', err, { 
-      email: email?.toLowerCase().trim(),
-      registrationId: registrationId || 'unknown'
+      email: req.body?.email?.toLowerCase().trim(),
+      registrationId: req.body?.registrationId || 'unknown'
     });
     
-    if (req.file) {
+    // Clean up uploaded file if it still exists
+    if (uploadedFilePath) {
       try {
-        fs.unlinkSync(req.file.path);
+        fs.unlinkSync(uploadedFilePath);
       } catch (e) {
-        // Ignore cleanup errors
+        console.warn('⚠️ Could not cleanup temp file:', e.message);
       }
     }
     
@@ -948,6 +974,30 @@ async function registerHandler(req, res) {
       logError('Duplicate key error in registration', err, { 
         field: Object.keys(err.keyPattern || {})[0] 
       });
+      const field = Object.keys(err.keyPattern || {})[0] || 'email';
+      const value = err.keyValue ? err.keyValue[field] : 'unknown';
+      errorMessage = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered: ${value}`;
+      statusCode = 409;
+    } else if (err.message && err.message.includes('duplicate')) {
+      errorMessage = 'Email address is already registered';
+      statusCode = 409;
+    } else if (err.message && err.message.includes('base64')) {
+      errorMessage = 'Payment image file is too large. Please use a smaller image.';
+      statusCode = 413;
+    } else if (err.message && err.message.includes('image')) {
+      errorMessage = 'Failed to process payment image. Please check the file format.';
+      statusCode = 400;
+    } else if (err.message && err.message.includes('events')) {
+      errorMessage = 'No events selected. Please select at least one event.';
+      statusCode = 400;
+    } else if (err.message && err.message.includes('Uploaded file')) {
+      errorMessage = 'File upload issue - please try again';
+      statusCode = 400;
+    }
+    
+    res.status(statusCode).json({ error: errorMessage, details: err.message });
+  }
+}
       const field = Object.keys(err.keyPattern || {})[0] || 'email';
       const value = err.keyValue ? err.keyValue[field] : 'unknown';
       errorMessage = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered: ${value}`;

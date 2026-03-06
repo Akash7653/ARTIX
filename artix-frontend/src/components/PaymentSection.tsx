@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { api } from '../lib/api';
+import { api, checkAPIHealth } from '../lib/api';
 import { INDIVIDUAL_EVENTS, type RegistrationFormData } from '../types/registration';
 
 interface Props {
@@ -74,6 +74,14 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
     setIsSubmitting(true);
 
     try {
+      // Check if API is reachable first
+      console.log('🔍 Checking API health...');
+      const isAPIHealthy = await checkAPIHealth();
+      if (!isAPIHealthy) {
+        throw new Error('Server is currently unavailable. Please wait a moment and try again. If the problem persists, contact ARTIX Admin: +91 8919068236');
+      }
+      console.log('✅ API is healthy');
+
       // CRITICAL: Log state at submission time
       console.log('🔴🔴🔴 SUBMISSION START - CRITICAL EVENT CHECK 🔴🔴🔴');
       console.log('formData.selectedIndividualEvents:', formData.selectedIndividualEvents);
@@ -173,7 +181,9 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       
       // Provide specific error guidance with admin contact
-      if (errorMessage.includes('Too many')) {
+      if (errorMessage.includes('unavailable')) {
+        setError(errorMessage);
+      } else if (errorMessage.includes('Too many')) {
         setError('⏳ Too many registration attempts. Please wait 1 hour before trying again.\n\nIf you need assistance, contact ARTIX Admin: +91 8919068236');
       } else if (errorMessage.includes('Email already registered')) {
         setError('❌ This email is already registered. Please use a different email address.');

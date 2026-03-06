@@ -196,10 +196,15 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       const token = localStorage.getItem('adminToken');
       
       console.log(`👤 Approving registration: ${registrationId}`);
-      console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
       
-      // Mark workflow in progress to preserve expanded view
+      // Optimistic UI update - immediately show approving status
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === registrationId 
+          ? { ...reg, approval_status: 'approving' }
+          : reg
+      ));
       setWorkflowInProgress(registrationId);
+      setExpandedId(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
@@ -210,34 +215,22 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
         body: JSON.stringify({ approved: true })
       });
 
-      console.log(`📊 Response status: ${response.status} ${response.statusText}`);
-      
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Approval error:', errorData);
         throw new Error(errorData.error || 'Approval failed');
       }
       
       const result = await response.json();
-      console.log(`✅ Approval response:`, result);
+      console.log(`✅ Approval successful`);
       
-      // Keep expanded ID to prevent collapse
-      setExpandedId(registrationId);
       setMessage(`✅ Approved! Now enter the Verification ID.`);
       setMessageType('success');
       
-      // Reload data but keep expanded view
+      // Update registrations and fetch fresh data in background
+      loadData();
       setTimeout(() => {
-        loadData();
-        // Refetch full details to update expanded view without collapsing
-        setTimeout(() => {
-          fetchFullRegistrationDetails(registrationId);
-          const expandedElement = document.querySelector(`[data-registration-id="${registrationId}"]`);
-          if (expandedElement) {
-            expandedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 600);
-      }, 500);
+        fetchFullRegistrationDetails(registrationId);
+      }, 300);
       
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
@@ -302,13 +295,19 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       return;
     }
 
+    // Optimistic UI update - immediately show processing
+    setRegistrations(prev => prev.map(reg => 
+      reg.registration_id === registrationId 
+        ? { ...reg, verification_status: 'setting' }
+        : reg
+    ));
     setSettingVerificationId(registrationId);
     setWorkflowInProgress(registrationId);
+    setExpandedId(registrationId);
+    
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      
       console.log(`🔐 Setting verification ID for: ${registrationId}`);
-      console.log(`🔐 Verification ID: ${verificationId}`);
       
       const response = await fetch(`${baseUrl}/admin/set-verification-id`, {
         method: 'POST',
@@ -316,16 +315,13 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
         body: JSON.stringify({ registrationId, verificationId })
       });
 
-      console.log(`📊 Response status: ${response.status}`);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Error response:', errorData);
         throw new Error(errorData.error || 'Failed to set verification ID');
       }
       
       const result = await response.json();
-      console.log(`✅ Verification ID set:`, result);
+      console.log(`✅ Verification ID set`);
       
       // FIXED: Do NOT open WhatsApp automatically
       // Users should click "Send WhatsApp Message" button in Step 3 instead
@@ -473,8 +469,16 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
 
   const handleConfirmWhatsAppSent = async (reg: Registration) => {
     try {
+      // Optimistic UI update
+      setRegistrations(prev => prev.map(r => 
+        r.registration_id === reg.registration_id 
+          ? { ...r, notification_sent: true }
+          : r
+      ));
       setSendingNotification(reg.registration_id);
       setWorkflowInProgress(reg.registration_id);
+      setExpandedId(reg.registration_id);
+      
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -488,14 +492,10 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       });
 
       const data = await response.json();
-      console.log('📱 WhatsApp marked as sent:', data);
 
       if (response.ok) {
         setMessage('✅ WhatsApp message marked as sent!');
         setMessageType('success');
-        
-        // Keep expanded view throughout the workflow
-        setExpandedId(reg.registration_id);
         
         // Remove from pending set
         setPendingWhatsAppSend(prev => {
@@ -504,21 +504,20 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
           return newSet;
         });
         
+        // Quick refresh
+        loadData();
         setTimeout(() => {
-          loadData();
-          // Refetch full details to update expanded view
-          setTimeout(() => fetchFullRegistrationDetails(reg.registration_id), 600);
-        }, 500);
+          fetchFullRegistrationDetails(reg.registration_id);
+        }, 300);
+        
         setTimeout(() => setMessage(''), 3000);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error';
-        console.error('❌ Error marking WhatsApp sent:', errorMsg);
         setMessage('❌ ' + errorMsg);
         setMessageType('error');
         setTimeout(() => setMessage(''), 3000);
       }
     } catch (err) {
-      console.error('❌ Error:', err);
       setMessage('❌ ' + (err instanceof Error ? err.message : 'Error marking WhatsApp sent'));
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);

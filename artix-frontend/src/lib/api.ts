@@ -10,6 +10,16 @@ const fetchWithTimeout = (url: string, options: RequestInit = {}, timeout = 3000
   ]);
 };
 
+// Health check to verify API is online
+export const checkAPIHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/health`, {}, 5000);
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
 export const api = {
   register: async (formData: any) => {
     const form = new FormData();
@@ -49,11 +59,29 @@ export const api = {
         body: form,
       }, 30000);
 
-      // Check response status first
-      const jsonData = await response.json();
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      let jsonData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        jsonData = await response.json();
+      } else {
+        // Server returned HTML or other non-JSON response (error page)
+        const text = await response.text();
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          // HTML error page - server is down or having issues
+          throw new Error('Server error. Please try again in a few moments. If the problem persists, contact ARTIX Admin: +91 8919068236');
+        }
+        // Try to parse as JSON anyway
+        try {
+          jsonData = JSON.parse(text);
+        } catch {
+          throw new Error('Invalid server response. Please check your connection and try again.');
+        }
+      }
 
       if (!response.ok) {
-        // Handle rate limit (429) errors - they have error field in JSON now
+        // Handle rate limit (429) errors
         if (response.status === 429) {
           throw new Error(jsonData.error || 'Too many registration requests. Please wait before trying again.');
         }
@@ -71,6 +99,9 @@ export const api = {
         }
         if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
           throw new Error('Failed to connect to server. This could be a temporary network issue. Please try again.');
+        }
+        if (err.message.includes('Server error') || err.message.includes('Invalid server response')) {
+          throw err; // Already has helpful message
         }
       }
       throw err;
