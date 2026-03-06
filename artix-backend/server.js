@@ -1674,6 +1674,86 @@ app.get('/api/admin/registrations', async (req, res) => {
   }
 });
 
+// Get single registration with full details including payment screenshot
+app.get('/api/admin/registration/:registrationId', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    console.log(`📋 Fetching full details for registration: ${registrationId}`);
+
+    // Fetch FULL registration including base64 (NOT using projection)
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    // Format response with all fields
+    const transformedTeamMembers = (registration.team_members || []).map(member => ({
+      member_name: member.name || member.member_name || '',
+      member_branch: member.branch || member.member_branch || '',
+      member_phone: member.phone || member.member_phone || ''
+    }));
+
+    let selectedEvents = registration.selected_events || [];
+    if (!Array.isArray(selectedEvents)) {
+      selectedEvents = [];
+    }
+    selectedEvents = selectedEvents.filter(e => {
+      const strVal = String(e).trim();
+      return strVal && strVal !== 'undefined' && strVal !== 'null' && strVal !== '';
+    });
+
+    let createdAt = registration.created_at;
+    if (!createdAt) {
+      createdAt = new Date();
+    }
+    const createdAtISO = createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString();
+
+    const responseData = {
+      success: true,
+      data: {
+        _id: registration._id,
+        registration_id: registration.registration_id,
+        verification_id: registration.verification_id || null,
+        full_name: registration.full_name,
+        email: registration.email,
+        phone: registration.phone,
+        college_name: registration.college_name,
+        year_of_study: registration.year_of_study,
+        branch: registration.branch,
+        roll_number: registration.roll_number,
+        selected_events: selectedEvents,
+        total_amount: registration.total_amount,
+        transaction_id: registration.transaction_id,
+        utr_id: registration.utr_id,
+        approval_status: registration.approval_status,
+        selected_for_event: registration.selected_for_event,
+        team_members: transformedTeamMembers,
+        created_at: createdAtISO,
+        notification_sent: registration.notification_sent || false,
+        whatsapp_sent: registration.notification_sent || false,
+        entry_verified_at: registration.entry_verified_at || null,
+        // INCLUDE FULL BASE64 DATA FOR SINGLE REGISTRATION VIEW
+        payment_screenshot_base64: registration.payment_screenshot_base64 || null,
+        payment_screenshot_mimetype: registration.payment_screenshot_mimetype || 'image/jpeg'
+      }
+    };
+
+    res.json(responseData);
+
+  } catch (err) {
+    logError('Failed to fetch registration details', err);
+    res.status(500).json({ error: 'Failed to fetch registration details', details: err.message });
+  }
+});
+
 // Email Service - Send email notifications
 async function sendEmailNotification(email, fullName, verificationId) {
   try {

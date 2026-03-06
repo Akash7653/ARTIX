@@ -33,6 +33,8 @@ interface Registration {
   notification_sent: boolean;
   whatsapp_sent?: boolean;
   entry_verified_at?: string;
+  payment_screenshot_base64?: string | null;
+  payment_screenshot_mimetype?: string;
 }
 
 interface Stats {
@@ -69,8 +71,45 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   const [settingVerificationId, setSettingVerificationId] = useState<string | null>(null);
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
+  const [fullRegistrationData, setFullRegistrationData] = useState<Record<string, Registration>>({});
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
+
+  // Fetch full registration details including payment screenshot
+  const fetchFullRegistrationDetails = async (registrationId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      console.log(`📸 Fetching full details for ${registrationId} including payment screenshot...`);
+      
+      const response = await fetch(`${baseUrl}/admin/registration/${registrationId}`, { headers });
+      
+      if (!response.ok) {
+        console.error(`❌ Failed to fetch full registration details: ${response.status}`);
+        return;
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        console.log(`✅ Full registration details loaded with payment screenshot`);
+        // Store the full registration data including base64
+        setFullRegistrationData(prev => ({
+          ...prev,
+          [registrationId]: result.data
+        }));
+        
+        // Also update the registrations array with the full data
+        setRegistrations(prev => prev.map(reg => 
+          reg.registration_id === registrationId ? { ...reg, ...result.data } : reg
+        ));
+      }
+    } catch (err) {
+      console.error('❌ Error fetching full registration details:', err);
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1082,7 +1121,14 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button
-                        onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
+                        onClick={() => {
+                          const newExpandedId = expandedId === reg._id ? null : reg._id;
+                          setExpandedId(newExpandedId);
+                          // Fetch full details with payment screenshot when expanding
+                          if (newExpandedId === reg._id) {
+                            fetchFullRegistrationDetails(reg.registration_id);
+                          }
+                        }}
                         className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
                           darkMode
                             ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
