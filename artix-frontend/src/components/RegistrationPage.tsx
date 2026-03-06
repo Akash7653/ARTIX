@@ -560,6 +560,86 @@ function LandingPage2({
           </div>
         </div>
 
+        {/* Chief Guest Invitation Card */}
+        <div className="mb-16 px-4">
+          <div className={`max-w-2xl mx-auto group relative overflow-hidden rounded-3xl transition-all duration-300 ${
+            darkMode
+              ? 'bg-gradient-to-br from-red-900/40 via-orange-900/30 to-yellow-900/40 border-2 border-red-600/50'
+              : 'bg-gradient-to-br from-red-100/60 via-orange-100/50 to-yellow-100/40 border-2 border-red-400/50'
+          } backdrop-blur-md overflow-hidden shadow-2xl hover:shadow-red-500/50`}>
+            {/* Decorative glow */}
+            <div className={`absolute inset-0 ${
+              darkMode 
+                ? 'bg-gradient-to-r from-red-500/0 via-orange-500/10 to-yellow-500/0' 
+                : 'bg-gradient-to-r from-red-400/0 via-orange-400/15 to-yellow-400/0'
+            }`}></div>
+
+            {/* Crown decoration */}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-4xl animate-bounce">👑</div>
+
+            <div className="relative z-10 py-12 px-8">
+              {/* Top decorative line */}
+              <div className={`h-1 w-24 mx-auto mb-8 rounded-full ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                  : 'bg-gradient-to-r from-red-600 to-orange-600'
+              }`}></div>
+
+              {/* Chief Guest Title */}
+              <h3 className={`text-2xl md:text-3xl font-bold text-center mb-3 transition-colors duration-300 ${
+                darkMode ? 'text-red-300' : 'text-red-700'
+              }`}>Chief Guest</h3>
+
+              {/* Profile Image */}
+              <div className="flex justify-center mb-6">
+                <div className={`w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-4 ${
+                  darkMode ? 'border-orange-500/70' : 'border-orange-600/70'
+                } shadow-xl group-hover:scale-110 transition-transform duration-300 relative`}>
+                  <img 
+                    src="/Mr. BHANU PASULA.jpeg" 
+                    alt="Mr. BHANU PASULA" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className={`absolute inset-0 ${
+                    darkMode 
+                      ? 'bg-gradient-to-t from-red-900/40 to-transparent' 
+                      : 'bg-gradient-to-t from-red-600/20 to-transparent'
+                  }`}></div>
+                </div>
+              </div>
+
+              {/* Name */}
+              <h2 className={`text-3xl md:text-4xl font-bold text-center mb-2 transition-colors duration-300 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>Mr. BHANU PASULA</h2>
+
+              {/* Title */}
+              <p className={`text-lg md:text-xl font-semibold text-center mb-6 transition-colors duration-300 ${
+                darkMode ? 'text-orange-400' : 'text-orange-600'
+              }`}>Founder of BKP Homes</p>
+
+              {/* Description */}
+              <p className={`text-center text-base md:text-lg max-w-xl mx-auto transition-colors duration-300 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                We would be honored by your gracious presence to inspire and elevate the spirit of ARTIX 2026.
+              </p>
+
+              {/* Bottom decorative line */}
+              <div className={`h-1 w-24 mx-auto mt-8 rounded-full ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500' 
+                  : 'bg-gradient-to-r from-orange-600 to-red-600'
+              }`}></div>
+
+              {/* Tagline */}
+              <p className={`text-center mt-6 text-lg font-bold tracking-widest ${
+                darkMode ? 'text-cyan-400' : 'text-cyan-600'
+              }`}>Create • Innovate • Celebrate</p>
+            </div>
+          </div>
+        </div>
+
         {/* CTA Buttons */}
         <div className="flex flex-row gap-6 sm:gap-8 md:gap-10 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
           <button
