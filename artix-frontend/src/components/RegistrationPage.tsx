@@ -461,7 +461,7 @@ function LandingPage2({
             👑 Chief Guests & Speakers
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Guest 1: Karthik - Premium Invitation Card */}
             <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
               darkMode
@@ -626,6 +626,62 @@ function LandingPage2({
                   darkMode 
                     ? 'bg-gradient-to-r from-teal-500 to-cyan-500' 
                     : 'bg-gradient-to-r from-teal-600 to-cyan-600'
+                }`}></div>
+              </div>
+            </div>
+
+            {/* Guest 4: Harsha Vardhan - Premium Invitation Card */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
+              darkMode
+                ? 'bg-gradient-to-br from-green-900/40 via-emerald-800/30 to-teal-900/40 border-2 border-green-600/50'
+                : 'bg-gradient-to-br from-green-100/60 via-emerald-50/50 to-teal-100/40 border-2 border-green-400/50'
+            } backdrop-blur-md overflow-hidden shadow-2xl hover:shadow-green-500/50 hover:scale-105`}>
+              <div className={`absolute inset-0 ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-green-500/0 via-green-500/10 to-emerald-500/0' 
+                  : 'bg-gradient-to-r from-green-400/0 via-green-400/15 to-emerald-400/0'
+              }`}></div>
+              
+              <div className="relative z-10 py-10 px-6">
+                <div className={`h-1 w-20 mx-auto mb-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                    : 'bg-gradient-to-r from-green-600 to-emerald-600'
+                }`}></div>
+
+                <div className="flex justify-center mb-6">
+                  <div className={`w-36 h-36 rounded-full overflow-hidden border-4 ${
+                    darkMode ? 'border-green-500/70' : 'border-green-600/70'
+                  } shadow-xl group-hover:scale-110 transition-transform duration-300 relative`}>
+                    <img 
+                      src="/harsha-vardhan.jpeg" 
+                      alt="Harsha Vardhan" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className={`absolute inset-0 ${
+                      darkMode 
+                        ? 'bg-gradient-to-t from-green-900/40 to-transparent' 
+                        : 'bg-gradient-to-t from-green-600/20 to-transparent'
+                    }`}></div>
+                  </div>
+                </div>
+
+                <h3 className={`text-2xl md:text-3xl font-bold text-center mb-2 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Harsha Vardhan</h3>
+
+                <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-green-400' : 'text-green-600'
+                }`}>Founder, CEO & COO</p>
+
+                <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>Strategic visionary with deep expertise in sustainability and modern retail innovation</p>
+
+                <div className={`h-1 w-20 mx-auto mt-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-500' 
+                    : 'bg-gradient-to-r from-emerald-600 to-green-600'
                 }`}></div>
               </div>
             </div>
