@@ -5,13 +5,18 @@ import ApprovedParticipants from './ApprovedParticipants';
 
 export function AdminScanner() {
   const [mode, setMode] = useState<'menu' | 'dashboard' | 'entry-verify' | 'approved-participants'>('menu');
+  const [darkMode, setDarkMode] = useState(true);
 
   const handleLogout = () => {
     setMode('menu');
   };
 
+  const handleDarkModeToggle = () => {
+    setDarkMode(!darkMode);
+  };
+
   if (mode === 'dashboard') {
-    return <AdminDashboard onLogout={handleLogout} />;
+    return <AdminDashboard onLogout={handleLogout} darkMode={darkMode} onDarkModeToggle={handleDarkModeToggle} />;
   }
 
   if (mode === 'entry-verify') {

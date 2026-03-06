@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send, ChevronUp } from 'lucide-react';
+import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send, ChevronUp, Sun, Moon } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
 import { PerformanceMonitoring } from './PerformanceMonitoring';
 import { ErrorViewer } from './ErrorViewer';
@@ -52,9 +52,10 @@ const ADMIN_PASSWORD = '23J41A69A3';
 interface Props {
   onLogout: () => void;
   darkMode?: boolean;
+  onDarkModeToggle?: () => void;
 }
 
-export function AdminDashboard({ onLogout, darkMode = true }: Props) {
+export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: Props) {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -764,6 +765,17 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
             <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>IoT esSENCE 2K26 Registration Management</p>
           </div>
           <div className="flex gap-3 items-center">
+            <button
+              onClick={onDarkModeToggle}
+              className={`flex items-center justify-center w-12 h-12 rounded-lg transition ${
+                darkMode
+                  ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30'
+                  : 'bg-slate-700/20 border border-slate-700/30 text-slate-700 hover:bg-slate-700/30'
+              }`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
             <button
               onClick={() => {
                 setIsAuthenticated(false);
