@@ -2700,6 +2700,33 @@ logger.info('📊 Monitoring endpoints available at /api/monitor/*');
 
 // ==================== END ADVANCED ROUTES ====================
 
+// 404 Handler - Ensures JSON response for unknown routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Global Error Handler - Ensures JSON responses for all errors
+app.use((err, req, res, next) => {
+  console.error('❌ Global Error Handler:', err);
+  logError('Unhandled error', err, {
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Ensure JSON response for all errors
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error',
+    details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Start Server
 async function startServer() {
   try {
