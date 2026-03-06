@@ -72,6 +72,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   const [entryVerificationId, setEntryVerificationId] = useState('');
   const [verifyingEntry, setVerifyingEntry] = useState(false);
   const [fullRegistrationData, setFullRegistrationData] = useState<Record<string, Registration>>({});
+  const [workflowInProgress, setWorkflowInProgress] = useState<string | null>(null);
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
 
@@ -197,6 +198,9 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       console.log(`👤 Approving registration: ${registrationId}`);
       console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
       
+      // Mark workflow in progress to preserve expanded view
+      setWorkflowInProgress(registrationId);
+      
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
         headers: { 
@@ -225,8 +229,9 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       // Reload data but keep expanded view
       setTimeout(() => {
         loadData();
-        // Scroll to expanded element after data loads
+        // Refetch full details to update expanded view without collapsing
         setTimeout(() => {
+          fetchFullRegistrationDetails(registrationId);
           const expandedElement = document.querySelector(`[data-registration-id="${registrationId}"]`);
           if (expandedElement) {
             expandedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -298,6 +303,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
     }
 
     setSettingVerificationId(registrationId);
+    setWorkflowInProgress(registrationId);
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       
@@ -329,7 +335,11 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" in Step 3 to send the message.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
-      setTimeout(loadData, 500);
+      setTimeout(() => {
+        loadData();
+        // Refetch full details to ensure expanded view updates
+        setTimeout(() => fetchFullRegistrationDetails(registrationId), 600);
+      }, 500);
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -464,6 +474,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
   const handleConfirmWhatsAppSent = async (reg: Registration) => {
     try {
       setSendingNotification(reg.registration_id);
+      setWorkflowInProgress(reg.registration_id);
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -493,7 +504,11 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
           return newSet;
         });
         
-        setTimeout(loadData, 1000);
+        setTimeout(() => {
+          loadData();
+          // Refetch full details to update expanded view
+          setTimeout(() => fetchFullRegistrationDetails(reg.registration_id), 600);
+        }, 500);
         setTimeout(() => setMessage(''), 3000);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error';
@@ -509,6 +524,7 @@ export function AdminDashboard({ onLogout, darkMode = true }: Props) {
       setTimeout(() => setMessage(''), 3000);
     } finally {
       setSendingNotification(null);
+      setWorkflowInProgress(null);
     }
   };
 
