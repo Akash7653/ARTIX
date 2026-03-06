@@ -49,12 +49,18 @@ export const api = {
         body: form,
       }, 30000);
 
+      // Check response status first
+      const jsonData = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
+        // Handle rate limit (429) errors - they have error field in JSON now
+        if (response.status === 429) {
+          throw new Error(jsonData.error || 'Too many registration requests. Please wait before trying again.');
+        }
+        throw new Error(jsonData.error || 'Registration failed');
       }
 
-      return await response.json();
+      return jsonData;
     } catch (err) {
       console.error('❌ Registration API error:', err);
       

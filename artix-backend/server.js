@@ -140,38 +140,49 @@ app.use(createOptimizationMiddleware({
 app.use(helmet()); // Add security headers
 
 // Rate limiters for different endpoints
+// Custom rate limit handler that returns JSON instead of plain text
+const rateLimitHandler = (req, res, options) => {
+  res.status(options.statusCode).json({
+    error: options.message || 'Too many requests'
+  });
+};
+
 const registrationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // 5 registrations per IP per hour
-  message: '❌ Too many registrations from this IP. Please try again later.',
+  message: 'Too many registrations from this IP. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.ip === '127.0.0.1' // Skip for localhost (testing)
+  skip: (req) => req.ip === '127.0.0.1', // Skip for localhost (testing)
+  handler: rateLimitHandler // Use custom JSON handler
 });
 
 const whatsappLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 20, // 20 WhatsApp messages per IP per 10 minutes
-  message: '❌ Too many WhatsApp messages. Please wait before sending more.',
+  message: 'Too many WhatsApp messages. Please wait before sending more.',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  handler: rateLimitHandler // Use custom JSON handler
 });
 
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per IP per 15 minutes
-  message: '❌ Too many admin requests. Please slow down.',
+  message: 'Too many admin requests. Please slow down.',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  handler: rateLimitHandler // Use custom JSON handler
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 login attempts per IP per 15 minutes
-  message: '❌ Too many login attempts. Please try again later.',
+  message: 'Too many login attempts. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true // Don't count successful logins
+  skipSuccessfulRequests: true, // Don't count successful logins
+  handler: rateLimitHandler // Use custom JSON handler
 });
 
 // JWT Configuration

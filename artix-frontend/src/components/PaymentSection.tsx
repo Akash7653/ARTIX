@@ -173,7 +173,9 @@ export function PaymentSection({ formData, updateFormData, onSubmitSuccess, dark
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       
       // Provide specific error guidance with admin contact
-      if (errorMessage.includes('Email already registered')) {
+      if (errorMessage.includes('Too many')) {
+        setError('⏳ Too many registration attempts. Please wait 1 hour before trying again.\n\nIf you need assistance, contact ARTIX Admin: +91 8919068236');
+      } else if (errorMessage.includes('Email already registered')) {
         setError('❌ This email is already registered. Please use a different email address.');
       } else if (errorMessage.includes('Transaction ID')) {
         setError('❌ ' + errorMessage);
