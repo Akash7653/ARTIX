@@ -770,7 +770,7 @@ function LandingPage2({
 
         {/* Additional Chief Guest Invitations */}
         <div className="mb-16 px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Guest Invitation 1: Sai Kumar */}
             <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
