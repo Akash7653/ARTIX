@@ -674,6 +674,19 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   }
 });
 
+// Database connection check middleware for critical routes
+const ensureDatabaseConnection = (req, res, next) => {
+  if (!db || !client || !client.topology || !client.topology.isConnected()) {
+    console.error('Database connection lost during request:', req.method, req.url);
+    return res.status(503).json({
+      error: 'Service temporarily unavailable',
+      message: 'Database connection is currently unavailable. Please try again in a few moments.',
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+};
+
 /**
  * @swagger
  * /api/register:
@@ -744,19 +757,6 @@ app.post('/api/register', registrationLimiter, ensureDatabaseConnection, (req, r
     });
   });
 });
-
-// Database connection check middleware for critical routes
-const ensureDatabaseConnection = (req, res, next) => {
-  if (!db || !client || !client.topology || !client.topology.isConnected()) {
-    console.error('Database connection lost during request:', req.method, req.url);
-    return res.status(503).json({
-      error: 'Service temporarily unavailable',
-      message: 'Database connection is currently unavailable. Please try again in a few moments.',
-      timestamp: new Date().toISOString()
-    });
-  }
-  next();
-};
 
 // Registration handler function with enhanced error handling
 async function registerHandler(req, res) {
