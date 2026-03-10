@@ -461,7 +461,7 @@ function LandingPage2({
             👑 Chief Guests & Speakers
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             {/* Guest 1: Karthik - Premium Invitation Card */}
             <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
               darkMode
@@ -770,7 +770,7 @@ function LandingPage2({
 
         {/* Additional Chief Guest Invitations */}
         <div className="mb-16 px-4">
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             
             {/* Guest Invitation 1: Sai Kumar */}
             <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
