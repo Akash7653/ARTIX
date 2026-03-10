@@ -770,7 +770,7 @@ function LandingPage2({
 
         {/* Additional Chief Guest Invitations */}
         <div className="mb-16 px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-8">
             
             {/* Guest Invitation 1: Sai Kumar */}
             <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
@@ -872,7 +872,7 @@ function LandingPage2({
 
                 <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
                   darkMode ? 'text-amber-400' : 'text-amber-600'
-                }`}>Founder of Fasttracks</p>
+                }`}>Founder of Fastracks</p>
 
                 <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
                   darkMode ? 'text-gray-300' : 'text-gray-700'
@@ -930,7 +930,7 @@ function LandingPage2({
 
                 <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
                   darkMode ? 'text-violet-400' : 'text-violet-600'
-                }`}>Founder of The Automotive Studio</p>
+                }`}>CMO Of Fastracks</p>
 
                 <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
                   darkMode ? 'text-gray-300' : 'text-gray-700'
