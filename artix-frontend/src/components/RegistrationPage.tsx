@@ -768,6 +768,186 @@ function LandingPage2({
           </div>
         </div>
 
+        {/* Additional Chief Guest Invitations */}
+        <div className="mb-16 px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            {/* Guest Invitation 1: Sai Kumar */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
+              darkMode
+                ? 'bg-gradient-to-br from-blue-900/40 via-indigo-900/30 to-blue-900/40 border-2 border-blue-600/50'
+                : 'bg-gradient-to-br from-blue-100/60 via-indigo-100/50 to-blue-100/40 border-2 border-blue-400/50'
+            } backdrop-blur-md overflow-hidden shadow-2xl hover:shadow-blue-500/50`}>
+              <div className={`absolute inset-0 ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-indigo-500/0' 
+                  : 'bg-gradient-to-r from-blue-400/0 via-blue-400/15 to-indigo-400/0'
+              }`}></div>
+
+              <div className="relative z-10 py-8 px-6">
+                <div className={`h-1 w-20 mx-auto mb-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                }`}></div>
+
+                <div className="flex justify-center mb-6">
+                  <div className={`w-40 h-40 rounded-full overflow-hidden border-4 ${
+                    darkMode ? 'border-blue-500/70' : 'border-blue-600/70'
+                  } shadow-xl group-hover:scale-110 transition-transform duration-300 relative`}>
+                    <img 
+                      src="/MR. SAI-KUMAR.jpeg" 
+                      alt="Mr. Sai Kumar" 
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <div className={`absolute inset-0 ${
+                      darkMode 
+                        ? 'bg-gradient-to-t from-blue-900/40 to-transparent' 
+                        : 'bg-gradient-to-t from-blue-600/20 to-transparent'
+                    }`}></div>
+                  </div>
+                </div>
+
+                <h3 className={`text-2xl md:text-3xl font-bold text-center mb-1 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Mr. SAI KUMAR</h3>
+
+                <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-blue-400' : 'text-blue-600'
+                }`}>Founder of BMW Krishna Automotive</p>
+
+                <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  We would be honored for your gracious presence to inspire and elevate the spirit of ARTIX 2026.
+                </p>
+
+                <div className={`h-1 w-20 mx-auto mt-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-indigo-500 to-blue-500' 
+                    : 'bg-gradient-to-r from-indigo-600 to-blue-600'
+                }`}></div>
+              </div>
+            </div>
+
+            {/* Guest Invitation 2: Rakesh Kumar */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
+              darkMode
+                ? 'bg-gradient-to-br from-amber-900/40 via-yellow-900/30 to-amber-900/40 border-2 border-amber-600/50'
+                : 'bg-gradient-to-br from-amber-100/60 via-yellow-100/50 to-amber-100/40 border-2 border-amber-400/50'
+            } backdrop-blur-md overflow-hidden shadow-2xl hover:shadow-amber-500/50`}>
+              <div className={`absolute inset-0 ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-yellow-500/0' 
+                  : 'bg-gradient-to-r from-amber-400/0 via-amber-400/15 to-yellow-400/0'
+              }`}></div>
+
+              <div className="relative z-10 py-8 px-6">
+                <div className={`h-1 w-20 mx-auto mb-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500' 
+                    : 'bg-gradient-to-r from-amber-600 to-yellow-600'
+                }`}></div>
+
+                <div className="flex justify-center mb-6">
+                  <div className={`w-40 h-40 rounded-full overflow-hidden border-4 ${
+                    darkMode ? 'border-amber-500/70' : 'border-amber-600/70'
+                  } shadow-xl group-hover:scale-110 transition-transform duration-300 relative`}>
+                    <img 
+                      src="/Mr. RAKESH-KUMAR.jpeg" 
+                      alt="Mr. Rakesh Kumar" 
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <div className={`absolute inset-0 ${
+                      darkMode 
+                        ? 'bg-gradient-to-t from-amber-900/40 to-transparent' 
+                        : 'bg-gradient-to-t from-amber-600/20 to-transparent'
+                    }`}></div>
+                  </div>
+                </div>
+
+                <h3 className={`text-2xl md:text-3xl font-bold text-center mb-1 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Mr. RAKESH KUMAR</h3>
+
+                <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-amber-400' : 'text-amber-600'
+                }`}>Founder of Fasttracks</p>
+
+                <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  We would be honored for your gracious presence to inspire and elevate the spirit of ARTIX 2026.
+                </p>
+
+                <div className={`h-1 w-20 mx-auto mt-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-yellow-500 to-amber-500' 
+                    : 'bg-gradient-to-r from-yellow-600 to-amber-600'
+                }`}></div>
+              </div>
+            </div>
+
+            {/* Guest Invitation 3: Rohan Thatipally */}
+            <div className={`group relative overflow-hidden rounded-3xl transition-all duration-300 ${
+              darkMode
+                ? 'bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-violet-900/40 border-2 border-violet-600/50'
+                : 'bg-gradient-to-br from-violet-100/60 via-purple-100/50 to-violet-100/40 border-2 border-violet-400/50'
+            } backdrop-blur-md overflow-hidden shadow-2xl hover:shadow-violet-500/50`}>
+              <div className={`absolute inset-0 ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-violet-500/0 via-violet-500/10 to-purple-500/0' 
+                  : 'bg-gradient-to-r from-violet-400/0 via-violet-400/15 to-purple-400/0'
+              }`}></div>
+
+              <div className="relative z-10 py-8 px-6">
+                <div className={`h-1 w-20 mx-auto mb-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-violet-500 to-purple-500' 
+                    : 'bg-gradient-to-r from-violet-600 to-purple-600'
+                }`}></div>
+
+                <div className="flex justify-center mb-6">
+                  <div className={`w-40 h-40 rounded-full overflow-hidden border-4 ${
+                    darkMode ? 'border-violet-500/70' : 'border-violet-600/70'
+                  } shadow-xl group-hover:scale-110 transition-transform duration-300 relative`}>
+                    <img 
+                      src="/Mr. ROHAN-THATIPALLY.jpeg" 
+                      alt="Mr. Rohan Thatipally" 
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <div className={`absolute inset-0 ${
+                      darkMode 
+                        ? 'bg-gradient-to-t from-violet-900/40 to-transparent' 
+                        : 'bg-gradient-to-t from-violet-600/20 to-transparent'
+                    }`}></div>
+                  </div>
+                </div>
+
+                <h3 className={`text-2xl md:text-3xl font-bold text-center mb-1 transition-colors duration-300 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>Mr. ROHAN THATIPALLY</h3>
+
+                <p className={`text-lg font-semibold text-center mb-4 transition-colors duration-300 ${
+                  darkMode ? 'text-violet-400' : 'text-violet-600'
+                }`}>Founder of The Automotive Studio</p>
+
+                <p className={`text-center text-sm md:text-base transition-colors duration-300 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  We would be honored for your gracious presence to inspire and elevate the spirit of ARTIX 2026.
+                </p>
+
+                <div className={`h-1 w-20 mx-auto mt-6 rounded-full ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-purple-500 to-violet-500' 
+                    : 'bg-gradient-to-r from-purple-600 to-violet-600'
+                }`}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* CTA Buttons */}
         <div className="flex flex-row gap-6 sm:gap-8 md:gap-10 justify-center items-center px-2 md:px-0 pb-8 md:pb-0 flex-wrap">
           <button
