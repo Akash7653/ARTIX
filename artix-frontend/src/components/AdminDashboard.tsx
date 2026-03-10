@@ -586,6 +586,55 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     }
   };
 
+  const handleDeleteUser = async (registrationId: string) => {
+    try {
+      if (!window.confirm('⚠️ WARNING: This will permanently delete this participant and all their data!\n\nAre you absolutely sure? This cannot be undone.')) {
+        return;
+      }
+
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      console.log(`🗑️ Deleting participant: ${registrationId}`);
+      
+      const response = await fetch(`${baseUrl}/admin/user/${registrationId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...headers
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage(`✅ Participant deleted successfully: ${data.data.name}`);
+        setMessageType('success');
+        
+        // Remove from local state immediately
+        setRegistrations(prev => prev.filter(reg => reg.registration_id !== registrationId));
+        
+        // Close expanded view if this registration was expanded
+        if (expandedId === registrationId) {
+          setExpandedId(null);
+        }
+        
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        const errorMsg = data.error || data.message || 'Unknown error occurred';
+        setMessage(`❌ Failed to delete participant: ${errorMsg}`);
+        setMessageType('error');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (err) {
+      console.error('❌ Error deleting participant:', err);
+      setMessage('❌ Failed to delete participant: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
   const handleExportToExcel = () => {
     try {
       // Transform registrations data for export
@@ -1154,16 +1203,29 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <button
-                        onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
-                        className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
-                          darkMode
-                            ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                      >
-                        {expandedId === reg._id ? 'Hide' : 'View'}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
+                          className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
+                            darkMode
+                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                        >
+                          {expandedId === reg._id ? 'Hide' : 'View'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(reg.registration_id)}
+                          className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
+                            darkMode
+                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          title="Delete this participant"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
