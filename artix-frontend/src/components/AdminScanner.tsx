@@ -44,6 +44,21 @@ export function AdminScanner() {
 
         {/* Buttons */}
         <div className="space-y-4">
+          {/* Dark Mode Toggle */}
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={handleDarkModeToggle}
+              className={`flex items-center justify-center w-12 h-12 rounded-lg transition ${
+                darkMode
+                  ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30'
+                  : 'bg-slate-700/20 border border-slate-700/30 text-slate-700 hover:bg-slate-700/30'
+              }`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+          </div>
+
           {/* Admin Dashboard Button */}
           <button
             onClick={() => setMode('dashboard')}
