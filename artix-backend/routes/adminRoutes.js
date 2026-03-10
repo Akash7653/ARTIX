@@ -205,26 +205,80 @@ export function createAdminRoutes(db, logger) {
    * GET /api/admin/analytics/colleges
    * Get college-wise analytics
    */
-  router.get('/analytics/colleges', (req, res) => {
-    const limit = parseInt(req.query.limit) || 20;
+  router.get('/stats', async (req, res) => {
+    try {
+      console.log('📊 Admin stats request received');
+      
+      // Use aggregation pipeline for better performance
+      const pipeline = [
+        {
+          $group: {
+            _id: null,
+            approval_status: '$approval_status'
+          },
+          $project: {
+            _id: 0,
+            totalRegistrations: { $sum: 1 },
+            approvedEntries: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'approved'] }, then: 1, else: 0 }
+              }
+            },
+            rejectedEntries: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'rejected'] }, then: 1, else: 0 }
+              }
+            },
+            pendingEntries: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'pending'] }, then: 1, else: 0 }
+              }
+            },
+            verifiedEntries: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'approved'] }, then: 1, else: 0 }
+              }
+            },
+            approvedRevenue: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'approved'] }, then: '$total_amount', else: 0 }
+              }
+            },
+            pendingRevenue: {
+              $sum: {
+                $cond: { if: { $eq: ['$approval_status', 'pending'] }, then: '$total_amount', else: 0 }
+              }
+            }
+          }
+        }
+      ];
 
-    req.analytics.getCollegeAnalytics(limit)
-      .then(colleges => {
-        res.json({
-          success: true,
-          data: colleges,
-          count: colleges.length,
-          timestamp: new Date()
-        });
-      })
-      .catch(err => {
-        logger?.error('College analytics error', { error: err.message });
-        res.status(500).json({
-          success: false,
-          error: 'Failed to fetch college analytics',
-          message: err.message
-        });
+      const result = await db.collection('registrations').aggregate(pipeline).toArray();
+      const stats = result[0];
+
+      console.log('📊 Stats calculated:', stats);
+
+      res.json({
+        success: true,
+        data: {
+          totalRegistrations: stats.totalRegistrations || 0,
+          approvedEntries: stats.approvedEntries || 0,
+          rejectedEntries: stats.rejectedEntries || 0,
+          pendingEntries: stats.pendingEntries || 0,
+          verifiedEntries: stats.verifiedEntries || 0,
+          approvedRevenue: stats.approvedRevenue || 0,
+          pendingRevenue: stats.pendingRevenue || 0
+        }
       });
+
+    } catch (err) {
+      console.error('❌ Stats fetch error:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch statistics',
+        message: err.message
+      });
+    }
   });
 
   /**

@@ -169,11 +169,30 @@ app.use(express.json({ limit: '1gb' }));
 app.use(express.urlencoded({ limit: '1gb', extended: true }));
 
 // Performance Optimizations
-app.use(compression()); // Gzip compression for all responses
+app.use(compression({ level: 6 })); // Gzip compression with higher level
 app.use(createOptimizationMiddleware({
   filterFields: true,
-  removeNulls: true
+  removeNulls: true,
+  enableCaching: true // Add response caching
 })); // Response field filtering and null removal
+
+// Add caching middleware for frequently accessed data
+const cache = new Map();
+const cacheMiddleware = (req, res, next) => {
+  const key = req.originalUrl;
+  if (cache.has(key)) {
+    const cached = cache.get(key);
+    if (Date.now() - cached.timestamp < 30000) { // 30 seconds cache
+      res.json(cached.data);
+      return;
+    }
+  }
+  next();
+};
+
+// Apply caching to stats and registrations endpoints
+app.use('/api/admin/stats', cacheMiddleware);
+app.use('/api/admin/registrations', cacheMiddleware);
 
 // Security & Rate Limiting Middleware
 app.use(helmet()); // Add security headers
@@ -186,14 +205,18 @@ const rateLimitHandler = (req, res, options) => {
   });
 };
 
+// Enhanced rate limiters with better timeout handling
 const registrationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 registrations per IP per hour
+  max: 10, // Increased from 5 to 10 registrations per IP per hour
   message: 'Too many registrations from this IP. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.ip === '127.0.0.1', // Skip for localhost (testing)
-  handler: rateLimitHandler // Use custom JSON handler
+  handler: rateLimitHandler, // Use custom JSON handler
+  // Add retry-after header for better client handling
+  keyGenerator: (req) => req.ip,
+  skipSuccessfulRequests: false
 });
 
 const whatsappLimiter = rateLimit({
