@@ -505,6 +505,83 @@ export function createAdminRoutes(db, logger) {
     });
   });
 
+  /**
+   * DELETE /api/admin/user/:registrationId
+   * Delete a user and all associated data
+   */
+  router.delete('/user/:registrationId', async (req, res) => {
+    try {
+      const { registrationId } = req.params;
+      
+      if (!registrationId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Registration ID is required'
+        });
+      }
+
+      logger?.info('Admin attempting to delete user', { registrationId });
+
+      // Find the registration first
+      const registration = await db.collection('registrations').findOne({ 
+        registration_id: registrationId 
+      });
+      
+      if (!registration) {
+        return res.status(404).json({
+          success: false,
+          error: 'Registration not found',
+          registrationId
+        });
+      }
+
+      // Delete from all collections in parallel
+      const results = await Promise.all([
+        db.collection('registrations').deleteOne({ registration_id: registrationId }),
+        db.collection('payments').deleteOne({ registration_id: registrationId }),
+        db.collection('team_members').deleteMany({ registration_id: registrationId })
+      ]);
+
+      logger?.info('User deleted successfully', {
+        registrationId,
+        name: registration.full_name,
+        email: registration.email,
+        deletedCounts: {
+          registrations: results[0].deletedCount,
+          payments: results[1].deletedCount,
+          teamMembers: results[2].deletedCount
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'User deleted successfully',
+        data: {
+          registrationId,
+          name: registration.full_name,
+          email: registration.email,
+          deletedCounts: {
+            registrations: results[0].deletedCount,
+            payments: results[1].deletedCount,
+            teamMembers: results[2].deletedCount
+          }
+        }
+      });
+
+    } catch (err) {
+      logger?.error('Error deleting user', { 
+        error: err.message,
+        registrationId: req.params.registrationId 
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete user',
+        message: err.message
+      });
+    }
+  });
+
   return router;
 }
 

@@ -465,6 +465,7 @@ app.get('/api', (req, res) => {
       'GET /api/health - Health check',
       'POST /api/register - Register new participant',
       'GET /api/registration/:registrationId - Get registration details',
+      'DELETE /api/admin/user/:registrationId - Delete user (Admin only)',
       'GET /api/admin/stats - Get admin dashboard statistics',
       'GET /api/admin/registrations - Get all registrations',
       'POST /api/admin/registrations/:id/approve - Approve registration',
