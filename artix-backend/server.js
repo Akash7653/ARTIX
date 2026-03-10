@@ -44,60 +44,85 @@ let registrationsCollection = null;
 let paymentsCollection = null;
 let teamMembersCollection = null;
 
-const client = new MongoClient(MONGODB_URI);
+const client = new MongoClient(MONGODB_URI, {
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
+  retryWrites: true, // Retry write operations if they fail
+  retryReads: true // Retry read operations if they fail
+});
 
-// Connect to MongoDB
+// Connect to MongoDB with retry logic
 async function connectDB() {
-  try {
-    await client.connect();
-    db = client.db('artix_2026');
-    registrationsCollection = db.collection('registrations');
-    paymentsCollection = db.collection('payments');
-    teamMembersCollection = db.collection('team_members');
-    
-    // Create indexes for faster queries
-    await registrationsCollection.createIndex({ email: 1 }, { unique: true });
-    await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
-    
-    // Indexes for pagination and filtering
-    await registrationsCollection.createIndex({ approval_status: 1 });
-    await registrationsCollection.createIndex({ created_at: -1 }); // For sorting recent first
-    await registrationsCollection.createIndex({ full_name: 1 }); // For searching by name
-    await registrationsCollection.createIndex({ phone: 1 }); // For searching by phone
-    // Note: email index already created as unique above, no need for duplicate non-unique index
-    
-    // Compound index for efficient pagination with status filter
-    await registrationsCollection.createIndex({ approval_status: 1, created_at: -1 });
-    
-    // Text index for fast searching across multiple fields
+  const maxRetries = 5;
+  const retryDelay = 5000; // 5 seconds
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await registrationsCollection.createIndex({
-        full_name: 'text',
-        email: 'text',
-        phone: 'text',
-        registration_id: 'text',
-        college_name: 'text'
-      });
-      logger.info('✓ Text index created for search optimization');
-    } catch (e) {
-      logger.info('ℹ Text index already exists or error creating it');
+      console.log(`🔗 MongoDB connection attempt ${attempt}/${maxRetries}...`);
+      await client.connect();
+      db = client.db('artix_2026');
+      registrationsCollection = db.collection('registrations');
+      paymentsCollection = db.collection('payments');
+      teamMembersCollection = db.collection('team_members');
+      
+      // Create indexes for faster queries
+      await registrationsCollection.createIndex({ email: 1 }, { unique: true });
+      await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+      
+      // Indexes for pagination and filtering
+      await registrationsCollection.createIndex({ approval_status: 1 });
+      await registrationsCollection.createIndex({ created_at: -1 }); // For sorting recent first
+      await registrationsCollection.createIndex({ full_name: 1 }); // For searching by name
+      await registrationsCollection.createIndex({ phone: 1 }); // For searching by phone
+      // Note: email index already created as unique above, no need for duplicate non-unique index
+      
+      // Compound index for efficient pagination with status filter
+      await registrationsCollection.createIndex({ approval_status: 1, created_at: -1 });
+      
+      // Text index for fast searching across multiple fields
+      try {
+        await registrationsCollection.createIndex({
+          full_name: 'text',
+          email: 'text',
+          phone: 'text',
+          registration_id: 'text',
+          college_name: 'text'
+        });
+        logger.info('✓ Text index created for search optimization');
+      } catch (e) {
+        logger.info('ℹ Text index already exists or error creating it');
+      }
+      
+      // Drop verification_id index if exists (to prevent null duplicate errors)
+      try {
+        await registrationsCollection.dropIndex({ verification_id: 1 });
+        logger.info('✓ Dropped verification_id unique index');
+      } catch (e) {
+        // Index might not exist, that's fine
+      }
+      
+      // Initialize admin cache with collections
+      adminCache.registrationsCollection = registrationsCollection;
+      
+      logger.info('Connected to MongoDB with optimized indexes');
+      console.log('✅ MongoDB connection successful');
+      return; // Success, exit retry loop
+      
+    } catch (err) {
+      logError(`MongoDB connection attempt ${attempt} failed`, err);
+      console.error(`❌ MongoDB connection attempt ${attempt} failed:`, err.message);
+      
+      if (attempt === maxRetries) {
+        console.error('❌ All MongoDB connection attempts failed. Exiting...');
+        logError('MongoDB connection failed after all retries', err);
+        process.exit(1);
+      }
+      
+      console.log(`⏳ Retrying in ${retryDelay/1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
-    
-    // Drop verification_id index if exists (to prevent null duplicate errors)
-    try {
-      await registrationsCollection.dropIndex({ verification_id: 1 });
-      logger.info('✓ Dropped verification_id unique index');
-    } catch (e) {
-      // Index might not exist, that's fine
-    }
-    
-    // Initialize admin cache with collections
-    adminCache.registrationsCollection = registrationsCollection;
-    
-    logger.info('Connected to MongoDB with optimized indexes');
-  } catch (err) {
-    logError('MongoDB connection failed', err);
-    process.exit(1);
   }
 }
 
@@ -126,6 +151,20 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Request timeout middleware
+app.use((req, res, next) => {
+  res.setTimeout(30000, () => {
+    console.error('Request timeout:', req.method, req.url);
+    res.status(408).json({
+      error: 'Request timeout',
+      message: 'The request took too long to process',
+      timestamp: new Date().toISOString()
+    });
+  });
+  next();
+});
+
 app.use(express.json({ limit: '1gb' }));
 app.use(express.urlencoded({ limit: '1gb', extended: true }));
 
@@ -380,13 +419,40 @@ app.get('/api/health', (req, res) => {
 });
 
 // Health Check with API prefix
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'ARTIX Backend API',
-    database: db ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection
+    let dbStatus = 'disconnected';
+    let dbPingTime = null;
+    
+    if (db && client) {
+      try {
+        const startTime = Date.now();
+        await db.admin().ping();
+        dbPingTime = Date.now() - startTime;
+        dbStatus = 'connected';
+      } catch (err) {
+        console.error('Database health check failed:', err);
+        dbStatus = 'error';
+      }
+    }
+    
+    res.json({
+      status: 'healthy',
+      service: 'ARTIX Backend API',
+      database: dbStatus,
+      databasePingTime: dbPingTime,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Catch-all route for /api to provide helpful information
@@ -671,7 +737,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
  *         description: Server error
  */
 // 1. Register User
-app.post('/api/register', registrationLimiter, (req, res, next) => {
+app.post('/api/register', registrationLimiter, ensureDatabaseConnection, (req, res, next) => {
   upload.single('paymentScreenshot')(req, res, (err) => {
     handleUploadError(err, req, res, () => {
       registerHandler(req, res);
@@ -679,8 +745,29 @@ app.post('/api/register', registrationLimiter, (req, res, next) => {
   });
 });
 
-// Registration handler function
+// Database connection check middleware for critical routes
+const ensureDatabaseConnection = (req, res, next) => {
+  if (!db || !client || !client.topology || !client.topology.isConnected()) {
+    console.error('Database connection lost during request:', req.method, req.url);
+    return res.status(503).json({
+      error: 'Service temporarily unavailable',
+      message: 'Database connection is currently unavailable. Please try again in a few moments.',
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+};
+
+// Registration handler function with enhanced error handling
 async function registerHandler(req, res) {
+  // Ensure database is connected before processing
+  if (!db || !client || !client.topology || !client.topology.isConnected()) {
+    return res.status(503).json({
+      error: 'Service temporarily unavailable',
+      message: 'Database connection is currently unavailable. Please try again in a few moments.',
+      timestamp: new Date().toISOString()
+    });
+  }
   let uploadedFilePath = null;
   
   try {
@@ -2759,21 +2846,45 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global Error Handler - Ensures JSON responses for all errors
+// Enhanced Global Error Handler with comprehensive error handling
 app.use((err, req, res, next) => {
   console.error('❌ Global Error Handler:', err);
   logError('Unhandled error', err, {
     method: req.method,
     url: req.url,
     ip: req.ip,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
+    body: req.body,
+    params: req.params,
+    query: req.query
   });
   
+  // Handle specific error types
+  let statusCode = 500;
+  let errorMessage = 'Internal server error';
+  
+  if (err.name === 'ValidationError') {
+    statusCode = 400;
+    errorMessage = 'Validation failed';
+  } else if (err.name === 'MongoError' || err.name === 'MongoServerError') {
+    statusCode = 503;
+    errorMessage = 'Database error occurred';
+  } else if (err.code === 'ECONNREFUSED') {
+    statusCode = 503;
+    errorMessage = 'Service temporarily unavailable';
+  } else if (err.code === 'ETIMEDOUT') {
+    statusCode = 504;
+    errorMessage = 'Request timeout';
+  } else if (err.message) {
+    errorMessage = err.message;
+  }
+  
   // Ensure JSON response for all errors
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+  res.status(statusCode).json({
+    error: errorMessage,
     details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    requestId: req.headers['x-request-id'] || 'unknown'
   });
 });
 
