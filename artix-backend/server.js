@@ -1085,27 +1085,6 @@ async function registerHandler(req, res) {
     res.status(statusCode).json({ error: errorMessage, details: err.message });
   }
 }
-      const field = Object.keys(err.keyPattern || {})[0] || 'email';
-      const value = err.keyValue ? err.keyValue[field] : 'unknown';
-      errorMessage = `${field.charAt(0).toUpperCase() + field.slice(1)} already registered: ${value}`;
-      statusCode = 409;
-    } else if (err.message && err.message.includes('duplicate')) {
-      errorMessage = 'Email address is already registered';
-      statusCode = 409;
-    } else if (err.message && err.message.includes('base64')) {
-      errorMessage = 'Payment image file is too large. Please use a smaller image.';
-      statusCode = 413;
-    } else if (err.message && err.message.includes('image')) {
-      errorMessage = 'Failed to process payment image. Please check the file format.';
-      statusCode = 400;
-    } else if (err.message && err.message.includes('events')) {
-      errorMessage = 'No events selected. Please select at least one event.';
-      statusCode = 400;
-    }
-    
-    res.status(statusCode).json({ error: errorMessage, details: err.message });
-  }
-}
 
 // 2. Get Registration by ID (search by registration_id)
 app.get('/api/registration/:registrationId', async (req, res) => {
