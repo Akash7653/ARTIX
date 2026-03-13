@@ -84,27 +84,24 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const token = localStorage.getItem('adminToken');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      console.log(`📸 Fetching full details for ${registrationId} including payment screenshot...`);
-      
       const response = await fetch(`${baseUrl}/admin/registration/${registrationId}`, { headers });
       
       if (!response.ok) {
-        console.error(`❌ Failed to fetch full registration details: ${response.status}`);
+        console.error(`❌ Failed to fetch full registration: ${response.status}`);
         return;
       }
       
       const result = await response.json();
       
       if (result.success && result.data) {
-        console.log(`✅ Full registration details loaded with payment screenshot`);
-        // Store ONLY the full registration data - don't update registrations array to prevent collapse
+        // Store the full registration data
         setFullRegistrationData(prev => ({
           ...prev,
           [registrationId]: result.data
         }));
       }
     } catch (err) {
-      console.error('❌ Error fetching full registration details:', err);
+      console.error('❌ Error fetching registration details:', err);
     }
   };
 
@@ -324,36 +321,72 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       console.log(`📱 Preparing WhatsApp message for: ${reg.registration_id}`);
       
+      // Check if verification ID already exists
+      if (!reg.verification_id) {
+        setMessage('❌ Verification ID not generated yet. Click "Generate Verification ID" first.');
+        setMessageType('error');
+        setTimeout(() => setMessage(''), 5000);
+        return;
+      }
+      
       setWorkflowInProgress(reg.registration_id);
       
-      // Fetch message details from backend
-      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({ registrationId: reg.registration_id })
-      });
+      // Build WhatsApp message manually if we already have verification ID
+      const eventsList = Array.isArray(reg.selected_events) 
+        ? reg.selected_events.map(e => `• ${e.toUpperCase()}`).join('\n') 
+        : '• REGISTRATION';
+      
+      const message = `✅ *ARTIX 2026 - REGISTRATION APPROVED* ✅
 
-      if (!response.ok) {
-        throw new Error('Failed to generate WhatsApp message');
-      }
+🎉 Your registration has been approved!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 *VERIFICATION DETAILS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎫 Verification ID: *${reg.verification_id}*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 *PARTICIPANT INFORMATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Name: ${reg.full_name}
+🏫 College: ${reg.college_name || 'N/A'}
+📚 Branch: ${reg.branch}
+📖 Year: ${reg.year_of_study}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 *EVENT DETAILS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎪 Events:
+${eventsList}
+💰 Total Amount: ₹${reg.total_amount}
+📝 Reg ID: ${reg.registration_id}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *GATE ENTRY INSTRUCTIONS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Show your Verification ID at event desk
+✓ Keep this message for reference
+✓ Arrive 15 mins before event time
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 *NEED ASSISTANCE?*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact ARTIX Admin Team:
+📱 +918919068236`;
       
-      const result = await response.json();
-      const waLink = result.whatsapp?.link;
+      const encodedMessage = encodeURIComponent(message);
+      const waLink = `https://wa.me/${reg.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
       
-      if (waLink) {
-        // Open WhatsApp with pre-filled message
-        window.open(waLink, '_blank');
-        
-        // Show pending state
-        setExpandedId(reg.registration_id);
-        setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
-        setMessage('📱 WhatsApp opened - Please send the message and then click "Mark as Sent"');
-        setMessageType('success');
-        setTimeout(() => setMessage(''), 5000);
-      }
+      // Open WhatsApp with pre-filled message
+      window.open(waLink, '_blank');
+      
+      // Show pending state
+      setExpandedId(reg.registration_id);
+      setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
+      setMessage('📱 WhatsApp opened - Please send the message and then click "Mark as Sent"');
+      setMessageType('success');
+      setTimeout(() => setMessage(''), 5000);
+      
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Error opening WhatsApp:', errorMsg);
@@ -638,16 +671,16 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     loadData();
   }, []);
 
-  // Auto-refresh data every 5 seconds when authenticated
+  // Auto-refresh data every 5 seconds when authenticated (but NOT when something is expanded)
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || expandedId) return; // Skip refresh if anything is expanded
     
     const autoRefreshInterval = setInterval(() => {
       loadData();
     }, 5000); // Refresh every 5 seconds
     
     return () => clearInterval(autoRefreshInterval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, expandedId]);
 
   // Auto-scroll to expanded details
   useEffect(() => {
@@ -1229,16 +1262,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
               const reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
               if (!reg) return null;
 
-              // Log the registration data for debugging
-              console.log('📊 [DETAIL VIEW] Registration data received:', {
-                registration_id: reg.registration_id,
-                created_at: reg.created_at,
-                created_at_type: typeof reg.created_at,
-                selected_events: reg.selected_events,
-                selected_events_type: Array.isArray(reg.selected_events) ? 'array' : typeof reg.selected_events,
-                selected_events_length: Array.isArray(reg.selected_events) ? reg.selected_events.length : 0,
-                selected_events_raw: JSON.stringify(reg.selected_events)
-              });
+              // Expanded detail view for registration
 
               const totalHeadCount = (reg.team_members?.length || 0) + 1;
 
@@ -1378,21 +1402,9 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                         <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected Events</p>
                         {(() => {
                           const events = Array.isArray(reg.selected_events) ? reg.selected_events : [];
-                          console.log('📋 [EVENTS RENDER] Processing events:', {
-                            registration_id: reg.registration_id,
-                            events_input: events,
-                            is_array: Array.isArray(events),
-                            count: events.length
-                          });
-                          
                           const validEvents = events
                             .filter(e => e && String(e).trim() !== '' && String(e) !== 'undefined')
                             .map(e => String(e).trim());
-                          
-                          console.log('📋 [EVENTS RENDER] After filtering:', {
-                            valid_count: validEvents.length,
-                            valid_events: validEvents
-                          });
                           
                           if (validEvents.length === 0) {
                             return (
