@@ -78,6 +78,10 @@ async function connectDB() {
       // Create indexes for faster queries
       await registrationsCollection.createIndex({ email: 1 }, { unique: true });
       await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
+      await registrationsCollection.createIndex(
+        { verification_id: 1 },
+        { unique: true, sparse: true } // sparse allows multiple null values
+      );
       
       // Indexes for pagination and filtering
       await registrationsCollection.createIndex({ approval_status: 1 });
@@ -414,22 +418,33 @@ function generateRegistrationId() {
 
 // Generate sequential Verification ID (ARTIX2026-001, 002, etc.)
 async function generateVerificationId() {
+  const counterCollection = db.collection('counters');
+  
   try {
-    const counterCollection = db.collection('counters');
+    // Ensure counter document exists
+    const checkCounter = await counterCollection.findOne({ _id: 'verification_id' });
+    if (!checkCounter) {
+      logger.warn('⚠️ Verification ID counter missing! Reinitializing...');
+      await counterCollection.insertOne({ _id: 'verification_id', sequence_value: 0 });
+    }
+    
+    // Atomically increment counter
     const result = await counterCollection.findOneAndUpdate(
       { _id: 'verification_id' },
       { $inc: { sequence_value: 1 } },
       { returnDocument: 'after' }
     );
     
-    const nextSequence = result.value?.sequence_value || 1;
+    if (!result.value || typeof result.value.sequence_value !== 'number') {
+      throw new Error('Counter update failed: invalid counter state');
+    }
+    
+    const nextSequence = result.value.sequence_value;
+    logger.info(`📊 Generated Verification ID #${nextSequence}`);
     return `ARTIX2026-${String(nextSequence).padStart(3, '0')}`;
   } catch (err) {
-    logger.error('Error generating verification ID', err);
-    // Fallback to timestamp-based if counter fails
-    const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `VRF-${timestamp}-${randomPart}`;
+    logger.error('❌ Error generating verification ID:', err.message);
+    throw err; // Fail fast rather than silently returning a duplicate
   }
 }
 
@@ -1354,9 +1369,17 @@ app.post('/api/admin/confirm-whatsapp-sent', async (req, res) => {
     if (!registrationId) {
       return res.status(400).json({ error: 'Registration ID is required' });
     }
+    
+    // Validate the registration ID format
+    if (typeof registrationId !== 'string' || !registrationId.trim()) {
+      return res.status(400).json({ error: 'Invalid registration ID format' });
+    }
+    
+    const trimmedId = registrationId.trim();
+    logger.info(`📱 WhatsApp confirm for: ${trimmedId}`);
 
     const result = await registrationsCollection.findOneAndUpdate(
-      { registration_id: registrationId },
+      { registration_id: trimmedId },
       {
         $set: {
           whatsapp_sent: true,
@@ -1367,28 +1390,38 @@ app.post('/api/admin/confirm-whatsapp-sent', async (req, res) => {
     );
 
     if (!result.value) {
-      return res.status(404).json({ error: 'Registration not found' });
+      logger.warn(`⚠️ Registration not found for confirm: ${trimmedId}`);
+      return res.status(404).json({ 
+        error: 'Registration not found',
+        searchedId: trimmedId
+      });
     }
 
     logWhatsApp('WhatsApp confirmation recorded', {
-      registrationId,
+      registrationId: trimmedId,
       participantName: result.value.full_name,
       verificationId: result.value.verification_id
     });
+    
+    logger.info(`✅ WhatsApp confirmed for ${result.value.full_name}`);
 
     res.json({
       success: true,
       message: 'WhatsApp message confirmed as sent',
       registration: {
-        registration_id: registrationId,
+        registration_id: trimmedId,
         whatsapp_sent: true,
         verification_id: result.value.verification_id
       }
     });
 
   } catch (err) {
-    console.error('Error confirming WhatsApp:', err);
-    res.status(500).json({ error: 'Failed to confirm WhatsApp', details: err.message });
+    logger.error('Error confirming WhatsApp:', err);
+    res.status(500).json({ 
+      error: 'Failed to confirm WhatsApp', 
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
