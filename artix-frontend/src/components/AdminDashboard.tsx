@@ -198,12 +198,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       console.log(`👤 Approving registration: ${registrationId}`);
       
-      // Optimistic UI update - immediately show approving status
-      setRegistrations(prev => prev.map(reg => 
-        reg.registration_id === registrationId 
-          ? { ...reg, approval_status: 'approving' }
-          : reg
-      ));
+      // Set processing state
       setWorkflowInProgress(registrationId);
       setExpandedId(registrationId);
       
@@ -224,18 +219,10 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const result = await response.json();
       console.log(`✅ Approval successful:`, result);
       
-      // Show the auto-generated verification ID
-      const verificationId = result.registration?.verification_id;
-      if (verificationId) {
-        setMessage(`✅ APPROVED! Verification ID: ${verificationId}`);
-        // Pre-fill the verification ID in the input
-        setVerificationIdInput(prev => ({ ...prev, [registrationId]: verificationId }));
-      } else {
-        setMessage(`✅ Approved! Verification ID generated.`);
-      }
+      setMessage(`✅ Approved! Next: Generate Verification ID`);
       setMessageType('success');
       
-      // Update registrations and fetch fresh data in background
+      // Reload data to show updated approval status
       loadData();
       setTimeout(() => {
         fetchFullRegistrationDetails(registrationId);
@@ -248,6 +235,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setMessage(`❌ Failed to approve: ${errorMsg}`);
       setMessageType('error');
       setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setWorkflowInProgress(null);
     }
   };
 
@@ -258,6 +247,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       console.log(`❌ Rejecting registration: ${registrationId}`);
       console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
+      
+      setWorkflowInProgress(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
@@ -291,6 +282,162 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setMessage(`❌ Failed to reject: ${errorMsg}`);
       setMessageType('error');
       setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setWorkflowInProgress(null);
+    }
+  };
+
+  // Step 2: Generate sequential verification ID
+  const handleGenerateVerificationId = async (registrationId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`🔐 Generating verification ID for: ${registrationId}`);
+      
+      setWorkflowInProgress(registrationId);
+      setExpandedId(registrationId);
+      
+      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ registrationId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate verification ID');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Verification ID generated:`, result);
+      
+      const verificationId = result.registration?.verification_id;
+      setMessage(`✅ Verification ID Generated: ${verificationId} | Ready to send WhatsApp`);
+      setMessageType('success');
+      
+      // Reload data to show generated ID
+      loadData();
+      setTimeout(() => {
+        fetchFullRegistrationDetails(registrationId);
+      }, 300);
+      
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to generate verification ID:', errorMsg);
+      setMessage(`❌ Failed: ${errorMsg}`);
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setWorkflowInProgress(null);
+    }
+  };
+
+  // Step 3a: Open WhatsApp with message
+  const handleSendWhatsAppMessage = async (reg: Registration) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`📱 Preparing WhatsApp message for: ${reg.registration_id}`);
+      
+      setWorkflowInProgress(reg.registration_id);
+      
+      // Fetch message details from backend
+      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ registrationId: reg.registration_id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate WhatsApp message');
+      }
+      
+      const result = await response.json();
+      const waLink = result.whatsapp?.link;
+      
+      if (waLink) {
+        // Open WhatsApp with pre-filled message
+        window.open(waLink, '_blank');
+        
+        // Show pending state
+        setExpandedId(reg.registration_id);
+        setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
+        setMessage('📱 WhatsApp opened - Please send the message and then click "Mark as Sent"');
+        setMessageType('success');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error opening WhatsApp:', errorMsg);
+      setMessage(`❌ Error: ${errorMsg}`);
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setWorkflowInProgress(null);
+    }
+  };
+
+  // Step 3b: Confirm WhatsApp was sent
+  const handleMarkWhatsAppSent = async (reg: Registration) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`✅ Marking WhatsApp as sent for: ${reg.registration_id}`);
+      
+      setWorkflowInProgress(reg.registration_id);
+      
+      const response = await fetch(`${baseUrl}/admin/confirm-whatsapp-sent`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ registrationId: reg.registration_id })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark as sent');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ WhatsApp marked as sent:`, result);
+      
+      // Remove from pending set
+      setPendingWhatsAppSend(prev => {
+        const updated = new Set(prev);
+        updated.delete(reg.registration_id);
+        return updated;
+      });
+      
+      setMessage('✅ WhatsApp delivery confirmed!');
+      setMessageType('success');
+      
+      // Reload data
+      loadData();
+      setTimeout(() => {
+        fetchFullRegistrationDetails(reg.registration_id);
+      }, 300);
+      
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to mark as sent:', errorMsg);
+      setMessage(`❌ Failed: ${errorMsg}`);
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setWorkflowInProgress(null);
     }
   };
 
@@ -304,12 +451,6 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       return;
     }
 
-    // Optimistic UI update - immediately show processing
-    setRegistrations(prev => prev.map(reg => 
-      reg.registration_id === registrationId 
-        ? { ...reg, verification_status: 'setting' }
-        : reg
-    ));
     setSettingVerificationId(registrationId);
     setWorkflowInProgress(registrationId);
     setExpandedId(registrationId);
@@ -332,17 +473,11 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const result = await response.json();
       console.log(`✅ Verification ID set`);
       
-      // FIXED: Do NOT open WhatsApp automatically
-      // Users should click "Send WhatsApp Message" button in Step 3 instead
-      
-      // Keep expanded view throughout the workflow
-      setExpandedId(registrationId);
-      setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" in Step 3 to send the message.`);
+      setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" to send the message.`);
       setMessageType('success');
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
       setTimeout(() => {
         loadData();
-        // Refetch full details to ensure expanded view updates
         setTimeout(() => fetchFullRegistrationDetails(registrationId), 600);
       }, 500);
       setTimeout(() => setMessage(''), 5000);
@@ -354,243 +489,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setTimeout(() => setMessage(''), 5000);
     } finally {
       setSettingVerificationId(null);
-    }
-  };
-
-  const handleVerifyEntry = async () => {
-    const verificationId = entryVerificationId.trim();
-    
-    if (!verificationId) {
-      setMessage('❌ Please enter a verification ID to verify');
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-
-    setVerifyingEntry(true);
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      
-      console.log(`✅ Verifying entry with ID: ${verificationId}`);
-      
-      const response = await fetch(`${baseUrl}/admin/verify-entry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verification_id: verificationId })
-      });
-
-      console.log(`📊 Response status: ${response.status}`);
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('❌ Verification error:', error);
-        throw new Error(error.error || 'Verification failed');
-      }
-      
-      const result = await response.json();
-      console.log(`✅ Entry verified:`, result);
-      
-      // Create a better message
-      const participantName = result.participant?.full_name || 'Participant';
-      const branch = result.participant?.branch ? ` (${result.participant.branch})` : '';
-      const eventInfo = result.participant?.selected_events?.length > 0 
-        ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
-        : '';
-      
-      setMessage(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`);
-      setMessageType('success');
-      setEntryVerificationId('');
-      setTimeout(loadData, 500);
-      setTimeout(() => setMessage(''), 5000);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to verify entry:', errorMsg);
-      setMessage(`❌ ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
-    } finally {
-      setVerifyingEntry(false);
-    }
-  };
-
-  const generateWhatsAppMessage = (reg: Registration): string => {
-    const lines = [
-      'ARTIX 2026 - REGISTRATION APPROVED',
-      '',
-      'Your registration has been approved!',
-      '',
-      'Verification Details:',
-      `Verification ID: ${reg.verification_id}`,
-      '',
-      'Participant Information:',
-      `Name: ${reg.full_name}`,
-      `College: ${reg.college_name || 'N/A'}`,
-      `Branch: ${reg.branch}`,
-      `Year: ${reg.year_of_study}`,
-      `Phone: ${reg.phone}`,
-      ''
-    ];
-
-    // Add team members if they exist
-    if (reg.team_members && reg.team_members.length > 0) {
-      lines.push('Team Members:');
-      reg.team_members.forEach((member) => {
-        lines.push(`${member.member_name} - ${member.member_branch} - ${member.member_phone}`);
-      });
-      lines.push('');
-    }
-
-    lines.push('Event Details:');
-    // Fix: Check if selected_events exists and is an array before joining
-    if (reg.selected_events && Array.isArray(reg.selected_events) && reg.selected_events.length > 0) {
-      lines.push(`Events: ${reg.selected_events.join(', ')}`);
-    } else {
-      lines.push('Events: No specific events selected');
-    }
-    lines.push(`Total Amount: Rs ${reg.total_amount}`);
-    lines.push(`Registration ID: ${reg.registration_id}`);
-    lines.push('');
-    lines.push('Verification Instructions:');
-    lines.push('Use your Verification ID at the event registration desk for quick entry verification.');
-    lines.push('');
-    lines.push('For assistance, contact ARTIX Admin Team');
-    
-    return lines.join('\n');
-  };
-
-  const handleSendNotification = async (registrationId: string, method: string) => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const response = await fetch(`${baseUrl}/admin/confirm-and-notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationId, method })
-      });
-
-      if (response.ok) {
-        console.log(`✅ Notification marked as sent for ${registrationId}`);
-        setTimeout(loadData, 1000); // Reload data to update notification status
-      }
-    } catch (err) {
-      console.error('Failed to mark notification as sent:', err);
-    }
-  };
-
-  const handleConfirmWhatsAppSent = async (reg: Registration) => {
-    try {
-      // Optimistic UI update
-      setRegistrations(prev => prev.map(r => 
-        r.registration_id === reg.registration_id 
-          ? { ...r, notification_sent: true }
-          : r
-      ));
-      setSendingNotification(reg.registration_id);
-      setWorkflowInProgress(reg.registration_id);
-      setExpandedId(reg.registration_id);
-      
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const token = localStorage.getItem('adminToken');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      console.log(`📱 Marking WhatsApp as sent for ${reg.registration_id}`);
-      
-      const response = await fetch(`${baseUrl}/admin/mark-whatsapp-sent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ registrationId: reg.registration_id })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('✅ WhatsApp message marked as sent!');
-        setMessageType('success');
-        
-        // Remove from pending set
-        setPendingWhatsAppSend(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(reg.registration_id);
-          return newSet;
-        });
-        
-        // Quick refresh
-        loadData();
-        setTimeout(() => {
-          fetchFullRegistrationDetails(reg.registration_id);
-        }, 300);
-        
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        const errorMsg = data.error || data.message || 'Unknown error';
-        setMessage('❌ ' + errorMsg);
-        setMessageType('error');
-        setTimeout(() => setMessage(''), 3000);
-      }
-    } catch (err) {
-      setMessage('❌ ' + (err instanceof Error ? err.message : 'Error marking WhatsApp sent'));
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
-    } finally {
-      setSendingNotification(null);
       setWorkflowInProgress(null);
-    }
-  };
-
-  const handleSendWhatsAppDirect = async (reg: Registration) => {
-    try {
-      setSendingNotification(reg.registration_id);
-      
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      console.log(`📱 Sending WhatsApp to ${reg.phone} via API: ${baseUrl}/admin/send-whatsapp-to-participant`);
-      
-      const response = await fetch(`${baseUrl}/admin/send-whatsapp-to-participant`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrationId: reg.registration_id })
-      });
-
-      const data = await response.json();
-      console.log('📱 WhatsApp API Response:', data);
-
-      if (response.ok && data.success) {
-        // New free WhatsApp Web approach - provide wa.me link
-        if (data.details && data.details.waLink) {
-          const waLink = data.details.waLink;
-          const participantName = data.details.participantName || 'participant';
-          const confirmOpen = window.confirm(
-            `✅ WhatsApp ready!\n\nParticipant: ${participantName}\nPhone: ${reg.phone}\n\nClick OK to open WhatsApp Web to send the message.\n\nAfter sending, click the 'Confirm Sent' button below.`
-          );
-          
-          if (confirmOpen) {
-            // Open WhatsApp Web in new tab
-            window.open(waLink, '_blank');
-            
-            // Add to pending set - show the confirmation button
-            // Keep expanded view and show the pending state
-            setExpandedId(reg.registration_id);
-            setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
-            setMessage('📱 WhatsApp opened - Please send the message and then click "Confirm Sent" button');
-            setMessageType('info');
-            setTimeout(() => setMessage(''), 5000);
-          }
-        } else {
-          // Add to pending set for manual confirmation
-          setExpandedId(reg.registration_id);
-          setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
-          setMessage('📱 Message prepared - Please send manually and click "Confirm Sent"');
-          setMessageType('info');
-          setTimeout(() => setMessage(''), 3000);
-        }
-      } else {
-        const errorMsg = data.error || data.message || 'Unknown error occurred';
-        console.error('❌ WhatsApp Error:', errorMsg);
-        alert('❌ Failed to prepare WhatsApp message:\n\n' + errorMsg);
-      }
-    } catch (err) {
-      console.error('❌ Error sending WhatsApp:', err);
-      alert('❌ Error: ' + (err instanceof Error ? err.message : 'Failed to send WhatsApp message'));
-    } finally {
-      setSendingNotification(null);
     }
   };
 
@@ -1504,7 +1403,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                       </h3>
                       <p className={`text-sm mb-4 ${
                         darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>Approve or reject this registration. After approval, you'll set a verification ID.</p>
+                      }`}>Approve or reject this registration. After approval, you'll generate a sequential verification ID and send WhatsApp message.</p>
                       <div className="flex gap-4 flex-wrap">
                         <button
                           onClick={() => handleApprove(reg.registration_id)}
@@ -1542,55 +1441,41 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                     </div>
                   )}
 
-                  {/* Entry Verification Section - Set Verification ID */}
+                  {/* Step 2: Generate Verification ID */}
                   {reg.approval_status === 'approved' && !reg.verification_id && (
                     <div className={`rounded-lg p-5 border-2 ${
                       darkMode
-                        ? 'bg-yellow-500/5 border-yellow-500/40'
-                        : 'bg-yellow-50 border-yellow-300'
+                        ? 'bg-blue-500/5 border-blue-500/40'
+                        : 'bg-blue-50 border-blue-300'
                     }`}>
                       <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
-                        darkMode ? 'text-yellow-300' : 'text-yellow-700'
+                        darkMode ? 'text-blue-400' : 'text-blue-700'
                       }`}>
-                        🔐 Step 2: Set Verification ID
+                        🔐 Step 2: Generate Verification ID
                       </h3>
                       <p className={`text-sm mb-4 ${
                         darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>Create a unique verification ID for this participant. They will use this ID at event entry.</p>
-                      <div className="flex gap-3 items-end flex-wrap">
-                        <div className="flex-1 min-w-xs">
-                          <label className={`block text-sm font-semibold mb-2 ${
-                            darkMode ? 'text-gray-300' : 'text-gray-700'
-                          }`}>Enter Verification ID</label>
-                          <input
-                            type="text"
-                            value={verificationIdInput[reg.registration_id] || ''}
-                            onChange={(e) => setVerificationIdInput({ ...verificationIdInput, [reg.registration_id]: e.target.value })}
-                            placeholder="e.g., ARTIX-8026, VER001, etc."
-                            className={`w-full px-4 py-2 rounded-lg font-mono font-bold focus:outline-none transition border-2 ${
-                              darkMode
-                                ? 'bg-gray-900/70 border-yellow-500/40 text-yellow-300 placeholder-gray-600 focus:border-yellow-400'
-                                : 'bg-white border-yellow-400 text-yellow-700 placeholder-gray-500 focus:border-yellow-500'
-                            }`}
-                          />
-                        </div>
-                        <button
-                          onClick={() => handleSetVerificationId(reg.registration_id)}
-                          disabled={settingVerificationId === reg.registration_id}
-                          className={`px-6 py-2 rounded-lg transition font-semibold disabled:opacity-50 hover:scale-105 border-2 ${
-                            darkMode
-                              ? 'bg-yellow-500/30 text-yellow-200 border-yellow-400 hover:bg-yellow-500/40'
-                              : 'bg-yellow-200 text-yellow-800 border-yellow-400 hover:bg-yellow-300'
-                          }`}
-                        >
-                          {settingVerificationId === reg.registration_id ? '⏳ Setting...' : '✅ Set ID'}
-                        </button>
-                      </div>
+                      }`}>Click to auto-generate a sequential verification ID (ARTIX2026-001, 002, etc.). You'll be able to preview and send the WhatsApp message in Step 3.</p>
+                      <button
+                        onClick={() => handleGenerateVerificationId(reg.registration_id)}
+                        disabled={workflowInProgress === reg.registration_id}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
+                          workflowInProgress === reg.registration_id
+                            ? (darkMode
+                                ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                            : (darkMode
+                                ? 'bg-blue-600/40 text-blue-200 border-blue-500 hover:bg-blue-600/50 hover:scale-105'
+                                : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600 hover:scale-105')
+                        }`}
+                      >
+                        {workflowInProgress === reg.registration_id ? '⏳ Generating...' : '🔐 Generate Verification ID'}
+                      </button>
                     </div>
                   )}
 
-                  {/* Notification Section - Send WhatsApp */}
-                  {reg.approval_status === 'approved' && reg.verification_id && !reg.notification_sent && (
+                  {/* Step 3: Send WhatsApp Message */}
+                  {reg.approval_status === 'approved' && reg.verification_id && !reg.whatsapp_sent && (
                     <div className={`rounded-lg p-5 border-2 ${
                       darkMode
                         ? 'bg-green-500/5 border-green-500/40'
@@ -1615,52 +1500,51 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                             📱 Sending to: <span className="font-semibold">+91 {reg.phone}</span>
                           </p>
                           <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
-                            ✅ Formatted message includes: Verification ID, participant details, event information
+                            ✅ Message includes: Verification ID, participant details, and event information
                           </p>
                         </div>
                       </div>
 
                       <div className="flex gap-3 flex-wrap items-center">
                         {!pendingWhatsAppSend.has(reg.registration_id) ? (
-                          <>
-                            <button
-                              onClick={() => handleSendWhatsAppDirect(reg)}
-                              disabled={sendingNotification === reg.registration_id}
-                              className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
-                                darkMode
-                                  ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
-                                  : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
-                              }`}
-                            >
-                              <MessageCircle className="w-6 h-6" />
-                              {sendingNotification === reg.registration_id ? 'Sending...' : 'Send WhatsApp Message'}
-                            </button>
-
-                            <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
-                              darkMode ? 'bg-gray-500/20 text-gray-300 border-gray-500' : 'bg-gray-200 text-gray-700 border-gray-400'
-                            }`}>
-                              ⏳ Pending
-                            </div>
-                          </>
+                          <button
+                            onClick={() => handleSendWhatsAppMessage(reg)}
+                            disabled={workflowInProgress === reg.registration_id}
+                            className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
+                              workflowInProgress === reg.registration_id
+                                ? (darkMode
+                                    ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                                : (darkMode
+                                    ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
+                                    : 'bg-green-500 text-white border-green-600 hover:bg-green-600')
+                            }`}
+                          >
+                            <MessageCircle className="w-6 h-6" />
+                            {workflowInProgress === reg.registration_id ? '⏳ Opening...' : '📱 Send WhatsApp'}
+                          </button>
                         ) : (
                           <>
                             <button
-                              onClick={() => handleConfirmWhatsAppSent(reg)}
-                              disabled={sendingNotification === reg.registration_id}
+                              onClick={() => handleMarkWhatsAppSent(reg)}
+                              disabled={workflowInProgress === reg.registration_id}
                               className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
-                                darkMode
-                                  ? 'bg-blue-600/40 text-blue-200 border-blue-500 hover:bg-blue-600/50'
-                                  : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600'
+                                workflowInProgress === reg.registration_id
+                                  ? (darkMode
+                                      ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                      : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                                  : (darkMode
+                                      ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
+                                      : 'bg-green-500 text-white border-green-600 hover:bg-green-600')
                               }`}
                             >
                               <CheckCircle2 className="w-6 h-6" />
-                              {sendingNotification === reg.registration_id ? 'Confirming...' : 'Confirm Sent'}
+                              {workflowInProgress === reg.registration_id ? '⏳ Confirming...' : '✅ Mark as Sent'}
                             </button>
-
                             <div className={`px-4 py-3 rounded-lg text-sm font-bold border-2 ${
-                              darkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500' : 'bg-blue-100 text-blue-700 border-blue-300'
+                              darkMode ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500' : 'bg-yellow-100 text-yellow-800 border-yellow-400'
                             }`}>
-                              📱 Ready to Send - Click 'Confirm Sent' after sending on WhatsApp
+                              ⏳ Awaiting Confirmation
                             </div>
                           </>
                         )}
@@ -1668,21 +1552,19 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                     </div>
                   )}
 
-                  {/* Success message after WhatsApp sent */}
-                  {reg.approval_status === 'approved' && reg.verification_id && reg.notification_sent && (
+                  {/* Completion Status */}
+                  {reg.approval_status === 'approved' && reg.verification_id && reg.whatsapp_sent && (
                     <div className={`rounded-lg p-5 border-2 ${
                       darkMode
-                        ? 'bg-green-500/10 border-green-500/40'
-                        : 'bg-green-100 border-green-300'
+                        ? 'bg-green-500/10 border-green-500/50'
+                        : 'bg-green-100 border-green-400'
                     }`}>
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className={`w-8 h-8 ${darkMode ? 'text-green-400' : 'text-green-700'}`} />
                         <div>
-                          <h3 className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
-                            ✅ All Done!
-                          </h3>
-                          <p className={`text-sm ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
-                            Participant {reg.full_name} has been approved and notified via WhatsApp.
+                          <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>✅ Workflow Complete</p>
+                          <p className={`text-sm ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                            Verification ID: <span className="font-mono font-bold">{reg.verification_id}</span> | WhatsApp sent to {reg.phone}
                           </p>
                         </div>
                       </div>
