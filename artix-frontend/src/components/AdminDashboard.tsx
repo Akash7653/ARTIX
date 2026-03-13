@@ -301,54 +301,12 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   };
 
   // Step 2: Generate sequential verification ID
-  const handleGenerateVerificationId = async (registrationId: string) => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const token = localStorage.getItem('adminToken');
-      
-      console.log(`🔐 Generating verification ID for: ${registrationId}`);
-      
-      setWorkflowInProgress(registrationId);
-      setExpandedId(registrationId);
-      
-      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({ registrationId })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate verification ID');
-      }
-      
-      const result = await response.json();
-      console.log(`✅ Verification ID generated:`, result);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to generate verification ID');
-      }
-      
-      const verificationId = result.registration?.verification_id;
-      // Show popup with generated ID
-      addPopup('🔐 Verification ID Generated', `ID: ${verificationId}\n\nNext: Send WhatsApp message to participant`, 'success', 4000);
-      addToast(`✅ Verification ID Generated: ${verificationId}`, 'success', 4000);
-      
-      // Reload data to show generated ID
-      loadData();
-      setTimeout(() => {
-        fetchFullRegistrationDetails(registrationId);
-      }, 300);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to generate verification ID:', errorMsg);
-      addToast(`Failed: ${errorMsg}`, 'error', 4000);
-    } finally {
-      setWorkflowInProgress(null);
-    }
+  const handleGenerateVerificationId = (registrationId: string, participantName: string) => {
+    setConfirmAction({
+      action: 'generate-id',
+      registrationId,
+      participantName
+    });
   };
 
   // Step 3a: Open WhatsApp with message
@@ -435,51 +393,12 @@ Contact ARTIX Admin Team:
   };
 
   // Step 3b: Confirm WhatsApp was sent
-  const handleMarkWhatsAppSent = async (reg: Registration) => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const token = localStorage.getItem('adminToken');
-      
-      console.log(`✅ Marking WhatsApp as sent for: ${reg.registration_id}`);
-      
-      setWorkflowInProgress(reg.registration_id);
-      
-      const response = await fetch(`${baseUrl}/admin/confirm-whatsapp-sent`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({ registrationId: reg.registration_id })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to mark as sent');
-      }
-      
-      const result = await response.json();
-      console.log(`✅ WhatsApp marked as sent:`, result);
-      
-      // Remove from pending set
-      setPendingWhatsAppSend(prev => {
-        const updated = new Set(prev);
-        updated.delete(reg.registration_id);
-        return updated;
-      });
-      
-      // Show popup confirmation
-      addPopup('📱 WhatsApp Sent', `Message delivered to ${reg.full_name}!\n${reg.phone}`, 'success', 3000);
-      addPopup('✅ Sent', `WhatsApp sent to ${reg.full_name}!`, 'success', 3000);
-      addToast('✅ WhatsApp delivery confirmed!', 'success', 3000, true);
-      
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to mark as sent:', errorMsg);
-      addToast(`Failed: ${errorMsg}`, 'error', 4000);
-    } finally {
-      setWorkflowInProgress(null);
-    }
+  const handleMarkWhatsAppSent = (registrationId: string, participantName: string) => {
+    setConfirmAction({
+      action: 'mark-sent',
+      registrationId,
+      participantName
+    });
   };
 
   const handleSetVerificationId = async (registrationId: string) => {
@@ -1677,6 +1596,102 @@ Contact ARTIX Admin Team:
           </div>
         )}
 
+      {/* Confirmation Modal */}
+      {confirmAction.action && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className={`mx-4 rounded-2xl p-8 shadow-2xl max-w-sm w-full ${
+            darkMode ? 'bg-gray-900 border-2 border-gray-700' : 'bg-white border-2 border-gray-300'
+          }`}>
+            <div className="text-center">
+              {/* Action Icon */}
+              <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                confirmAction.action === 'approve' ? (darkMode ? 'bg-green-500/30' : 'bg-green-100') :
+                confirmAction.action === 'reject' ? (darkMode ? 'bg-red-500/30' : 'bg-red-100') :
+                confirmAction.action === 'generate-id' ? (darkMode ? 'bg-blue-500/30' : 'bg-blue-100') :
+                (darkMode ? 'bg-green-500/30' : 'bg-green-100')
+              }">
+                <span className="text-4xl">{
+                  confirmAction.action === 'approve' ? '✅' :
+                  confirmAction.action === 'reject' ? '❌' :
+                  confirmAction.action === 'generate-id' ? '🔐' :
+                  '📱'
+                }</span>
+              </div>
+
+              {/* Title */}
+              <h3 className={`text-2xl font-bold mb-2 ${
+                confirmAction.action === 'approve' ? (darkMode ? 'text-green-400' : 'text-green-700') :
+                confirmAction.action === 'reject' ? (darkMode ? 'text-red-400' : 'text-red-700') :
+                confirmAction.action === 'generate-id' ? (darkMode ? 'text-blue-400' : 'text-blue-700') :
+                (darkMode ? 'text-green-400' : 'text-green-700')
+              }`}>
+                {confirmAction.action === 'approve' && 'Approve Registration?'}
+                {confirmAction.action === 'reject' && 'Reject Registration?'}
+                {confirmAction.action === 'generate-id' && 'Generate Verification ID?'}
+                {confirmAction.action === 'mark-sent' && 'Confirm WhatsApp Sent?'}
+              </h3>
+
+              {/* Participant Info */}
+              <div className={`py-4 px-4 rounded-lg mb-6 ${
+                darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-100 border border-gray-300'
+              }`}>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Participant</p>
+                <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {confirmAction.participantName}
+                </p>
+              </div>
+
+              {/* Description */}
+              <p className={`text-sm mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {confirmAction.action === 'approve' && 'This will mark the registration as approved. You\'ll then generate a Verification ID and send WhatsApp.'}
+                {confirmAction.action === 'reject' && 'This will mark the registration as rejected. No further action needed.'}
+                {confirmAction.action === 'generate-id' && 'This will generate a unique sequential Verification ID (ARTIX2026-###). You\'ll then send it via WhatsApp.'}
+                {confirmAction.action === 'mark-sent' && 'This will confirm the WhatsApp message has been sent to the participant.'}
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmAction({ action: null, registrationId: null, participantName: null })}
+                  disabled={workflowInProgress === confirmAction.registrationId}
+                  className={`flex-1 px-6 py-3 rounded-lg font-bold transition ${
+                    workflowInProgress === confirmAction.registrationId
+                      ? (darkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-600 cursor-not-allowed')
+                      : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-900')
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmAction.action === 'approve') executeApprove(confirmAction.registrationId!);
+                    else if (confirmAction.action === 'reject') executeReject(confirmAction.registrationId!);
+                    else if (confirmAction.action === 'generate-id') executeGenerateVerificationId(confirmAction.registrationId!);
+                    else if (confirmAction.action === 'mark-sent') executeMarkWhatsAppSent(confirmAction.registrationId!);
+                  }}
+                  disabled={workflowInProgress === confirmAction.registrationId}
+                  className={`flex-1 px-6 py-3 rounded-lg font-bold transition ${
+                    confirmAction.action === 'approve' || confirmAction.action === 'generate-id' || confirmAction.action === 'mark-sent'
+                      ? (workflowInProgress === confirmAction.registrationId
+                          ? (darkMode ? 'bg-green-700 text-green-300 cursor-not-allowed' : 'bg-green-400 text-green-100 cursor-not-allowed')
+                          : (darkMode ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-green-500 hover:bg-green-600 text-white'))
+                      : (workflowInProgress === confirmAction.registrationId
+                          ? (darkMode ? 'bg-red-700 text-red-300 cursor-not-allowed' : 'bg-red-400 text-red-100 cursor-not-allowed')
+                          : (darkMode ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-red-500 hover:bg-red-600 text-white'))
+                  }`}
+                >
+                  {workflowInProgress === confirmAction.registrationId ? '⏳ Processing...' : (
+                    confirmAction.action === 'approve' ? 'Approve' :
+                    confirmAction.action === 'reject' ? 'Reject' :
+                    confirmAction.action === 'generate-id' ? 'Generate ID' :
+                    'Confirm Sent'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
