@@ -303,8 +303,9 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       }
       
       const verificationId = result.registration?.verification_id;
+      // Show popup with generated ID
+      addPopup('🔐 Verification ID Generated', `ID: ${verificationId}\n\nNext: Send WhatsApp message to participant`, 'success', 4000);
       addToast(`✅ Verification ID Generated: ${verificationId}`, 'success', 4000);
-      
       
       // Reload data to show generated ID
       loadData();
@@ -437,6 +438,8 @@ Contact ARTIX Admin Team:
         return updated;
       });
       
+      // Show popup confirmation
+      addPopup('📱 WhatsApp Sent', `Message delivered to ${reg.full_name}!\n${reg.phone}`, 'success', 3000);
       addPopup('✅ Sent', `WhatsApp sent to ${reg.full_name}!`, 'success', 3000);
       addToast('✅ WhatsApp delivery confirmed!', 'success', 3000, true);
       
@@ -652,16 +655,16 @@ Contact ARTIX Admin Team:
     loadData();
   }, []);
 
-  // Auto-refresh data every 5 seconds when authenticated (but NOT when something is expanded)
+  // Auto-refresh data every 5 seconds when authenticated (but NOT when something is expanded or workflow is in progress)
   useEffect(() => {
-    if (!isAuthenticated || expandedId) return; // Skip refresh if anything is expanded
+    if (!isAuthenticated || expandedId || workflowInProgress) return; // Skip refresh if anything is expanded or action in progress
     
     const autoRefreshInterval = setInterval(() => {
       loadData();
     }, 5000); // Refresh every 5 seconds
     
     return () => clearInterval(autoRefreshInterval);
-  }, [isAuthenticated, expandedId]);
+  }, [isAuthenticated, expandedId, workflowInProgress]);
 
   // Auto-scroll to expanded details
   useEffect(() => {
