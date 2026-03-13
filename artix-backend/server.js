@@ -507,6 +507,107 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Fix endpoint - for registrations approved but missing verification ID
+app.post('/api/fix-registration/:registrationId', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    console.log(`🔧 Attempting to fix registration: ${registrationId}`);
+
+    // Find the registration
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    console.log(`📋 Current state:`, {
+      approval_status: registration.approval_status,
+      has_verification_id: !!registration.verification_id,
+      selected_for_event: registration.selected_for_event
+    });
+
+    // If already has verification ID, nothing to fix
+    if (registration.verification_id) {
+      return res.status(400).json({ 
+        error: 'Registration already has verification ID',
+        verification_id: registration.verification_id
+      });
+    }
+
+    // If not approved, nothing to fix
+    if (registration.approval_status !== 'approved') {
+      return res.status(400).json({ 
+        error: 'Registration is not approved',
+        status: registration.approval_status
+      });
+    }
+
+    // Generate verification ID
+    console.log('🔄 Generating verification ID...');
+    const verifyId = await generateVerificationId();
+    console.log(`✅ Generated: ${verifyId}`);
+
+    // Update registration with verification ID
+    const result = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        verification_id: null  // Only update if still null
+      },
+      {
+        $set: {
+          verification_id: verifyId,
+          verification_id_set_at: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) {
+      return res.status(400).json({ error: 'Could not update registration' });
+    }
+
+    const updatedReg = result.value;
+
+    // Generate WhatsApp message
+    const whatsappMessage = generateApprovalMessage(
+      updatedReg.full_name,
+      verifyId,
+      updatedReg.college_name || 'N/A',
+      updatedReg.branch,
+      updatedReg.year_of_study,
+      updatedReg.phone,
+      updatedReg.selected_events,
+      updatedReg.total_amount,
+      registrationId
+    );
+
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const whatsappLink = `https://wa.me/${updatedReg.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+    console.log(`✅ Registration fixed! Verification ID assigned: ${verifyId}`);
+
+    res.json({
+      success: true,
+      message: 'Registration fixed! Verification ID assigned.',
+      registration: {
+        registration_id: registrationId,
+        approval_status: 'approved',
+        verification_id: verifyId,
+        phone: updatedReg.phone
+      },
+      whatsapp: {
+        link: whatsappLink,
+        message: whatsappMessage
+      }
+    });
+  } catch (err) {
+    console.error('❌ Fix registration error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Diagnostic endpoint - check registration and counter status (NO AUTH - for debugging)
 app.get('/api/diagnostic/:registrationId', async (req, res) => {
   try {
