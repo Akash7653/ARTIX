@@ -67,6 +67,14 @@ async function connectDB() {
       paymentsCollection = db.collection('payments');
       teamMembersCollection = db.collection('team_members');
       
+      // Initialize verification ID counter collection
+      const counterCollection = db.collection('counters');
+      const verificationIdCounter = await counterCollection.findOne({ _id: 'verification_id' });
+      if (!verificationIdCounter) {
+        await counterCollection.insertOne({ _id: 'verification_id', sequence_value: 0 });
+        logger.info('✓ Initialized verification ID counter');
+      }
+      
       // Create indexes for faster queries
       await registrationsCollection.createIndex({ email: 1 }, { unique: true });
       await registrationsCollection.createIndex({ registration_id: 1 }, { unique: true });
@@ -119,7 +127,7 @@ async function connectDB() {
         logError('MongoDB connection failed after all retries', err);
         process.exit(1);
       }
-      
+
       console.log(`⏳ Retrying in ${retryDelay/1000} seconds...`);
       await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
@@ -404,13 +412,25 @@ function generateRegistrationId() {
   return `ARTIX2026-${randomNum}`;
 }
 
-// Generate unique Verification ID (for entry scanning at event)
-function generateVerificationId() {
-  // Format: VERIFY-TIMESTAMP-RANDOM
-  // Example: VERIFY-20260315-A7K9M
-  const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `VRF-${timestamp}-${randomPart}`;
+// Generate sequential Verification ID (ARTIX2026-001, 002, etc.)
+async function generateVerificationId() {
+  try {
+    const counterCollection = db.collection('counters');
+    const result = await counterCollection.findOneAndUpdate(
+      { _id: 'verification_id' },
+      { $inc: { sequence_value: 1 } },
+      { returnDocument: 'after' }
+    );
+    
+    const nextSequence = result.value?.sequence_value || 1;
+    return `ARTIX2026-${String(nextSequence).padStart(3, '0')}`;
+  } catch (err) {
+    logger.error('Error generating verification ID', err);
+    // Fallback to timestamp-based if counter fails
+    const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `VRF-${timestamp}-${randomPart}`;
+  }
 }
 
 // Admin Configuration
@@ -1225,12 +1245,144 @@ For assistance, contact ARTIX Admin Team`;
   return message;
 }
 
-// 4. Set Verification ID MANUALLY (Admin inputs verification ID)
+// 4. Generate and Set Verification ID (Auto-generated sequential)
+app.post('/api/admin/generate-verification-id', async (req, res) => {
+  try {
+    const { registrationId } = req.body;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (registration.approval_status !== 'approved') {
+      return res.status(400).json({ error: 'Registration must be approved first' });
+    }
+
+    if (registration.verification_id) {
+      return res.status(400).json({ 
+        error: 'Verification ID already assigned',
+        verification_id: registration.verification_id 
+      });
+    }
+
+    // Generate sequential verification ID
+    const verifyId = await generateVerificationId();
+
+    // Update registration with verification ID
+    const result = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        verification_id: null  // Only update if not already set
+      },
+      {
+        $set: {
+          verification_id: verifyId,
+          verification_id_set_at: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) {
+      return res.status(400).json({ error: 'Could not assign verification ID' });
+    }
+
+    const updatedReg = result.value;
+
+    // Generate formatted WhatsApp message
+    const whatsappMessage = generateApprovalMessage(
+      updatedReg.full_name,
+      verifyId,
+      updatedReg.college_name || 'N/A',
+      updatedReg.branch,
+      updatedReg.year_of_study,
+      updatedReg.phone,
+      updatedReg.selected_events,
+      updatedReg.total_amount,
+      registrationId
+    );
+
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const whatsappLink = `https://wa.me/${updatedReg.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+    res.json({
+      success: true,
+      message: 'Verification ID generated successfully',
+      registration: {
+        registration_id: registrationId,
+        verification_id: verifyId,
+        phone: updatedReg.phone
+      },
+      whatsapp: {
+        link: whatsappLink,
+        message: whatsappMessage
+      }
+    });
+
+  } catch (err) {
+    console.error('Error generating verification ID:', err);
+    res.status(500).json({ error: 'Failed to generate verification ID', details: err.message });
+  }
+});
+
+// 4b. Confirm WhatsApp was sent by admin
+app.post('/api/admin/confirm-whatsapp-sent', async (req, res) => {
+  try {
+    const { registrationId } = req.body;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    const result = await registrationsCollection.findOneAndUpdate(
+      { registration_id: registrationId },
+      {
+        $set: {
+          whatsapp_sent: true,
+          whatsapp_sent_at: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    logWhatsApp('WhatsApp confirmation recorded', {
+      registrationId,
+      participantName: result.value.full_name,
+      verificationId: result.value.verification_id
+    });
+
+    res.json({
+      success: true,
+      message: 'WhatsApp message confirmed as sent',
+      registration: {
+        registration_id: registrationId,
+        whatsapp_sent: true,
+        verification_id: result.value.verification_id
+      }
+    });
+
+  } catch (err) {
+    console.error('Error confirming WhatsApp:', err);
+    res.status(500).json({ error: 'Failed to confirm WhatsApp', details: err.message });
+  }
+});
+
+// Old endpoint for backward compatibility - DEPRECATED, do not use
 app.post('/api/admin/set-verification-id', async (req, res) => {
   try {
     const { registrationId, verificationId } = req.body;
-
-    console.log(`🔐 Setting verification ID for registration: ${registrationId}`);
 
     if (!registrationId || !verificationId) {
       return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
@@ -1267,7 +1419,6 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
       }
 
       if (checkReg.verification_id) {
-        console.log(`⚠️ Verification ID already exists for ${registrationId}: ${checkReg.verification_id}`);
         return res.status(400).json({ error: 'Verification ID already assigned' });
       }
 
@@ -1276,12 +1427,6 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
 
     const updatedReg = registration.value;
     const trimmedVerifId = verificationId.trim();
-    
-    console.log(`✅ Verification ID set for registration_id="${registrationId}", verif_id="${trimmedVerifId}"`);
-
-    // Cache will expire naturally via TTL - no need to invalidate
-    // Stats will refresh within 15 seconds
-    // Registrations will refresh within 30 seconds
 
     // Generate formatted WhatsApp message
     const whatsappMessage = generateApprovalMessage(
@@ -1327,9 +1472,7 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
 app.post('/api/admin/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { approved, rejected, verificationId } = req.body;
-
-    console.log(`📋 Admin Approval Request:`, { registrationId, approved, rejected });
+    const { approved, rejected } = req.body;
 
     // Determine the approval status
     let finalApprovalStatus = null;
@@ -1338,18 +1481,12 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
     } else if (approved === false || rejected === true) {
       finalApprovalStatus = 'rejected';
     } else {
-      console.error('❌ Missing approval status in body');
       return res.status(400).json({ error: 'Please specify approved: true or false' });
     }
 
-    // Use findOneAndUpdate to avoid find + update pattern
+    // Use atomic findOneAndUpdate to prevent race conditions
     const approvalDate = new Date();
     
-    // Generate verification ID for approved registrations
-    const verifyId = finalApprovalStatus === 'approved' 
-      ? (verificationId || generateVerificationId())
-      : null;
-
     const updateData = {
       $set: {
         approval_status: finalApprovalStatus,
@@ -1357,12 +1494,6 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
         selected_for_event: finalApprovalStatus === 'approved'
       }
     };
-
-    // If approved, set the verification ID
-    if (finalApprovalStatus === 'approved' && verifyId) {
-      updateData.$set.verification_id = verifyId;
-      updateData.$set.verification_id_generated_at = new Date();
-    }
 
     const result = await registrationsCollection.findOneAndUpdate(
       {
@@ -1392,57 +1523,22 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       return res.status(400).json({ error: 'Could not update approval status' });
     }
 
-    // Cache will expire naturally via TTL - no need to invalidate
-    // Stats will refresh within 15 seconds
-    // Registrations will refresh within 30 seconds
-
-    console.log(`✅ ${finalApprovalStatus === 'approved' ? 'Approved' : 'Rejected'}: ${registrationId}`);
     logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
       registrationId, 
       participantName: registration.full_name 
     });
 
-    // Generate WhatsApp message if approved
-    let whatsappData = null;
-    if (finalApprovalStatus === 'approved' && verifyId) {
-      const whatsappMessage = generateApprovalMessage(
-        registration.full_name,
-        verifyId,
-        registration.college_name || 'N/A',
-        registration.branch,
-        registration.year_of_study,
-        registration.phone,
-        registration.selected_events,
-        registration.total_amount,
-        registrationId
-      );
-      
-      const encodedMessage = encodeURIComponent(whatsappMessage);
-      const cleanedPhone = registration.phone.replace(/\D/g, '');
-      const whatsappLink = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
-      
-      whatsappData = {
-        link: whatsappLink,
-        message: whatsappMessage
-      };
-    }
-
     res.json({
       success: true,
       message: finalApprovalStatus === 'approved' 
-        ? `✅ Participant APPROVED with Verification ID: ${verifyId}` 
-        : '❌ Participant REJECTED',
+        ? '✅ Approval recorded. Next: Generate verification ID' 
+        : '❌ Rejection recorded',
       registration: {
         registration_id: registrationId,
         approval_status: finalApprovalStatus,
         selected_for_event: finalApprovalStatus === 'approved',
-        verification_id: verifyId
-      },
-      whatsapp: whatsappData ? {
-        link: whatsappData.link,
-        message: whatsappData.message,
-        note: 'Click the link to send message via WhatsApp'
-      } : null
+        verification_id: registration.verification_id || null
+      }
     });
 
   } catch (err) {
