@@ -3,6 +3,7 @@ import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff,
 import { exportToExcel } from '../utils/excelExport';
 import { PerformanceMonitoring } from './PerformanceMonitoring';
 import { ErrorViewer } from './ErrorViewer';
+import { Toast, type ToastMessage } from './Toast';
 
 interface TeamMember {
   member_name: string;
@@ -62,8 +63,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   const [stats, setStats] = useState<Stats | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
@@ -76,6 +76,15 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   const [workflowInProgress, setWorkflowInProgress] = useState<string | null>(null);
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
+  // Toast notification helpers
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success', duration: number = 5000, autoRefresh: boolean = false) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type, duration, autoRefresh }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   // Fetch full registration details including payment screenshot
   const fetchFullRegistrationDetails = async (registrationId: string) => {
@@ -112,9 +121,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setPassword('');
       loadData();
     } else {
-      setMessage('❌ Invalid password');
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
+      addToast('Invalid password', 'error', 3000);
     }
   };
 
@@ -161,8 +168,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
     } catch (err) {
       console.error('❌ Failed to load data:', err);
-      setMessage('⚠️ Failed to load data: ' + err.message);
-      setMessageType('error');
+      addToast('Failed to load data: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error', 5000);
     }
     setLoading(false);
   };
@@ -195,22 +201,14 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const result = await response.json();
       console.log(`✅ Approval successful:`, result);
       
-      setMessage(`✅ Approved! Next: Generate Verification ID`);
-      setMessageType('success');
+      addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
       
       // Reload data to show updated approval status
-      loadData();
-      setTimeout(() => {
-        fetchFullRegistrationDetails(registrationId);
-      }, 300);
-      
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(loadData, 800);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to approve:', errorMsg);
-      setMessage(`❌ Failed to approve: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      addToast(`Failed to approve: ${errorMsg}`, 'error', 5000);
     } finally {
       setWorkflowInProgress(null);
     }
@@ -248,16 +246,11 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       // Collapse view and reload - registration is now rejected
       setExpandedId(null);
-      setMessage('❌ Participant Rejected');
-      setMessageType('success');
-      setTimeout(loadData, 500);
-      setTimeout(() => setMessage(''), 3000);
+      addToast('Participant Rejected', 'success', 3000, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to reject:', errorMsg);
-      setMessage(`❌ Failed to reject: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      addToast(`Failed to reject: ${errorMsg}`, 'error', 5000);
     } finally {
       setWorkflowInProgress(null);
     }
@@ -297,7 +290,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       const verificationId = result.registration?.verification_id;
       setMessage(`✅ Verification ID Generated: ${verificationId} | Ready to send WhatsApp`);
-      setMessageType('success');
+      
       
       // Reload data to show generated ID
       loadData();
@@ -305,13 +298,13 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         fetchFullRegistrationDetails(registrationId);
       }, 300);
       
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => addToast(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to generate verification ID:', errorMsg);
       setMessage(`❌ Failed: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     } finally {
       setWorkflowInProgress(null);
     }
@@ -327,9 +320,9 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       // Check if verification ID already exists
       if (!reg.verification_id) {
-        setMessage('❌ Verification ID not generated yet. Click "Generate Verification ID" first.');
-        setMessageType('error');
-        setTimeout(() => setMessage(''), 5000);
+        addToast('❌ Verification ID not generated yet. Click "Generate Verification ID" first.');
+        
+        setTimeout(() => addToast(''), 5000);
         return;
       }
       
@@ -387,16 +380,16 @@ Contact ARTIX Admin Team:
       // Show pending state
       setExpandedId(reg.registration_id);
       setPendingWhatsAppSend(prev => new Set(prev).add(reg.registration_id));
-      setMessage('📱 WhatsApp opened - Please send the message and then click "Mark as Sent"');
-      setMessageType('success');
-      setTimeout(() => setMessage(''), 5000);
+      addToast('📱 WhatsApp opened - Please send the message and then click "Mark as Sent"');
+      
+      setTimeout(() => addToast(''), 5000);
       
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Error opening WhatsApp:', errorMsg);
       setMessage(`❌ Error: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     } finally {
       setWorkflowInProgress(null);
     }
@@ -436,8 +429,8 @@ Contact ARTIX Admin Team:
         return updated;
       });
       
-      setMessage('✅ WhatsApp delivery confirmed!');
-      setMessageType('success');
+      addToast('✅ WhatsApp delivery confirmed!');
+      
       
       // Reload data
       loadData();
@@ -445,13 +438,13 @@ Contact ARTIX Admin Team:
         fetchFullRegistrationDetails(reg.registration_id);
       }, 300);
       
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => addToast(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to mark as sent:', errorMsg);
       setMessage(`❌ Failed: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     } finally {
       setWorkflowInProgress(null);
     }
@@ -461,9 +454,9 @@ Contact ARTIX Admin Team:
     const verificationId = verificationIdInput[registrationId]?.trim();
     
     if (!verificationId) {
-      setMessage('❌ Please enter a verification ID');
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
+      addToast('❌ Please enter a verification ID');
+      
+      setTimeout(() => addToast(''), 3000);
       return;
     }
 
@@ -490,19 +483,19 @@ Contact ARTIX Admin Team:
       console.log(`✅ Verification ID set`);
       
       setMessage(`✅ Verification ID set! Now click "Send WhatsApp Message" to send the message.`);
-      setMessageType('success');
+      
       setVerificationIdInput({ ...verificationIdInput, [registrationId]: '' });
       setTimeout(() => {
         loadData();
         setTimeout(() => fetchFullRegistrationDetails(registrationId), 600);
       }, 500);
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => addToast(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to set verification ID:', errorMsg);
       setMessage(`❌ Failed: ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     } finally {
       setSettingVerificationId(null);
       setWorkflowInProgress(null);
@@ -513,9 +506,9 @@ Contact ARTIX Admin Team:
     const verificationId = entryVerificationId.trim();
     
     if (!verificationId) {
-      setMessage('❌ Please enter a verification ID to verify');
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
+      addToast('❌ Please enter a verification ID to verify');
+      
+      setTimeout(() => addToast(''), 3000);
       return;
     }
 
@@ -550,16 +543,16 @@ Contact ARTIX Admin Team:
         : '';
       
       setMessage(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`);
-      setMessageType('success');
+      
       setEntryVerificationId('');
       setTimeout(loadData, 500);
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => addToast(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to verify entry:', errorMsg);
       setMessage(`❌ ${errorMsg}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     } finally {
       setVerifyingEntry(false);
     }
@@ -586,7 +579,7 @@ Contact ARTIX Admin Team:
 
       if (response.ok && data.success) {
         setMessage(`✅ Participant deleted successfully: ${data.data.name}`);
-        setMessageType('success');
+        
         
         // Remove from local state immediately
         setRegistrations(prev => prev.filter(reg => reg.registration_id !== registrationId));
@@ -596,25 +589,25 @@ Contact ARTIX Admin Team:
           setExpandedId(null);
         }
         
-        setTimeout(() => setMessage(''), 3000);
+        setTimeout(() => addToast(''), 3000);
       } else {
         const errorMsg = data.error || data.message || 'Unknown error occurred';
         setMessage(`❌ Failed to delete participant: ${errorMsg}`);
-        setMessageType('error');
-        setTimeout(() => setMessage(''), 5000);
+        
+        setTimeout(() => addToast(''), 5000);
       }
     } catch (err) {
       console.error('❌ Error deleting participant:', err);
-      setMessage('❌ Failed to delete participant: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      addToast('❌ Failed to delete participant: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      
+      setTimeout(() => addToast(''), 5000);
     }
   };
 
   const handleExportToExcel = async () => {
     try {
-      setMessage('⏳ Fetching all registrations for export...');
-      setMessageType('success');
+      addToast('⏳ Fetching all registrations for export...');
+      
 
       // Fetch ALL registrations from backend (not just current page)
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
@@ -656,17 +649,17 @@ Contact ARTIX Admin Team:
       const result = exportToExcel(exportData, 'ARTIX-AllRegistrations');
       if (result.success) {
         setMessage(`✅ Excel file exported successfully with ${exportData.length} registrations!`);
-        setMessageType('success');
+        
       } else {
         setMessage(`❌ Export failed: ${result.error}`);
-        setMessageType('error');
+        
       }
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => addToast(''), 5000);
     } catch (err) {
       console.error('Export error:', err);
       setMessage(`❌ Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      setMessageType('error');
-      setTimeout(() => setMessage(''), 5000);
+      
+      setTimeout(() => addToast(''), 5000);
     }
   };
 
@@ -856,22 +849,14 @@ Contact ARTIX Admin Team:
           </div>
         </div>
 
-        {/* Loading State */}
-        {/* Message */}
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg font-semibold animate-slide-in border transition-all ${
-            messageType === 'error' 
-              ? darkMode
-                ? 'bg-red-500/20 text-red-300 border-red-500/30'
-                : 'bg-red-100 text-red-700 border-red-300'
-              : darkMode
-                ? 'bg-green-500/20 text-green-300 border-green-500/30'
-                : 'bg-green-100 text-green-700 border-green-300'
-          }`}>
-            {message}
-          </div>
-        )}
+        {/* Toast Notifications */}
+        <Toast 
+          toasts={toasts} 
+          onRemove={removeToast}
+          onRefresh={loadData}
+        />
 
+        {/* Loading State */}
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
@@ -1020,16 +1005,16 @@ Contact ARTIX Admin Team:
 
                 if (!response.ok) throw new Error('Failed to clear database');
 
-                setMessage('✅ Database cleared successfully! All data has been removed.');
-                setMessageType('success');
+                addToast('✅ Database cleared successfully! All data has been removed.');
+                
                 setTimeout(() => {
                   loadData();
-                  setMessage('');
+                  addToast('');
                 }, 1000);
               } catch (err) {
-                setMessage('❌ Failed to clear database');
-                setMessageType('error');
-                setTimeout(() => setMessage(''), 3000);
+                addToast('❌ Failed to clear database');
+                
+                setTimeout(() => addToast(''), 3000);
               }
             }}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 border ${
