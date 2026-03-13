@@ -6,9 +6,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   darkMode?: boolean;
+  onDarkModeToggle?: () => void;
 }
 
-export function AdminModal({ isOpen, onClose, darkMode = true }: Props) {
+export function AdminModal({ isOpen, onClose, darkMode = true, onDarkModeToggle }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -45,12 +46,16 @@ export function AdminModal({ isOpen, onClose, darkMode = true }: Props) {
   if (isLoggedIn) {
     return (
       <div className="fixed inset-0 z-[999]">
-        <AdminDashboard darkMode={darkMode} onLogout={() => {
-          setIsLoggedIn(false);
-          setEmail('');
-          setPassword('');
-          onClose();
-        }} />
+        <AdminDashboard 
+          darkMode={darkMode} 
+          onDarkModeToggle={onDarkModeToggle}
+          onLogout={() => {
+            setIsLoggedIn(false);
+            setEmail('');
+            setPassword('');
+            onClose();
+          }} 
+        />
       </div>
     );
   }

@@ -64,7 +64,12 @@ export function RegistrationPage({ fromLandingPage = false }) {
           onToggleTheme={() => setDarkMode(!darkMode)}
           onOpenAdminModal={() => setShowAdminModal(true)}
         />
-        <AdminModal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} darkMode={darkMode} />
+        <AdminModal 
+          isOpen={showAdminModal} 
+          onClose={() => setShowAdminModal(false)} 
+          darkMode={darkMode} 
+          onDarkModeToggle={() => setDarkMode(!darkMode)}
+        />
       </>
     );
   }
@@ -92,11 +97,15 @@ export function RegistrationPage({ fromLandingPage = false }) {
       {/* Theme Toggle */}
       <div className="fixed top-4 right-4 z-[100] md:top-6 md:right-6">
         <button
-          onClick={() => setDarkMode(!darkMode)}
-          className={`p-3 md:p-4 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl ${
+          onClick={() => {
+            const newMode = !darkMode;
+            setDarkMode(newMode);
+            localStorage.setItem('artix_darkMode', JSON.stringify(newMode));
+          }}
+          className={`p-3 md:p-4 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 ${
             darkMode
               ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700 border border-yellow-400/30'
-              : 'bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-400/30'
+              : 'bg-gray-100 text-orange-600 hover:bg-gray-200 border border-orange-400/40'
           }`}
           title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >

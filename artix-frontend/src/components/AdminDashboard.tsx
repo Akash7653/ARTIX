@@ -210,8 +210,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       console.log(`👤 Approving registration: ${registrationId}`);
       
+      // NOTE: Do NOT call setExpandedId here - causes unintended side effects
       setWorkflowInProgress(registrationId);
-      setExpandedId(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
@@ -225,16 +225,30 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ Approval failed:', errorData);
-        throw new Error(errorData.error || 'Approval failed');
+        // Check if it's already reviewed
+        if (errorData.error === 'This entry has already been reviewed') {
+          addPopup('⚠️ Already Reviewed', 'This registration has already been approved or rejected.', 'warning', 4000);
+          addToast('This entry has already been reviewed. Refreshing data...', 'info', 5000);
+          // Auto-refresh data to show current status
+          setTimeout(() => {
+            setFullRegistrationData({});
+            loadData();
+          }, 1000);
+        } else {
+          throw new Error(errorData.error || 'Approval failed');
+        }
+      } else {
+        const result = await response.json();
+        console.log(`✅ Approval successful:`, result);
+        
+        addPopup('✅ Approved!', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
+        addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
+        
+        setTimeout(() => {
+          setFullRegistrationData({});
+          loadData();
+        }, 1000);
       }
-      
-      const result = await response.json();
-      console.log(`✅ Approval successful:`, result);
-      
-      addPopup('✅ Approved!', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
-      addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
-      
-      setTimeout(loadData, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to approve:', errorMsg);
@@ -281,6 +295,19 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ Rejection error:', errorData);
+        
+        // Check if it's already reviewed
+        if (errorData.error === 'This entry has already been reviewed') {
+          addPopup('⚠️ Already Reviewed', 'This registration has already been approved or rejected.', 'warning', 4000);
+          addToast('This entry has already been reviewed. Refreshing data...', 'info', 5000);
+          // Auto-refresh data to show current status
+          setTimeout(() => {
+            setFullRegistrationData({});
+            loadData();
+          }, 1000);
+          return;
+        }
+        
         throw new Error(errorData.error || 'Rejection failed');
       }
       
@@ -297,6 +324,52 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       addToast(`Failed to reject: ${errorMsg}`, 'error', 5000);
     } finally {
       setWorkflowInProgress(null);
+    }
+  };
+
+  // Step 2: Execute generate verification ID
+  const executeGenerateVerificationId = async (registrationId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`🔐 Generating verification ID for: ${registrationId}`);
+      
+      setWorkflowInProgress(registrationId);
+      
+      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ registrationId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ ID generation failed:', errorData);
+        throw new Error(errorData.error || 'ID generation failed');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Verification ID generated:`, result);
+      
+      addPopup('✅ ID Generated!', `Verification ID: ${result.verification_id}`, 'success', 3000);
+      addToast(`✅ ID Generated! Ready to send WhatsApp`, 'success', 5000);
+      
+      setTimeout(() => {
+        setFullRegistrationData({});
+        loadData();
+      }, 1000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to generate ID:', errorMsg);
+      addPopup('❌ ID Generation Failed', errorMsg, 'error', 4000);
+      addToast(`Failed to generate ID: ${errorMsg}`, 'error', 5000);
+    } finally {
+      setWorkflowInProgress(null);
+      setConfirmAction({ action: null, registrationId: null, participantName: null });
     }
   };
 
@@ -745,9 +818,12 @@ Contact ARTIX Admin Team:
           <div className="flex gap-3 items-center">
             <button
               onClick={() => {
+                setFullRegistrationData({});
                 loadData();
                 // Scroll to top after refresh
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 200);
               }}
               disabled={loading}
               className={`flex items-center justify-center w-12 h-12 rounded-lg transition-all transform hover:scale-110 ${
@@ -757,9 +833,9 @@ Contact ARTIX Admin Team:
                     ? 'bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30 hover:shadow-lg hover:shadow-blue-500/50'
                     : 'bg-blue-500/20 border border-blue-500/30 text-blue-700 hover:bg-blue-500/30 hover:shadow-lg hover:shadow-blue-500/30'
               }`}
-              title="Refresh all data"
+              title="🔄 Refresh all data"
             >
-              <RefreshCw className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : 'hover:rotate-180'}`} />
+              <RefreshCw className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
             </button>
             <button
               onClick={onDarkModeToggle}
@@ -1414,15 +1490,15 @@ Contact ARTIX Admin Team:
                           className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
                             workflowInProgress === reg.registration_id
                               ? (darkMode
-                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
-                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed opacity-60'
+                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed opacity-60')
                               : (darkMode
-                                  ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50 hover:scale-105'
-                                  : 'bg-green-500 text-white border-green-600 hover:bg-green-600 hover:scale-105')
+                                  ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50 hover:scale-105 active:scale-95'
+                                  : 'bg-green-500 text-white border-green-600 hover:bg-green-600 hover:scale-105 active:scale-95')
                           }`}
                         >
                           <CheckCircle2 className="w-6 h-6" />
-                          {workflowInProgress === reg.registration_id ? '⏳ Processing...' : 'Approve'}
+                          {workflowInProgress === reg.registration_id ? '⏳ Processing...' : '✅ Approve'}
                         </button>
                         <button
                           onClick={() => handleReject(reg.registration_id, reg.full_name)}
