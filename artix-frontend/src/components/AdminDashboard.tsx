@@ -127,22 +127,16 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       // Use environment variable for API URL (works across all environments)
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       
-      console.log('📊 Loading admin data from:', baseUrl);
       const token = localStorage.getItem('adminToken');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      const statsRes = await fetch(`${baseUrl}/admin/stats`, { headers });
-      console.log('📊 Stats fetch status:', statsRes.status, statsRes.statusText);
-      const statsData = await statsRes.json();
-      console.log('📊 Stats response:', statsData);
+      const [statsRes, regsRes] = await Promise.all([
+        fetch(`${baseUrl}/admin/stats`, { headers }),
+        fetch(`${baseUrl}/admin/registrations`, { headers })
+      ]);
       
-      const regsRes = await fetch(`${baseUrl}/admin/registrations`, { headers });
-      console.log('📋 Registrations fetch status:', regsRes.status, regsRes.statusText);
+      const statsData = await statsRes.json();
       const regsData = await regsRes.json();
-      console.log('📋 Registrations FULL response:', regsData);
-      console.log('📋 Registrations response keys:', Object.keys(regsData));
-      console.log('📋 Registrations data field:', regsData.data);
-      console.log('📋 Registrations success field:', regsData.success);
       
       if (!regsRes.ok) {
         throw new Error(`Registrations API error: ${regsRes.status} ${regsRes.statusText}`);
@@ -156,31 +150,12 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       let registrationsArray = [];
       if (regsData?.data && Array.isArray(regsData.data)) {
         registrationsArray = regsData.data;
-        console.log('✅ Found data in response.data:', registrationsArray.length);
       } else if (Array.isArray(regsData)) {
         registrationsArray = regsData;
-        console.log('✅ Response is array directly:', registrationsArray.length);
       } else if (regsData?.registrations && Array.isArray(regsData.registrations)) {
         registrationsArray = regsData.registrations;
-        console.log('✅ Found data in response.registrations:', registrationsArray.length);
-      } else {
-        console.warn('⚠️ Could not find array in response. Full response:', regsData);
       }
       
-      console.log('📋 Setting registrations:', registrationsArray.length, 'items');
-      if (registrationsArray.length > 0) {
-        console.log('📋 First registration details:', {
-          registration_id: registrationsArray[0].registration_id,
-          created_at: registrationsArray[0].created_at,
-          created_at_type: typeof registrationsArray[0].created_at,
-          selected_events: registrationsArray[0].selected_events,
-          selected_events_type: Array.isArray(registrationsArray[0].selected_events) ? 'array' : typeof registrationsArray[0].selected_events
-        });
-        // Log all registrations' created_at values
-        registrationsArray.forEach((reg, i) => {
-          console.log(`📋 Registration ${i} (${reg.registration_id}): created_at="${reg.created_at}", events=${JSON.stringify(reg.selected_events)}`);
-        });
-      }
       setRegistrations(registrationsArray);
       
     } catch (err) {
@@ -314,6 +289,10 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       const result = await response.json();
       console.log(`✅ Verification ID generated:`, result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate verification ID');
+      }
       
       const verificationId = result.registration?.verification_id;
       setMessage(`✅ Verification ID Generated: ${verificationId} | Ready to send WhatsApp`);
@@ -559,7 +538,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       console.log(`🗑️ Deleting participant: ${registrationId}`);
       
-      const response = await fetch(`${baseUrl}/admin/user/${registrationId}`, {
+      const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}`, {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json'
@@ -658,6 +637,17 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-refresh data every 5 seconds when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const autoRefreshInterval = setInterval(() => {
+      loadData();
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(autoRefreshInterval);
+  }, [isAuthenticated]);
 
   // Auto-scroll to expanded details
   useEffect(() => {

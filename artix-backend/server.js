@@ -1215,32 +1215,45 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
 
 // Helper function to generate formatted approval message for WhatsApp
 function generateApprovalMessage(fullName, verificationId, college, branch, year, phone, events, amount, registrationId) {
-  const eventsList = Array.isArray(events) ? events.join(', ') : events || 'Registration';
+  const eventsList = Array.isArray(events) ? events.map(e => `• ${e.toUpperCase()}`).join('\n') : '• REGISTRATION';
   
   const message = `✅ *ARTIX 2026 - REGISTRATION APPROVED* ✅
 
-✅ Your registration has been approved!
+🎉 Your registration has been approved!
 
-*🎫 Verification Details:*
-Verification ID: *${verificationId}*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 *VERIFICATION DETAILS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎫 Verification ID: *${verificationId}*
 
-*👤 Participant Information:*
-Name: ${fullName}
-College: ${college}
-Branch: ${branch}
-Year: ${year}
-Phone: ${phone}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 *PARTICIPANT INFORMATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Name: ${fullName}
+🏫 College: ${college}
+📚 Branch: ${branch}
+📖 Year: ${year}
 
-*🎯 Event Details:*
-Events: ${eventsList}
-Total Amount: ₹${amount}
-Registration ID: ${registrationId}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 *EVENT DETAILS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎪 Events:
+${eventsList}
+💰 Total Amount: ₹${amount}
+📝 Reg ID: ${registrationId}
 
-*📋 Verification Instructions:*
-Use your Verification ID at the event registration desk for quick entry verification.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *GATE ENTRY INSTRUCTIONS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Show your Verification ID at event desk
+✓ Keep this message for reference
+✓ Arrive 15 mins before event time
 
----
-For assistance, contact ARTIX Admin Team`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 *NEED ASSISTANCE?*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact ARTIX Admin Team:
+📱 +918919068236`;
 
   return message;
 }
@@ -1936,6 +1949,78 @@ app.get('/api/admin/registration/:registrationId', async (req, res) => {
   } catch (err) {
     logError('Failed to fetch registration details', err);
     res.status(500).json({ error: 'Failed to fetch registration details', details: err.message });
+  }
+});
+
+// DELETE participant registration
+app.delete('/api/admin/registrations/:registrationId', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    if (!registrationId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Registration ID is required' 
+      });
+    }
+
+    console.log(`🗑️ Deleting registration: ${registrationId}`);
+
+    // Find registration first
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Registration not found' 
+      });
+    }
+
+    // Delete related payment records
+    if (registration._id) {
+      await paymentsCollection.deleteMany({
+        registration_id: registrationId
+      });
+
+      // Delete related team members
+      await teamMembersCollection.deleteMany({
+        registration_id: registrationId
+      });
+    }
+
+    // Delete the registration itself
+    const result = await registrationsCollection.deleteOne({
+      _id: registration._id
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Could not delete registration' 
+      });
+    }
+
+    logAdmin(`Deleted registration: ${registrationId}, Name: ${registration.full_name}`);
+
+    res.json({
+      success: true,
+      message: 'Registration deleted successfully',
+      data: {
+        name: registration.full_name,
+        email: registration.email,
+        registration_id: registrationId
+      }
+    });
+
+  } catch (err) {
+    logError('Failed to delete registration', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete registration',
+      details: err.message 
+    });
   }
 });
 
