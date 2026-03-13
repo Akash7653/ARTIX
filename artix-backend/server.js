@@ -1053,8 +1053,8 @@ async function registerHandler(req, res) {
       payment_screenshot_filename: req.file.filename,
       transaction_id: transactionId.trim(),
       utr_id: utrId.trim(),
-      approval_status: 'pending',
-      selected_for_event: null,
+      approval_status: 'pending', // ALWAYS 'pending' - NEVER auto-approve on creation
+      selected_for_event: false, // NEVER true except after explicit admin approval
       entry_verified_at: null,
       notification_sent: false,
       created_at: new Date(),
