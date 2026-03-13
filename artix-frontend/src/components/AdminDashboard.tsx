@@ -153,7 +153,11 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         registrationsArray = regsData.registrations;
       }
       
-      setRegistrations(registrationsArray);
+      // Ensure proper state update with new array reference
+      setRegistrations([...registrationsArray]);
+      
+      // Clear full registration data cache on refresh
+      setFullRegistrationData({});
       
     } catch (err) {
       console.error('❌ Failed to load data:', err);
@@ -811,18 +815,22 @@ Contact ARTIX Admin Team:
           </div>
           <div className="flex gap-3 items-center">
             <button
-              onClick={() => loadData()}
+              onClick={() => {
+                loadData();
+                // Scroll to top after refresh
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               disabled={loading}
-              className={`flex items-center justify-center w-12 h-12 rounded-lg transition ${
+              className={`flex items-center justify-center w-12 h-12 rounded-lg transition-all transform hover:scale-110 ${
                 loading
                   ? 'opacity-50 cursor-not-allowed'
                   : darkMode
-                    ? 'bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30'
-                    : 'bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200'
+                    ? 'bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30 hover:shadow-lg hover:shadow-blue-500/50'
+                    : 'bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 hover:shadow-lg hover:shadow-blue-500/30'
               }`}
               title="Refresh all data"
             >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
             </button>
             <button
               onClick={onDarkModeToggle}
@@ -974,15 +982,21 @@ Contact ARTIX Admin Team:
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8 flex-wrap">
           <button
-            onClick={loadData}
+            onClick={() => {
+              loadData();
+              // Scroll to top after refresh
+              setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }, 300);
+            }}
             disabled={loading}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 border ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 border transform hover:shadow-lg ${
               darkMode
-                ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
-                : 'bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200'
+                ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30 hover:shadow-purple-500/50'
+                : 'bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200 hover:shadow-purple-500/30'
             }`}
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
             Refresh
           </button>
 

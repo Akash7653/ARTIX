@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { AdminDashboard } from './AdminDashboard';
 import { EventEntryVerification } from './EventEntryVerification';
 import ApprovedParticipants from './ApprovedParticipants';
