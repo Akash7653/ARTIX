@@ -4,6 +4,7 @@ import { exportToExcel } from '../utils/excelExport';
 import { PerformanceMonitoring } from './PerformanceMonitoring';
 import { ErrorViewer } from './ErrorViewer';
 import { Toast, type ToastMessage } from './Toast';
+import { Popup, type PopupMessage } from './Popup';
 
 interface TeamMember {
   member_name: string;
@@ -64,6 +65,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [popups, setPopups] = useState<PopupMessage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
@@ -84,6 +86,16 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Popup notification helpers
+  const addPopup = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration?: number) => {
+    const id = Date.now().toString();
+    setPopups(prev => [...prev, { id, title, message, type, duration, autoClose: !!duration }]);
+  };
+
+  const removePopup = (id: string) => {
+    setPopups(prev => prev.filter(p => p.id !== id));
   };
 
   // Fetch full registration details including payment screenshot
@@ -201,6 +213,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const result = await response.json();
       console.log(`✅ Approval successful:`, result);
       
+      addPopup('✅ Approved', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
       addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
       
       // Reload data to show updated approval status
@@ -246,6 +259,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       // Collapse view and reload - registration is now rejected
       setExpandedId(null);
+      addPopup('❌ Rejected', 'Participant has been rejected from the event', 'warning', 3000);
       addToast('Participant Rejected', 'success', 3000, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -423,6 +437,7 @@ Contact ARTIX Admin Team:
         return updated;
       });
       
+      addPopup('✅ Sent', `WhatsApp sent to ${reg.full_name}!`, 'success', 3000);
       addToast('✅ WhatsApp delivery confirmed!', 'success', 3000, true);
       
     } catch (err) {
@@ -519,6 +534,12 @@ Contact ARTIX Admin Team:
         ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
         : '';
       
+      addPopup(
+        '✅ Entry Verified',
+        `${participantName}${branch} verified for entry!${eventInfo ? ` Events: ${eventInfo}` : ''}`,
+        'success',
+        3000
+      );
       addToast(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`, 'success', 4000, true);
       
       setEntryVerificationId('');
@@ -551,6 +572,7 @@ Contact ARTIX Admin Team:
       const data = await response.json();
 
       if (response.ok && data.success) {
+        addPopup('✅ Deleted', `${data.data.name} deleted from system`, 'success', 3000);
         addToast(`✅ Participant deleted: ${data.data.name}`, 'success', 3000, true);
         
         // Remove from local state immediately
@@ -614,6 +636,7 @@ Contact ARTIX Admin Team:
 
       const result = exportToExcel(exportData, 'ARTIX-AllRegistrations');
       if (result.success) {
+        addPopup('✅ Exported', `${exportData.length} registrations exported!`, 'success', 3000);
         addToast(`✅ Excel exported: ${exportData.length} registrations`, 'success', 4000);
       } else {
         addToast(`Export failed: ${result.error}`, 'error', 4000);
@@ -815,6 +838,12 @@ Contact ARTIX Admin Team:
           toasts={toasts} 
           onRemove={removeToast}
           onRefresh={loadData}
+        />
+
+        {/* Popup Notifications */}
+        <Popup
+          popups={popups}
+          onRemove={removePopup}
         />
 
         {/* Loading State */}
