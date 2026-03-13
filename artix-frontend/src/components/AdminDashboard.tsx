@@ -247,6 +247,10 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         setTimeout(() => {
           setFullRegistrationData({});
           loadData();
+          // CRITICAL: Refetch full registration details to show updated approval_status
+          setTimeout(() => {
+            fetchFullRegistrationDetails(registrationId);
+          }, 500);
         }, 1000);
       }
     } catch (err) {
@@ -318,6 +322,15 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setExpandedId(null);
       addPopup('❌ Rejected', 'Participant has been rejected from the event', 'warning', 3000);
       addToast('Participant Rejected', 'success', 3000, true);
+      
+      setTimeout(() => {
+        setFullRegistrationData({});
+        loadData();
+        // Refetch full details after rejection
+        setTimeout(() => {
+          fetchFullRegistrationDetails(registrationId);
+        }, 500);
+      }, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to reject:', errorMsg);
@@ -361,6 +374,10 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       setTimeout(() => {
         setFullRegistrationData({});
         loadData();
+        // CRITICAL: Refetch full registration details to show new verification_id
+        setTimeout(() => {
+          fetchFullRegistrationDetails(registrationId);
+        }, 500);
       }, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -1225,7 +1242,15 @@ Contact ARTIX Admin Team:
                     <td className="px-6 py-4 text-sm">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => setExpandedId(expandedId === reg._id ? null : reg._id)}
+                          onClick={() => {
+                            if (expandedId === reg._id) {
+                              setExpandedId(null);
+                            } else {
+                              setExpandedId(reg._id);
+                              // Fetch fresh data when viewing
+                              fetchFullRegistrationDetails(reg.registration_id);
+                            }
+                          }}
                           className={`px-3 py-1 rounded text-xs transition hover:scale-105 ${
                             darkMode
                               ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
