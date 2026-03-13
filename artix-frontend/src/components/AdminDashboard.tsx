@@ -493,6 +493,62 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     }
   };
 
+  const handleVerifyEntry = async () => {
+    const verificationId = entryVerificationId.trim();
+    
+    if (!verificationId) {
+      setMessage('❌ Please enter a verification ID to verify');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setVerifyingEntry(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      
+      console.log(`✅ Verifying entry with ID: ${verificationId}`);
+      
+      const response = await fetch(`${baseUrl}/admin/verify-entry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_id: verificationId })
+      });
+
+      console.log(`📊 Response status: ${response.status}`);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Verification error:', error);
+        throw new Error(error.error || 'Verification failed');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Entry verified:`, result);
+      
+      // Create a better message
+      const participantName = result.participant?.full_name || 'Participant';
+      const branch = result.participant?.branch ? ` (${result.participant.branch})` : '';
+      const eventInfo = result.participant?.selected_events?.length > 0 
+        ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
+        : '';
+      
+      setMessage(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`);
+      setMessageType('success');
+      setEntryVerificationId('');
+      setTimeout(loadData, 500);
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to verify entry:', errorMsg);
+      setMessage(`❌ ${errorMsg}`);
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setVerifyingEntry(false);
+    }
+  };
+
   const handleDeleteUser = async (registrationId: string) => {
     try {
       if (!window.confirm('⚠️ WARNING: This will permanently delete this participant and all their data!\n\nAre you absolutely sure? This cannot be undone.')) {
