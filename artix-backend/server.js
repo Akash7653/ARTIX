@@ -428,6 +428,12 @@ async function generateVerificationId() {
   try {
     // Ensure counter document exists with proper initialization
     const checkCounter = await counterCollection.findOne({ _id: 'verification_id' });
+    console.log('🔍 Counter check result:', {
+      exists: !!checkCounter,
+      value: checkCounter ? checkCounter.sequence_value : 'N/A',
+      type: checkCounter ? typeof checkCounter.sequence_value : 'N/A'
+    });
+
     if (!checkCounter) {
       logger.warn('⚠️ Verification ID counter missing! Reinitializing...');
       try {
@@ -448,14 +454,21 @@ async function generateVerificationId() {
     
     // Validate counter document structure before incrementing
     if (typeof checkCounter.sequence_value !== 'number') {
+      console.error('❌ Invalid counter sequence_value:', {
+        value: checkCounter.sequence_value,
+        type: typeof checkCounter.sequence_value,
+        isNull: checkCounter.sequence_value === null,
+        isUndefined: checkCounter.sequence_value === undefined
+      });
       logger.warn('⚠️ Invalid counter state, resetting to valid value...');
       // Reset the counter to a valid state
-      await counterCollection.updateOne(
+      const resetResult = await counterCollection.findOneAndUpdate(
         { _id: 'verification_id' },
-        { $set: { sequence_value: 100 } }
+        { $set: { sequence_value: 100 } },
+        { returnDocument: 'after' }
       );
-      // Retry the generation
-      return generateVerificationId();
+      console.log('Counter reset result:', resetResult.value);
+      return generateVerificationId(); // Retry after reset
     }
     
     // Atomically increment counter
@@ -475,8 +488,8 @@ async function generateVerificationId() {
     logger.info(`📊 Generated Verification ID: ${verificationId} (#${nextSequence})`);
     return verificationId;
   } catch (err) {
-    logger.error('❌ Error generating verification ID:', err);
-    logger.error('Error details:', {
+    console.error('❌ Error generating verification ID:', err);
+    console.error('Error details:', {
       message: err.message,
       code: err.code,
       stack: err.stack
@@ -488,6 +501,47 @@ async function generateVerificationId() {
 // Admin Configuration
 const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
 logger.info(`Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
+
+// Diagnostic endpoint - check registration and counter status
+app.get('/api/admin/diagnostic/:registrationId', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    
+    // Check registration status
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+    
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+    
+    // Check counter status
+    const counter = await db.collection('counters').findOne({ _id: 'verification_id' });
+    
+    res.json({
+      registration: {
+        registration_id: registration.registration_id,
+        full_name: registration.full_name,
+        approval_status: registration.approval_status,
+        selected_for_event: registration.selected_for_event,
+        verification_id: registration.verification_id,
+        admin_viewed: registration.admin_viewed,
+        created_at: registration.created_at
+      },
+      counter: {
+        exists: !!counter,
+        sequence_value: counter ? counter.sequence_value : null,
+        type: counter ? typeof counter.sequence_value : null,
+        isValid: counter && typeof counter.sequence_value === 'number'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Diagnostic error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Routes
 
