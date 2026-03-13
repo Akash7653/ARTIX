@@ -1125,13 +1125,13 @@ app.get('/api/registration/:registrationId', async (req, res) => {
 });
 
 // 3. Approve/Reject Registration (NO AUTO CODE GENERATION)
+// Uses atomic operations to prevent race condition on concurrent requests
 app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { approved, rejected } = req.body;
 
     if (approved === undefined && rejected === undefined) {
-      console.error('❌ Missing both approved and rejected in body');
       return res.status(400).json({ error: 'Please specify approved or rejected status' });
     }
 
@@ -1139,34 +1139,42 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
       return res.status(400).json({ error: 'Cannot approve and reject simultaneously' });
     }
 
-    const registration = await registrationsCollection.findOne({
-      registration_id: registrationId
-    });
-
-    if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    if (registration.approval_status === 'approved') {
-      return res.status(400).json({ error: 'This entry has already been reviewed' });
-    }
-
-    // Update approval status - DO NOT generate verification ID yet
+    // Atomic operation: Only update if status is still 'pending'
+    // This prevents multiple concurrent approvals (race condition)
     const approvalDate = new Date();
-    const updateDoc = {
-      $set: {
-        approval_status: approved ? 'approved' : 'rejected',
-        approval_date: approvalDate,
-        selected_for_event: approved
-      }
-    };
-
-    await registrationsCollection.updateOne(
-      { _id: registration._id },
-      updateDoc
+    const result = await registrationsCollection.findOneAndUpdate(
+      {
+        registration_id: registrationId,
+        approval_status: 'pending'  // Only update if still pending
+      },
+      {
+        $set: {
+          approval_status: approved ? 'approved' : 'rejected',
+          approval_date: approvalDate,
+          selected_for_event: approved
+        }
+      },
+      { returnDocument: 'after' }
     );
 
-    console.log(`✅ ${approved ? 'Approved' : 'Rejected'}: ${registrationId}`);
+    const registration = result.value;
+
+    if (!registration) {
+      // Check why update failed
+      const checkReg = await registrationsCollection.findOne({
+        registration_id: registrationId
+      });
+
+      if (!checkReg) {
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+
+      if (checkReg.approval_status !== 'pending') {
+        return res.status(400).json({ error: 'This entry has already been reviewed' });
+      }
+
+      return res.status(400).json({ error: 'Could not update approval status' });
+    }
 
     res.json({
       success: true,

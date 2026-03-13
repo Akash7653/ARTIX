@@ -1508,21 +1508,31 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
                       <div className="flex gap-4 flex-wrap">
                         <button
                           onClick={() => handleApprove(reg.registration_id)}
-                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold hover:scale-105 border-2 ${
-                            darkMode
-                              ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50'
-                              : 'bg-green-500 text-white border-green-600 hover:bg-green-600'
+                          disabled={workflowInProgress === reg.registration_id}
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
+                            workflowInProgress === reg.registration_id
+                              ? (darkMode
+                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                              : (darkMode
+                                  ? 'bg-green-600/40 text-green-200 border-green-500 hover:bg-green-600/50 hover:scale-105'
+                                  : 'bg-green-500 text-white border-green-600 hover:bg-green-600 hover:scale-105')
                           }`}
                         >
                           <CheckCircle2 className="w-6 h-6" />
-                          Approve
+                          {workflowInProgress === reg.registration_id ? '⏳ Processing...' : 'Approve'}
                         </button>
                         <button
                           onClick={() => handleReject(reg.registration_id)}
-                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold hover:scale-105 border-2 ${
-                            darkMode
-                              ? 'bg-red-600/40 text-red-200 border-red-500 hover:bg-red-600/50'
-                              : 'bg-red-500 text-white border-red-600 hover:bg-red-600'
+                          disabled={workflowInProgress === reg.registration_id}
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
+                            workflowInProgress === reg.registration_id
+                              ? (darkMode
+                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                              : (darkMode
+                                  ? 'bg-red-600/40 text-red-200 border-red-500 hover:bg-red-600/50 hover:scale-105'
+                                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 hover:scale-105')
                           }`}
                         >
                           <XCircle className="w-6 h-6" />
