@@ -94,6 +94,16 @@ async function initializeDatabase() {
 
     console.log('✅ Validation schema applied');
 
+    // Ensure all existing registrations have admin_viewed field
+    console.log('\n🔧 Adding admin_viewed field to existing registrations...');
+    const updateResult = await registrationsCollection.updateMany(
+      { admin_viewed: { $exists: false } },
+      { $set: { admin_viewed: false } }
+    );
+    if (updateResult.modifiedCount > 0) {
+      console.log(`✅ Updated ${updateResult.modifiedCount} registrations with admin_viewed field`);
+    }
+
     // Display summary
     console.log('\n' + '='.repeat(50));
     console.log('📊 Database Initialization Complete!');

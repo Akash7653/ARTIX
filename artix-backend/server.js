@@ -1055,6 +1055,7 @@ async function registerHandler(req, res) {
       utr_id: utrId.trim(),
       approval_status: 'pending', // ALWAYS 'pending' - NEVER auto-approve on creation
       selected_for_event: false, // NEVER true except after explicit admin approval
+      admin_viewed: false, // Track if admin has reviewed this registration
       entry_verified_at: null,
       notification_sent: false,
       created_at: new Date(),
@@ -1624,7 +1625,8 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
       $set: {
         approval_status: finalApprovalStatus,
         approval_date: approvalDate,
-        selected_for_event: finalApprovalStatus === 'approved'
+        selected_for_event: finalApprovalStatus === 'approved',
+        admin_viewed: true  // Mark as viewed when admin approves/rejects
       }
     };
 
@@ -2009,6 +2011,16 @@ app.get('/api/admin/registration/:registrationId', async (req, res) => {
     }
 
     console.log(`📋 Fetching full details for registration: ${registrationId}`);
+
+    // Mark as viewed by admin when fetching full details
+    try {
+      await registrationsCollection.updateOne(
+        { registration_id: registrationId, admin_viewed: false },
+        { $set: { admin_viewed: true } }
+      );
+    } catch (err) {
+      // Silently continue if marking viewed fails
+    }
 
     // Fetch FULL registration including base64 (NOT using projection)
     const registration = await registrationsCollection.findOne({
