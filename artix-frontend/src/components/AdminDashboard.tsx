@@ -76,6 +76,15 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   const [verifyingEntry, setVerifyingEntry] = useState(false);
   const [fullRegistrationData, setFullRegistrationData] = useState<Record<string, Registration>>({});
   const [workflowInProgress, setWorkflowInProgress] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    action: 'approve' | 'reject' | 'generate-id' | 'mark-sent' | null;
+    registrationId: string | null;
+    participantName: string | null;
+  }>({
+    action: null,
+    registrationId: null,
+    participantName: null,
+  });
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
   // Toast notification helpers
@@ -185,14 +194,22 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     setLoading(false);
   };
 
-  const handleApprove = async (registrationId: string) => {
+  // Show confirmation before approving
+  const showApproveConfirm = (registrationId: string, participantName: string) => {
+    setConfirmAction({
+      action: 'approve',
+      registrationId,
+      participantName
+    });
+  };
+
+  const executeApprove = async (registrationId: string) => {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       
       console.log(`👤 Approving registration: ${registrationId}`);
       
-      // Set processing state
       setWorkflowInProgress(registrationId);
       setExpandedId(registrationId);
       
@@ -207,33 +224,46 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Approval failed:', errorData);
         throw new Error(errorData.error || 'Approval failed');
       }
       
       const result = await response.json();
       console.log(`✅ Approval successful:`, result);
       
-      addPopup('✅ Approved', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
+      addPopup('✅ Approved!', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
       addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
       
-      // Reload data to show updated approval status
-      setTimeout(loadData, 800);
+      setTimeout(loadData, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to approve:', errorMsg);
+      addPopup('❌ Approval Failed', errorMsg, 'error', 4000);
       addToast(`Failed to approve: ${errorMsg}`, 'error', 5000);
     } finally {
       setWorkflowInProgress(null);
+      setConfirmAction({ action: null, registrationId: null, participantName: null });
     }
   };
 
-  const handleReject = async (registrationId: string) => {
+  const handleApprove = (registrationId: string, participantName: string) => {
+    showApproveConfirm(registrationId, participantName);
+  };
+
+  const showRejectConfirm = (registrationId: string, participantName: string) => {
+    setConfirmAction({
+      action: 'reject',
+      registrationId,
+      participantName
+    });
+  };
+
+  const executeReject = async (registrationId: string) => {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       
       console.log(`❌ Rejecting registration: ${registrationId}`);
-      console.log(`🔗 Endpoint: ${baseUrl}/admin/registrations/${registrationId}/approve`);
       
       setWorkflowInProgress(registrationId);
       
@@ -246,7 +276,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         body: JSON.stringify({ approved: false })
       });
 
-      console.log(`📊 Response status: ${response.status} ${response.statusText}`);
+      console.log(`📊 Response status: ${response.status} ${response.statusText}`)
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -1460,7 +1490,7 @@ Contact ARTIX Admin Team:
                       }`}>Approve or reject this registration. After approval, you'll generate a sequential verification ID and send WhatsApp message.</p>
                       <div className="flex gap-4 flex-wrap">
                         <button
-                          onClick={() => handleApprove(reg.registration_id)}
+                          onClick={() => handleApprove(reg.registration_id, reg.full_name)}
                           disabled={workflowInProgress === reg.registration_id}
                           className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
                             workflowInProgress === reg.registration_id
@@ -1476,7 +1506,7 @@ Contact ARTIX Admin Team:
                           {workflowInProgress === reg.registration_id ? '⏳ Processing...' : 'Approve'}
                         </button>
                         <button
-                          onClick={() => handleReject(reg.registration_id)}
+                          onClick={() => handleReject(reg.registration_id, reg.full_name)}
                           disabled={workflowInProgress === reg.registration_id}
                           className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
                             workflowInProgress === reg.registration_id
@@ -1511,7 +1541,7 @@ Contact ARTIX Admin Team:
                         darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>Click to auto-generate a sequential verification ID (ARTIX2026-001, 002, etc.). You'll be able to preview and send the WhatsApp message in Step 3.</p>
                       <button
-                        onClick={() => handleGenerateVerificationId(reg.registration_id)}
+                        onClick={() => handleGenerateVerificationId(reg.registration_id, reg.full_name)}
                         disabled={workflowInProgress === reg.registration_id}
                         className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
                           workflowInProgress === reg.registration_id
@@ -1580,7 +1610,7 @@ Contact ARTIX Admin Team:
                         ) : (
                           <>
                             <button
-                              onClick={() => handleMarkWhatsAppSent(reg)}
+                              onClick={() => handleMarkWhatsAppSent(reg.registration_id, reg.full_name)}
                               disabled={workflowInProgress === reg.registration_id}
                               className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold disabled:opacity-50 hover:scale-105 border-2 ${
                                 workflowInProgress === reg.registration_id
