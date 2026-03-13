@@ -9,7 +9,7 @@ interface RegistrationData {
   college: string;
   branch: string;
   year: string;
-  selected_events?: string[];
+  selected_events?: string[] | string;
   total_amount?: number;
   transaction_id?: string;
   utr_id?: string;
@@ -26,6 +26,29 @@ interface RegistrationData {
   notification_sent?: boolean;
 }
 
+// Helper function to ensure selected_events is always an array
+const getEventsArray = (events: string[] | string | undefined): string[] => {
+  if (!events) {
+    return [];
+  }
+  if (Array.isArray(events)) {
+    return events;
+  }
+  if (typeof events === 'string') {
+    try {
+      // Try parsing as JSON array
+      const parsed = JSON.parse(events);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // If JSON parse fails, treat as comma-separated string
+      return events.split(',').map(e => e.trim()).filter(e => e);
+    }
+  }
+  return [];
+};
+
 export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Registrations') => {
   try {
     // Create workbooks
@@ -40,7 +63,7 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
       'Phone': reg.phone,
       'Branch': reg.branch,
       'Year': reg.year,
-      'Events': (reg.selected_events || []).join(', ') || 'N/A',
+      'Events': getEventsArray(reg.selected_events).join(', ') || 'N/A',
       'Amount (₹)': reg.total_amount || 0,
       'Transaction ID': reg.transaction_id || 'N/A',
       'UTR ID': reg.utr_id || 'N/A',
@@ -122,18 +145,18 @@ export const exportToExcel = (data: RegistrationData[], fileName = 'ARTIX-Regist
     // Sheet 3: Event-wise Registration
     const events = new Set<string>();
     data.forEach(reg => {
-      (reg.selected_events || []).forEach(event => events.add(event));
+      getEventsArray(reg.selected_events).forEach(event => events.add(event));
     });
 
     const eventData: any[] = [];
     events.forEach(event => {
       const registeredCount = data.filter(reg => 
-        (reg.selected_events || []).includes(event)
+        getEventsArray(reg.selected_events).includes(event)
       ).length;
       
       let totalParticipants = 0;
       data.forEach(reg => {
-        if ((reg.selected_events || []).includes(event)) {
+        if (getEventsArray(reg.selected_events).includes(event)) {
           totalParticipants += (reg.team_members?.length || 0) + 1;
         }
       });
