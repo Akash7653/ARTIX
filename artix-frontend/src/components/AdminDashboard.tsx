@@ -556,16 +556,13 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       }
 
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const token = localStorage.getItem('adminToken');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       console.log(`🗑️ Deleting participant: ${registrationId}`);
       
       const response = await fetch(`${baseUrl}/admin/user/${registrationId}`, {
         method: 'DELETE',
         headers: { 
-          'Content-Type': 'application/json',
-          ...headers
+          'Content-Type': 'application/json'
         }
       });
 
@@ -790,6 +787,20 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
             <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>IoT esSENCE 2K26 Registration Management</p>
           </div>
           <div className="flex gap-3 items-center">
+            <button
+              onClick={() => loadData()}
+              disabled={loading}
+              className={`flex items-center justify-center w-12 h-12 rounded-lg transition ${
+                loading
+                  ? 'opacity-50 cursor-not-allowed'
+                  : darkMode
+                    ? 'bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30'
+                    : 'bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200'
+              }`}
+              title="Refresh all data"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={onDarkModeToggle}
               className={`flex items-center justify-center w-12 h-12 rounded-lg transition ${
