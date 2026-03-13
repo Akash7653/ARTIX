@@ -446,6 +446,18 @@ async function generateVerificationId() {
       }
     }
     
+    // Validate counter document structure before incrementing
+    if (typeof checkCounter.sequence_value !== 'number') {
+      logger.warn('⚠️ Invalid counter state, resetting to valid value...');
+      // Reset the counter to a valid state
+      await counterCollection.updateOne(
+        { _id: 'verification_id' },
+        { $set: { sequence_value: 100 } }
+      );
+      // Retry the generation
+      return generateVerificationId();
+    }
+    
     // Atomically increment counter
     const result = await counterCollection.findOneAndUpdate(
       { _id: 'verification_id' },
@@ -454,6 +466,7 @@ async function generateVerificationId() {
     );
     
     if (!result.value || typeof result.value.sequence_value !== 'number') {
+      logger.error('❌ Counter update failed: invalid counter state', result.value);
       throw new Error('Counter update failed: invalid counter state');
     }
     
@@ -1300,34 +1313,55 @@ Contact ARTIX Admin Team:
 // 4. Generate and Set Verification ID (Auto-generated sequential)
 app.post('/api/admin/generate-verification-id', ensureDatabaseConnection, async (req, res) => {
   try {
+    console.log('🔐 Verification ID generation request received');
     const { registrationId } = req.body;
+    
+    console.log('📋 Request details:', {
+      registrationId,
+      dbConnected: !!db,
+      clientConnected: !!(client && client.topology && client.topology.isConnected())
+    });
 
     if (!registrationId) {
+      console.log('❌ Missing registration ID');
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
+    console.log('🔍 Looking up registration:', registrationId);
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
 
     if (!registration) {
+      console.log('❌ Registration not found:', registrationId);
       return res.status(404).json({ error: 'Registration not found' });
     }
 
+    console.log('📊 Registration found:', {
+      id: registration._id,
+      approval_status: registration.approval_status,
+      has_verification_id: !!registration.verification_id
+    });
+
     if (registration.approval_status !== 'approved') {
+      console.log('❌ Registration not approved:', registration.approval_status);
       return res.status(400).json({ error: 'Registration must be approved first' });
     }
 
     if (registration.verification_id) {
+      console.log('❌ Verification ID already exists:', registration.verification_id);
       return res.status(400).json({ 
         error: 'Verification ID already assigned',
         verification_id: registration.verification_id 
       });
     }
 
+    console.log('🔄 Generating new verification ID...');
     // Generate sequential verification ID
     const verifyId = await generateVerificationId();
+    console.log('✅ Verification ID generated:', verifyId);
 
+    console.log('💾 Updating registration with verification ID...');
     // Update registration with verification ID
     const result = await registrationsCollection.findOneAndUpdate(
       {
@@ -1343,7 +1377,16 @@ app.post('/api/admin/generate-verification-id', ensureDatabaseConnection, async 
       { returnDocument: 'after' }
     );
 
+    console.log('📊 Update result:', {
+      success: !!result.value,
+      resultValue: result.value ? {
+        id: result.value._id,
+        verification_id: result.value.verification_id
+      } : null
+    });
+
     if (!result.value) {
+      console.log('❌ Failed to update registration - result.value is null');
       return res.status(400).json({ error: 'Could not assign verification ID' });
     }
 
