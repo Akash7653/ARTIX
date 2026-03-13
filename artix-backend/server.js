@@ -1274,7 +1274,7 @@ Contact ARTIX Admin Team:
 }
 
 // 4. Generate and Set Verification ID (Auto-generated sequential)
-app.post('/api/admin/generate-verification-id', async (req, res) => {
+app.post('/api/admin/generate-verification-id', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId } = req.body;
 
@@ -1419,14 +1419,13 @@ app.post('/api/admin/confirm-whatsapp-sent', async (req, res) => {
     logger.error('Error confirming WhatsApp:', err);
     res.status(500).json({ 
       error: 'Failed to confirm WhatsApp', 
-      details: err.message,
-      timestamp: new Date().toISOString()
+      details: err.message
     });
   }
 });
 
-// Old endpoint for backward compatibility - DEPRECATED, do not use
-app.post('/api/admin/set-verification-id', async (req, res) => {
+// 5. Set Verification ID (Manual - for admin workflow)
+app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId, verificationId } = req.body;
 
@@ -1515,7 +1514,7 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
 });
 
 // 4. Admin Approve/Reject Registration (Admin Dashboard - matches frontend path)
-app.post('/api/admin/registrations/:registrationId/approve', async (req, res) => {
+app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { approved, rejected } = req.body;
@@ -1589,12 +1588,19 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
 
   } catch (err) {
     console.error('❌ Admin Approval error:', err);
-    res.status(500).json({ error: 'Failed to process approval', details: err.message });
+    console.error('Error stack:', err.stack);
+    console.error('Error message:', err.message);
+    logError('Admin approval endpoint error', err);
+    res.status(500).json({ 
+      error: 'Failed to process approval',
+      message: err.message,
+      details: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    });
   }
 });
 
 // 5. Confirm and Send Notifications (After verification ID is set)
-app.post('/api/admin/confirm-and-notify', async (req, res) => {
+app.post('/api/admin/confirm-and-notify', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId, method } = req.body; // method: 'email', 'whatsapp', 'both'
 
