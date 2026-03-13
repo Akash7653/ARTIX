@@ -418,14 +418,32 @@ function generateRegistrationId() {
 
 // Generate sequential Verification ID (ARTIX2026-001, 002, etc.)
 async function generateVerificationId() {
+  // Ensure database is connected
+  if (!db || !client || !client.topology || !client.topology.isConnected()) {
+    throw new Error('Database not connected - cannot generate verification ID');
+  }
+
   const counterCollection = db.collection('counters');
   
   try {
-    // Ensure counter document exists
+    // Ensure counter document exists with proper initialization
     const checkCounter = await counterCollection.findOne({ _id: 'verification_id' });
     if (!checkCounter) {
       logger.warn('⚠️ Verification ID counter missing! Reinitializing...');
-      await counterCollection.insertOne({ _id: 'verification_id', sequence_value: 0 });
+      try {
+        await counterCollection.insertOne({ _id: 'verification_id', sequence_value: 1 });
+        logger.info('✅ Verification ID counter initialized');
+        return 'ARTIX2026-001';
+      } catch (insertErr) {
+        // Handle duplicate key error if another process initialized it
+        if (insertErr.code === 11000) {
+          logger.info('⚠️ Counter was initialized by another process, retrying...');
+          // Retry after a short delay
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return generateVerificationId(); // Recursive retry
+        }
+        throw insertErr;
+      }
     }
     
     // Atomically increment counter
@@ -440,10 +458,16 @@ async function generateVerificationId() {
     }
     
     const nextSequence = result.value.sequence_value;
-    logger.info(`📊 Generated Verification ID #${nextSequence}`);
-    return `ARTIX2026-${String(nextSequence).padStart(3, '0')}`;
+    const verificationId = `ARTIX2026-${String(nextSequence).padStart(3, '0')}`;
+    logger.info(`📊 Generated Verification ID: ${verificationId} (#${nextSequence})`);
+    return verificationId;
   } catch (err) {
-    logger.error('❌ Error generating verification ID:', err.message);
+    logger.error('❌ Error generating verification ID:', err);
+    logger.error('Error details:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
     throw err; // Fail fast rather than silently returning a duplicate
   }
 }
@@ -1356,8 +1380,29 @@ app.post('/api/admin/generate-verification-id', ensureDatabaseConnection, async 
     });
 
   } catch (err) {
-    console.error('Error generating verification ID:', err);
-    res.status(500).json({ error: 'Failed to generate verification ID', details: err.message });
+    console.error('❌ Error generating verification ID:', err);
+    console.error('Error stack:', err.stack);
+    console.error('Error details:', {
+      message: err.message,
+      code: err.code,
+      name: err.name
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to generate verification ID';
+    if (err.message.includes('Database not connected')) {
+      errorMessage = 'Database connection lost. Please refresh and try again.';
+    } else if (err.message.includes('counter')) {
+      errorMessage = 'System error with ID counter. Please try again.';
+    } else if (err.code === 11000) {
+      errorMessage = 'ID generation conflict. Please try again.';
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+      code: err.code
+    });
   }
 });
 
