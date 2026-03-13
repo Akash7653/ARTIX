@@ -498,9 +498,14 @@ async function generateVerificationId() {
   }
 }
 
-// Admin Configuration
-const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
-logger.info(`Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
+// Debug endpoint - simple status check (public, no auth)
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Backend is running',
+    time: new Date().toISOString()
+  });
+});
 
 // Diagnostic endpoint - check registration and counter status (NO AUTH - for debugging)
 app.get('/api/diagnostic/:registrationId', async (req, res) => {
@@ -542,6 +547,11 @@ app.get('/api/diagnostic/:registrationId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+// Admin Configuration
+const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
+logger.info(`Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
 
 // Routes
 
