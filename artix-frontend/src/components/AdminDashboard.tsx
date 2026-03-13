@@ -222,9 +222,17 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       }
       
       const result = await response.json();
-      console.log(`✅ Approval successful`);
+      console.log(`✅ Approval successful:`, result);
       
-      setMessage(`✅ Approved! Now enter the Verification ID.`);
+      // Show the auto-generated verification ID
+      const verificationId = result.registration?.verification_id;
+      if (verificationId) {
+        setMessage(`✅ APPROVED! Verification ID: ${verificationId}`);
+        // Pre-fill the verification ID in the input
+        setVerificationIdInput(prev => ({ ...prev, [registrationId]: verificationId }));
+      } else {
+        setMessage(`✅ Approved! Verification ID generated.`);
+      }
       setMessageType('success');
       
       // Update registrations and fetch fresh data in background
@@ -233,7 +241,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         fetchFullRegistrationDetails(registrationId);
       }, 300);
       
-      setTimeout(() => setMessage(''), 4000);
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to approve:', errorMsg);
@@ -635,49 +643,62 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     }
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
-      // Transform registrations data for export
-      const exportData = registrations.map(reg => ({
-        registration_id: reg.registration_id,
-        verification_id: reg.verification_id || '',
-        full_name: reg.full_name,
-        email: reg.email,
-        phone: reg.phone,
-        college: reg.college_name,
-        branch: reg.branch,
-        year: reg.year_of_study,
-        selected_events: reg.selected_events,
-        total_amount: reg.total_amount,
-        transaction_id: reg.transaction_id,
-        utr_id: reg.utr_id,
-        approval_status: reg.approval_status,
-        entry_status: reg.selected_for_event,
-        team_members: reg.team_members.map(m => ({
-          name: m.member_name,
-          email: '',
-          phone: m.member_phone,
-          branch: m.member_branch,
-          year: ''
-        })),
-        created_at: reg.created_at,
-        notification_sent: reg.notification_sent
+      setMessage('⏳ Fetching all registrations for export...');
+      setMessageType('success');
+
+      // Fetch ALL registrations from backend (not just current page)
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const response = await fetch(`${baseUrl}/admin/export`, { headers });
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Export failed');
+      }
+
+      console.log(`📊 Fetched ${data.totalCount} registrations from backend`);
+
+      // The backend returns already formatted data, we just need to transform it slightly if needed
+      const exportData = (data.data || []).map(item => ({
+        registration_id: item['Registration ID'],
+        verification_id: item['Verification ID'],
+        full_name: item['Full Name'],
+        email: item['Email'],
+        phone: item['Phone'],
+        college: item['College Name'],
+        branch: item['Branch'],
+        year: item['Year of Study'],
+        selected_events: item['Selected Events'],
+        total_amount: item['Total Amount'],
+        transaction_id: item['Transaction ID'],
+        utr_id: item['UTR ID'],
+        approval_status: item['Approval Status'],
+        entry_status: item['Selected For Event'],
+        team_members: item['Team Members'] ? item['Team Members'].split('; ').map(name => ({ name })) : [],
+        created_at: item['Registration Date'],
+        notification_sent: item['Notification Sent'] || false
       }));
 
-      const result = exportToExcel(exportData, 'ARTIX-AdminDashboard');
+      console.log(`✅ Processing ${exportData.length} registrations for Excel export`);
+
+      const result = exportToExcel(exportData, 'ARTIX-AllRegistrations');
       if (result.success) {
-        setMessage('✅ Excel file exported successfully');
+        setMessage(`✅ Excel file exported successfully with ${exportData.length} registrations!`);
         setMessageType('success');
       } else {
         setMessage(`❌ Export failed: ${result.error}`);
         setMessageType('error');
       }
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       console.error('Export error:', err);
-      setMessage('❌ Failed to export to Excel');
+      setMessage(`❌ Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setMessageType('error');
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 

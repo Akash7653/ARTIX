@@ -413,7 +413,14 @@ function generateRegistrationId() {
   return `ARTIX2026-${randomNum}`;
 }
 
-// NOTE: Verification ID generation REMOVED - Admin manually sets via dashboard only
+// Generate unique Verification ID (for entry scanning at event)
+function generateVerificationId() {
+  // Format: VERIFY-TIMESTAMP-RANDOM
+  // Example: VERIFY-20260315-A7K9M
+  const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `VRF-${timestamp}-${randomPart}`;
+}
 
 // Admin Configuration
 const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
@@ -1340,7 +1347,7 @@ app.post('/api/admin/set-verification-id', async (req, res) => {
 app.post('/api/admin/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { approved, rejected } = req.body;
+    const { approved, rejected, verificationId } = req.body;
 
     console.log(`📋 Admin Approval Request:`, { registrationId, approved, rejected });
 
@@ -1357,19 +1364,33 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
 
     // Use findOneAndUpdate to avoid find + update pattern
     const approvalDate = new Date();
+    
+    // Generate verification ID for approved registrations
+    const verifyId = finalApprovalStatus === 'approved' 
+      ? (verificationId || generateVerificationId())
+      : null;
+
+    const updateData = {
+      $set: {
+        approval_status: finalApprovalStatus,
+        approval_date: approvalDate,
+        selected_for_event: finalApprovalStatus === 'approved'
+      }
+    };
+
+    // If approved, set the verification ID
+    if (finalApprovalStatus === 'approved' && verifyId) {
+      updateData.$set.verification_id = verifyId;
+      updateData.$set.verification_id_generated_at = new Date();
+    }
+
     const result = await registrationsCollection.findOneAndUpdate(
       {
         registration_id: registrationId,
         approval_status: 'pending'  // Only update if still pending
       },
-      {
-        $set: {
-          approval_status: finalApprovalStatus,
-          approval_date: approvalDate,
-          selected_for_event: finalApprovalStatus === 'approved'
-        }
-      },
-      { returnDocument: 'before' }  // Get original document
+      updateData,
+      { returnDocument: 'after' }  // Get updated document
     );
 
     const registration = result.value;
@@ -1401,15 +1422,47 @@ app.post('/api/admin/registrations/:registrationId/approve', async (req, res) =>
       participantName: registration.full_name 
     });
 
+    // Generate WhatsApp message if approved
+    let whatsappData = null;
+    if (finalApprovalStatus === 'approved' && verifyId) {
+      const whatsappMessage = generateApprovalMessage(
+        registration.full_name,
+        verifyId,
+        registration.college_name || 'N/A',
+        registration.branch,
+        registration.year_of_study,
+        registration.phone,
+        registration.selected_events,
+        registration.total_amount,
+        registrationId
+      );
+      
+      const encodedMessage = encodeURIComponent(whatsappMessage);
+      const cleanedPhone = registration.phone.replace(/\D/g, '');
+      const whatsappLink = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+      
+      whatsappData = {
+        link: whatsappLink,
+        message: whatsappMessage
+      };
+    }
+
     res.json({
       success: true,
-      message: finalApprovalStatus === 'approved' ? '✅ Participant APPROVED. Now set verification ID.' : '❌ Participant REJECTED',
+      message: finalApprovalStatus === 'approved' 
+        ? `✅ Participant APPROVED with Verification ID: ${verifyId}` 
+        : '❌ Participant REJECTED',
       registration: {
         registration_id: registrationId,
         approval_status: finalApprovalStatus,
         selected_for_event: finalApprovalStatus === 'approved',
-        verification_id: null
-      }
+        verification_id: verifyId
+      },
+      whatsapp: whatsappData ? {
+        link: whatsappData.link,
+        message: whatsappData.message,
+        note: 'Click the link to send message via WhatsApp'
+      } : null
     });
 
   } catch (err) {
