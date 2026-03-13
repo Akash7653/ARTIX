@@ -113,10 +113,11 @@ export function ParticipantDetailsForm({ formData, updateFormData, darkMode = tr
         </div>
 
         <div>
-          <label className={`block mb-2 md:mb-3 text-base md:text-lg font-semibold ${
+          <label htmlFor="yearOfStudy" className={`block mb-2 md:mb-3 text-base md:text-lg font-semibold ${
             darkMode ? 'text-gray-300' : 'text-gray-700'
           }`}>Year of Study *</label>
           <select
+            id="yearOfStudy"
             required
             value={formData.yearOfStudy}
             onChange={(e) => updateFormData({ yearOfStudy: e.target.value })}

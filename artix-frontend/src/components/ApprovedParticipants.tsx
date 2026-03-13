@@ -256,10 +256,11 @@ export default function ApprovedParticipants({ onLogout }: Props) {
             </div>
 
             <div>
-              <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label htmlFor="branchFilter" className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Branch
               </label>
               <select
+                id="branchFilter"
                 value={filterBranch}
                 onChange={(e) => handleFilterBranch(e.target.value)}
                 className={`w-full px-4 py-2 rounded-lg border-2 transition ${

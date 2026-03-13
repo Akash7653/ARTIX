@@ -138,8 +138,8 @@ const BulkOperationsPanel = ({ token }) => {
       {/* Controls */}
       <div className="bulk-controls">
         <div className="control-group">
-          <label>Action:</label>
-          <select value={action} onChange={(e) => setAction(e.target.value)} disabled={loading}>
+          <label htmlFor="bulkAction">Action:</label>
+          <select id="bulkAction" value={action} onChange={(e) => setAction(e.target.value)} disabled={loading}>
             <option value="approve">✅ Approve</option>
             <option value="reject">❌ Reject</option>
             <option value="verify">✔️ Verify Entry</option>
@@ -149,8 +149,9 @@ const BulkOperationsPanel = ({ token }) => {
 
         {action === 'reject' && (
           <div className="control-group">
-            <label>Rejection Reason:</label>
+            <label htmlFor="rejectionReason">Rejection Reason:</label>
             <input
+              id="rejectionReason"
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -175,6 +176,7 @@ const BulkOperationsPanel = ({ token }) => {
           <div className="list-col checkbox">
             <input
               type="checkbox"
+              aria-label="Select all registrations"
               checked={selectedIds.size === registrations.length && registrations.length > 0}
               onChange={selectAll}
             />
@@ -192,6 +194,7 @@ const BulkOperationsPanel = ({ token }) => {
             <div className="list-col checkbox">
               <input
                 type="checkbox"
+                aria-label={`Select registration for ${reg.participant_name || reg.full_name}`}
                 checked={selectedIds.has(reg._id)}
                 onChange={() => toggleSelection(reg._id)}
               />

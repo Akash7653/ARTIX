@@ -115,8 +115,8 @@ const AdvancedSearchPanel = ({ token }) => {
       {/* Filters */}
       <div className="filters-grid">
         <div className="filter">
-          <label>Status</label>
-          <select value={filters.approvalStatus} onChange={(e) => setFilters({ ...filters, approvalStatus: e.target.value })}>
+          <label htmlFor="statusFilter">Status</label>
+          <select id="statusFilter" value={filters.approvalStatus} onChange={(e) => setFilters({ ...filters, approvalStatus: e.target.value })}>
             <option value="">Any</option>
             <option value="approved">✅ Approved</option>
             <option value="pending">⏳ Pending</option>
@@ -125,8 +125,8 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>Payment</label>
-          <select value={filters.paymentStatus} onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}>
+          <label htmlFor="paymentFilter">Payment</label>
+          <select id="paymentFilter" value={filters.paymentStatus} onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}>
             <option value="">Any</option>
             <option value="completed">✅ Completed</option>
             <option value="pending">⏳ Pending</option>
@@ -135,8 +135,9 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>Event</label>
+          <label htmlFor="eventFilter">Event</label>
           <input
+            id="eventFilter"
             type="text"
             placeholder="e.g., Robotics Challenge"
             value={filters.event}
@@ -145,8 +146,9 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>College</label>
+          <label htmlFor="collegeFilter">College</label>
           <input
+            id="collegeFilter"
             type="text"
             placeholder="e.g., MIT Chennai"
             value={filters.college}
@@ -155,8 +157,9 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>Department</label>
+          <label htmlFor="departmentFilter">Department</label>
           <input
+            id="departmentFilter"
             type="text"
             placeholder="e.g., CSE"
             value={filters.department}
@@ -165,8 +168,8 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>Sort By</label>
-          <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })}>
+          <label htmlFor="sortFilter">Sort By</label>
+          <select id="sortFilter" value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })}>
             <option value="date_desc">📅 Newest First</option>
             <option value="date_asc">📅 Oldest First</option>
             <option value="name_asc">A-Z Name</option>
@@ -177,8 +180,8 @@ const AdvancedSearchPanel = ({ token }) => {
         </div>
 
         <div className="filter">
-          <label>Export Format</label>
-          <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
+          <label htmlFor="exportFormatFilter">Export Format</label>
+          <select id="exportFormatFilter" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
             <option value="csv">📊 CSV</option>
             <option value="json">📋 JSON</option>
             <option value="xlsx">📈 Excel</option>

@@ -91,6 +91,7 @@ export function AdminModal({ isOpen, onClose, darkMode = true }: Props) {
           </div>
           <button
             onClick={onClose}
+            aria-label="Close admin panel"
             className={`p-2 rounded-lg transition-all duration-300 ${
               darkMode
                 ? 'text-gray-400 hover:bg-gray-700 hover:text-white'

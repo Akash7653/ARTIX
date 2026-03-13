@@ -39,9 +39,10 @@ export function TeamMembersSection({ formData, updateFormData }: Props) {
         </a>
       </div>
 
-      <div className="mb-6 md:mb-6 md:mb-8">
-        <label className="block text-gray-300 mb-2 md:mb-3 text-base md:text-lg font-semibold">Team Size *</label>
+      <div className="mb-6 md:mb-8">
+        <label htmlFor="teamSize" className="block text-gray-300 mb-2 md:mb-3 text-base md:text-lg font-semibold">Team Size *</label>
         <select
+          id="teamSize"
           required
           value={formData.teamSize}
           onChange={(e) => handleTeamSizeChange(Number(e.target.value))}

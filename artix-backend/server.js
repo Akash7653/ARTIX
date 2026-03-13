@@ -346,15 +346,6 @@ const upload = multer({
   storage,
   // No file size limits - allowing unlimited uploads
   fileFilter: (req, file, cb) => {
-    // Log incoming file details for debugging
-    console.log(`📤 File upload received:`, {
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-      encoding: file.encoding,
-      timestamp: new Date().toISOString()
-    });
-
     // Validate file using comprehensive validation
     const validation = validateUploadFile(file, 50);
     
@@ -365,11 +356,11 @@ const upload = multer({
         error: validation.error,
         details: validation.details
       });
-      console.log(`❌ Validation error:`, validation.error);
+      logger.error('Validation failed', validation.error);
       return cb(new Error(validation.error));
     }
     
-    console.log(`✅ File validation passed`);
+    logger.info('File validation passed');
     cb(null, true);
   }
 });
@@ -424,7 +415,7 @@ function generateVerificationId() {
 
 // Admin Configuration
 const ADMIN_PHONE_NUMBER = process.env.ADMIN_PHONE_NUMBER || '+918919068236';
-console.log(`📱 Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
+logger.info(`Admin Phone Number configured: ${ADMIN_PHONE_NUMBER}`);
 
 // Routes
 
@@ -522,7 +513,7 @@ const handleUploadError = (err, req, res, callback) => {
     
     // File validation errors from fileFilter
     if (err.message && err.message.includes('Invalid file type')) {
-      console.log(`⚠️ Invalid MIME type`);
+      logger.warn('Invalid MIME type');
       return res.status(400).json({ 
         error: err.message,
         details: 'Only JPEG, PNG, and WebP images are allowed',
@@ -531,7 +522,7 @@ const handleUploadError = (err, req, res, callback) => {
     }
     
     if (err.message && err.message.includes('File extension not allowed')) {
-      console.log(`⚠️ Invalid file extension`);
+      logger.warn('Invalid file extension');
       return res.status(400).json({ 
         error: err.message,
         details: 'Please use a valid image file (JPG, PNG, WebP)',
@@ -540,7 +531,7 @@ const handleUploadError = (err, req, res, callback) => {
     }
 
     // Generic upload error - provide detailed information for debugging
-    console.log(`⚠️ Generic upload error: ${err.message}`);
+    logger.error(`Generic upload error: ${err.message}`);
     return res.status(400).json({ 
       error: 'File upload error',
       details: err.message || 'An error occurred while uploading your file',
@@ -923,7 +914,6 @@ async function registerHandler(req, res) {
     }
 
     // Convert payment screenshot to base64 (async to avoid blocking)
-    console.log(`📸 Converting image to base64...`);
     let paymentImageBase64, paymentImageMimeType;
     try {
       // Verify file exists first
@@ -935,7 +925,6 @@ async function registerHandler(req, res) {
       const paymentImageBuffer = await fs.promises.readFile(uploadedFilePath);
       paymentImageBase64 = paymentImageBuffer.toString('base64');
       paymentImageMimeType = req.file.mimetype || 'image/jpeg';
-      console.log(`✅ Image converted: ${paymentImageBase64.length} chars, mimetype: ${paymentImageMimeType}`);
     } catch (e) {
       console.error('❌ Failed to read/convert image:', e);
       throw new Error('Failed to process payment image: ' + e.message);
@@ -959,22 +948,19 @@ async function registerHandler(req, res) {
           .map(e => e.trim())
           .filter(e => e && e !== 'undefined' && e !== 'null' && e !== '');
         selectedEventsArray = rawArray;
-        console.log(`🎯 [PARSE] Split string into array:`, rawArray);
       } else if (Array.isArray(selectedIndividualEvents)) {
         // Filter out invalid values from array
         selectedEventsArray = selectedIndividualEvents.filter(e => e && String(e) !== 'undefined' && String(e) !== 'null');
-        console.log(`🎯 [PARSE] Already an array:`, selectedEventsArray);
       } else {
-        console.warn(`🎯 [PARSE] Unknown type for selectedIndividualEvents:`, typeof selectedIndividualEvents);
+        logger.warn(`Unknown type for selectedIndividualEvents: ${typeof selectedIndividualEvents}`);
       }
     } else {
-      console.warn(`🎯 [PARSE] No selectedIndividualEvents provided`);
+      logger.warn('No selectedIndividualEvents provided');
     }
 
-    console.log(`🎯 [STORE] Final selected_events to store:`, selectedEventsArray);
-    console.log(`🎯 [STORE] Event count: ${selectedEventsArray.length}`);
+
     if (selectedEventsArray.length === 0) {
-      console.warn(`⚠️ [WARN] Registration ${registrationId} has no events selected - totalAmount=${totalAmount}`);
+      logger.warn(`Registration ${registrationId} has no events selected - totalAmount=${totalAmount}`);
     }
 
     // Create registration document WITHOUT verification_id
@@ -1003,12 +989,7 @@ async function registerHandler(req, res) {
       team_members: parsedTeamMembers.length > 0 ? parsedTeamMembers : null
     };
 
-    console.log(`💾 [INSERT] Inserting registration document with events:`, {
-      registration_id: registrationId,
-      selected_events: registrationDoc.selected_events,
-      events_count: registrationDoc.selected_events.length,
-      event_type: registrationDoc.event_type
-    });
+
 
     // Insert registration
     const result = await registrationsCollection.insertOne(registrationDoc);  
@@ -1018,7 +999,6 @@ async function registerHandler(req, res) {
     // Registrations cache will refresh within 30 seconds
     
     // Verify it was inserted correctly
-    console.log(`💾 [VERIFY] Inserted with ID:`, result.insertedId);
     logRegistration('Registration created successfully', { 
       registrationId,
       email: normalizedEmail,
@@ -1049,7 +1029,6 @@ async function registerHandler(req, res) {
           member_order: index + 1
         }));
         await teamMembersCollection.insertMany(teamDocsToInsert);
-        console.log(`✅ Team members inserted: ${teamDocsToInsert.length}`);
       }
     })();
 
@@ -1122,19 +1101,14 @@ app.get('/api/registration/:registrationId', async (req, res) => {
   try {
     const { registrationId } = req.params;
     
-    console.log(`🔍 Searching for registration: ${registrationId}`);
-
     // Search by registration_id only
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
     
     if (!registration) {
-      console.log(`❌ No registration found for: ${registrationId}`);
       return res.status(404).json({ error: 'Registration not found' });
     }
-
-    console.log(`✅ Found registration: ${registration.registration_id}`);
 
     // Get team members if any
     const teamMembers = registration.team_members || [];
@@ -1155,8 +1129,6 @@ app.post('/api/registrations/:registrationId/approve', async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { approved, rejected } = req.body;
-
-    console.log(`📋 Approval Request:`, { registrationId, approved, rejected, body: req.body });
 
     if (approved === undefined && rejected === undefined) {
       console.error('❌ Missing both approved and rejected in body');
@@ -1548,101 +1520,6 @@ app.post('/api/admin/confirm-and-notify', async (req, res) => {
   } catch (err) {
     console.error('❌ Confirm and notify error:', err);
     res.status(500).json({ error: 'Failed to send notifications', details: err.message });
-  }
-});
-
-// 6. Previous endpoint: Admin Entry Approval (for payment verification) - DEPRECATED
-app.post('/api/admin/approve-entry-old', async (req, res) => {
-  try {
-    const { registrationId, adminPassword, transactionId, utrId } = req.body;
-    const VALID_ADMIN_PASSWORD = '23J41A69A3';
-
-    console.log('\n=== ADMIN APPROVAL REQUEST ===');
-    console.log('Full request body:', JSON.stringify(req.body));
-    console.log('Admin password:', JSON.stringify(adminPassword));
-    console.log('Expected password:', JSON.stringify(VALID_ADMIN_PASSWORD));
-    console.log('Password type:', typeof adminPassword);
-    console.log('Trimmed password:', JSON.stringify(String(adminPassword).trim()));
-
-    // Check password (convert to string, trim, and compare)
-    const receivedPassword = String(adminPassword).trim();
-    const passwordsMatch = receivedPassword === VALID_ADMIN_PASSWORD;
-    
-    console.log('Passwords match:', passwordsMatch);
-    console.log('=== END REQUEST ===\n');
-
-    if (!passwordsMatch) {
-      console.error('❌ INVALID PASSWORD ATTEMPT');
-      return res.status(401).json({ error: 'Invalid admin password' });
-    }
-
-    console.log('✅ Password verified successfully');
-
-    // Validate transaction ID and UTR ID
-    if (!transactionId || !transactionId.trim()) {
-      return res.status(400).json({ error: 'Transaction ID is required' });
-    }
-
-    if (!utrId || !utrId.trim()) {
-      return res.status(400).json({ error: 'UTR ID is required' });
-    }
-
-    const registration = await registrationsCollection.findOne({ registration_id: registrationId });
-    if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    if (registration.entry_status === 'verified') {
-      return res.status(400).json({ error: 'Entry already verified for this registration' });
-    }
-
-    // Update status with transaction and UTR details
-    const approvalDate = new Date();
-    await registrationsCollection.updateOne(
-      { registration_id: registrationId },
-      {
-        $set: {
-          entry_status: 'verified',
-          payment_status: 'verified',
-          entry_approved_at: approvalDate,
-          transaction_id: transactionId.trim(),
-          utr_id: utrId.trim()
-        }
-      }
-    );
-
-    // Also update payment status in payments collection
-    await paymentsCollection.updateOne(
-      { registration_id: registrationId },
-      {
-        $set: {
-          status: 'approved',
-          verified_at: approvalDate,
-          transaction_id: transactionId.trim(),
-          utr_id: utrId.trim()
-        }
-      }
-    );
-
-    // Fetch updated registration to generate new QR with all data
-    const updatedRegistration = await registrationsCollection.findOne({ registration_id: registrationId });
-    const updatedQRCode = await generateEntryQRCode(updatedRegistration);
-
-    res.json({
-      success: true,
-      message: 'Entry approved',
-      registration: {
-        registration_id: registrationId,
-        status: 'verified',
-        transaction_id: transactionId.trim(),
-        utr_id: utrId.trim()
-      },
-      entryQRCode: updatedQRCode
-    });
-
-  } catch (err) {
-    console.error('Approval error:', err);
-    res.status(500).json({ error: 'Failed to approve entry' });
   }
 });
 
