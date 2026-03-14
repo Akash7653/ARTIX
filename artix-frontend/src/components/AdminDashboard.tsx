@@ -224,22 +224,21 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
       const data = await response.json();
       
+      // REFRESH IMMEDIATELY - don't wait, start loading right away
+      setFullRegistrationData({});
+      loadData();
+      
       if (!response.ok) {
         const currentStatus = data.current_status || 'unknown';
         console.error('❌ Approval failed:', data);
         
         if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
           addPopup('⚠️ Cannot Approve', `This registration is already ${currentStatus}.`, 'warning', 3000);
-          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 3000);
+          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 2000);
         } else {
           addPopup('❌ Approval Failed', data.error || 'Unknown error', 'error', 3000);
-          addToast(data.error || 'Failed to approve', 'error', 3000);
+          addToast(data.error || 'Failed to approve', 'error', 2000);
         }
-        // Refresh to show actual status
-        setTimeout(() => {
-          setFullRegistrationData({});
-          loadData();
-        }, 500);
         return;
       }
 
@@ -247,9 +246,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       addPopup('✅ Approved!', 'Next: Assign Verification ID', 'success', 2000);
       addToast('✅ Approved! Assign Verification ID next', 'success', 2000);
       
+      // Fetch updated details
       setTimeout(() => {
-        setFullRegistrationData({});
-        loadData();
         fetchFullRegistrationDetails(registrationId);
       }, 500);
       
@@ -291,22 +289,21 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
       const data = await response.json();
       
+      // REFRESH IMMEDIATELY - don't wait, start loading right away
+      setFullRegistrationData({});
+      loadData();
+      
       if (!response.ok) {
         const currentStatus = data.current_status || 'unknown';
         console.error('❌ Rejection error:', data);
         
         if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
           addPopup('⚠️ Cannot Reject', `This registration is already ${currentStatus}.`, 'warning', 3000);
-          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 3000);
+          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 2000);
         } else {
           addPopup('❌ Rejection Failed', data.error || 'Unknown error', 'error', 3000);
-          addToast(data.error || 'Failed to reject', 'error', 3000);
+          addToast(data.error || 'Failed to reject', 'error', 2000);
         }
-        // Refresh to show actual status
-        setTimeout(() => {
-          setFullRegistrationData({});
-          loadData();
-        }, 500);
         return;
       }
 
@@ -315,9 +312,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       addPopup('❌ Rejected', 'Participant rejected', 'warning', 2000);
       addToast('Participant Rejected', 'success', 2000);
       
+      // Fetch updated details
       setTimeout(() => {
-        setFullRegistrationData({});
-        loadData();
         fetchFullRegistrationDetails(registrationId);
       }, 500);
       
