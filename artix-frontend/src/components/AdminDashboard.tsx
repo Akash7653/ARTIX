@@ -850,14 +850,14 @@ Contact ARTIX Admin Team:
   // Fetch full registration details when expanding
   useEffect(() => {
     if (expandedId) {
-      // Find the registration ID from expandedId (which is _id)
-      const reg = registrations.find(r => r._id === expandedId);
+      // Find the registration ID from expandedId (which is _id or registration_id)
+      const reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
       if (reg && !fullRegistrationData[reg.registration_id]) {
         // Only fetch if we don't already have the full data
         fetchFullRegistrationDetails(reg.registration_id);
       }
     }
-  }, [expandedId, registrations, fullRegistrationData]);
+  }, [expandedId]); // Remove registrations and fullRegistrationData from dependencies to prevent collapse on refresh
 
   const filteredRegistrations = registrations.filter(reg =>
     reg.registration_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1449,7 +1449,19 @@ Contact ARTIX Admin Team:
           }`}>
             {(() => {
               // Search through ALL registrations (not just filtered) so detail view stays open during workflow
-              const reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
+              let reg = registrations.find(r => r._id === expandedId || r.registration_id === expandedId);
+              
+              // If registration not found in current list, try to find from expandedId (it's the registration_id)
+              if (!reg) {
+                // Find any full registration data we have cached
+                const cachedRegId = Object.keys(fullRegistrationData).find(key => {
+                  return fullRegistrationData[key]._id === expandedId || fullRegistrationData[key].registration_id === expandedId;
+                });
+                if (cachedRegId && fullRegistrationData[cachedRegId]) {
+                  reg = fullRegistrationData[cachedRegId];
+                }
+              }
+              
               if (!reg) return null;
 
               // Expanded detail view for registration
