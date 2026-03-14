@@ -225,17 +225,24 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ Approval failed:', errorData);
-        // Check if it's already reviewed
-        if (errorData.error === 'This entry has already been reviewed') {
-          addPopup('⚠️ Already Reviewed', 'This registration has already been approved or rejected.', 'warning', 4000);
-          addToast('This entry has already been reviewed. Refreshing data...', 'info', 5000);
+        
+        // Check if it's already reviewed or in a different state
+        if (errorData.error === 'This entry has already been reviewed' || errorData.current_status) {
+          const currentStatus = errorData.current_status || 'unknown';
+          addPopup(
+            '⚠️ Cannot Approve', 
+            `Registration is already ${currentStatus}. Only pending registrations can be approved.`,
+            'warning', 
+            4000
+          );
+          addToast(`Registration status: ${currentStatus}. Refreshing...`, 'info', 5000);
           // Auto-refresh data to show current status
           setTimeout(() => {
             setFullRegistrationData({});
             loadData();
           }, 1000);
         } else {
-          throw new Error(errorData.error || 'Approval failed');
+          throw new Error(errorData.error || errorData.message || 'Approval failed');
         }
       } else {
         const result = await response.json();
@@ -301,9 +308,15 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         console.error('❌ Rejection error:', errorData);
         
         // Check if it's already reviewed
-        if (errorData.error === 'This entry has already been reviewed') {
-          addPopup('⚠️ Already Reviewed', 'This registration has already been approved or rejected.', 'warning', 4000);
-          addToast('This entry has already been reviewed. Refreshing data...', 'info', 5000);
+        if (errorData.error === 'This entry has already been reviewed' || errorData.current_status) {
+          const currentStatus = errorData.current_status || 'unknown';
+          addPopup(
+            '⚠️ Cannot Reject', 
+            `Registration is already ${currentStatus}. Only pending registrations can be rejected.`,
+            'warning', 
+            4000
+          );
+          addToast(`Registration status: ${currentStatus}. Refreshing...`, 'info', 5000);
           // Auto-refresh data to show current status
           setTimeout(() => {
             setFullRegistrationData({});

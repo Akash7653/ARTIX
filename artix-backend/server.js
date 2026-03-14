@@ -1864,6 +1864,8 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
     const { registrationId } = req.params;
     const { approved, rejected } = req.body;
 
+    console.log(`🔐 Approval request for: ${registrationId}`, { approved, rejected });
+
     // Determine the approval status
     let finalApprovalStatus = null;
     if (approved === true) {
@@ -1872,6 +1874,49 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
       finalApprovalStatus = 'rejected';
     } else {
       return res.status(400).json({ error: 'Please specify approved: true or false' });
+    }
+
+    // Pre-check: Get current registration status BEFORE attempting update
+    const preCheckReg = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!preCheckReg) {
+      console.log(`❌ Registration not found: ${registrationId}`);
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    console.log(`📋 Pre-check registration status:`, {
+      registration_id: preCheckReg.registration_id,
+      current_approval_status: preCheckReg.approval_status,
+      full_name: preCheckReg.full_name,
+      admin_viewed: preCheckReg.admin_viewed,
+      selected_for_event: preCheckReg.selected_for_event
+    });
+
+    // If already in the desired final state, return success
+    if (preCheckReg.approval_status === finalApprovalStatus) {
+      console.log(`✅ Registration already in ${finalApprovalStatus} state`);
+      return res.json({
+        success: true,
+        message: `This registration is already ${finalApprovalStatus}`,
+        registration: {
+          registration_id: registrationId,
+          approval_status: finalApprovalStatus,
+          selected_for_event: finalApprovalStatus === 'approved',
+          verification_id: preCheckReg.verification_id || null
+        }
+      });
+    }
+
+    // If NOT in pending, reject (can only change from pending)
+    if (preCheckReg.approval_status !== 'pending') {
+      console.log(`❌ Cannot approve - not pending. Current status: ${preCheckReg.approval_status}`);
+      return res.status(400).json({ 
+        error: 'This entry has already been reviewed',
+        current_status: preCheckReg.approval_status,
+        message: `Cannot change status from "${preCheckReg.approval_status}" to "${finalApprovalStatus}". Only pending registrations can be approved/rejected.`
+      });
     }
 
     // Use atomic findOneAndUpdate to prevent race conditions
@@ -1898,21 +1943,24 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
     const registration = result.value;
 
     if (!registration) {
-      // Check why update failed
-      const checkReg = await registrationsCollection.findOne({
+      // This should rarely happen now since we pre-checked, but handle it gracefully
+      console.log(`❌ Update failed - registration may have been modified by another process`);
+      const finalCheckReg = await registrationsCollection.findOne({
         registration_id: registrationId
       });
-
-      if (!checkReg) {
-        return res.status(404).json({ error: 'Registration not found' });
-      }
-
-      if (checkReg.approval_status !== 'pending') {
-        return res.status(400).json({ error: 'This entry has already been reviewed' });
-      }
-
-      return res.status(400).json({ error: 'Could not update approval status' });
+      
+      return res.status(409).json({ 
+        error: 'Registration was modified by another process',
+        current_status: finalCheckReg?.approval_status || 'unknown',
+        message: 'Please refresh and try again'
+      });
     }
+
+    console.log(`✅ Registration ${finalApprovalStatus}:`, {
+      registration_id: registrationId,
+      full_name: registration.full_name,
+      approval_status: registration.approval_status
+    });
 
     logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
       registrationId, 
@@ -1922,7 +1970,7 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
     res.json({
       success: true,
       message: finalApprovalStatus === 'approved' 
-        ? '✅ Approval recorded. Next: Generate verification ID' 
+        ? '✅ Approval recorded. Next: Assign Verification ID' 
         : '❌ Rejection recorded',
       registration: {
         registration_id: registrationId,
