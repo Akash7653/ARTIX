@@ -241,8 +241,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         const result = await response.json();
         console.log(`✅ Approval successful:`, result);
         
-        addPopup('✅ Approved!', 'Registration approved! Next: Generate Verification ID', 'success', 3000);
-        addToast(`✅ Approved! Next: Generate Verification ID`, 'success', 5000);
+        addPopup('✅ Approved!', 'Registration approved! Next: Assign Verification ID', 'success', 3000);
+        addToast(`✅ Approved! Next: Assign Verification ID`, 'success', 5000);
         
         setTimeout(() => {
           setFullRegistrationData({});
@@ -340,50 +340,69 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     }
   };
 
-  // Step 2: Execute generate verification ID
+  // Step 2: Execute MANUAL verification ID assignment (no auto-generation)
   const executeGenerateVerificationId = async (registrationId: string) => {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const token = localStorage.getItem('adminToken');
       
-      console.log(`🔐 Generating verification ID for: ${registrationId}`);
+      // Get the manually entered verification ID
+      const manualVerificationId = verificationIdInput[registrationId]?.trim();
+      
+      if (!manualVerificationId) {
+        addPopup('❌ Missing ID', 'Please enter a Verification ID', 'error', 3000);
+        return;
+      }
+      
+      console.log(`🔐 Setting verification ID for: ${registrationId} -> ${manualVerificationId}`);
       
       setWorkflowInProgress(registrationId);
       
-      const response = await fetch(`${baseUrl}/admin/generate-verification-id`, {
+      // Call the set-verification-id endpoint instead of generate
+      const response = await fetch(`${baseUrl}/admin/set-verification-id`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: JSON.stringify({ registrationId })
+        body: JSON.stringify({ 
+          registrationId,
+          verificationId: manualVerificationId
+        })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ ID generation failed:', errorData);
-        throw new Error(errorData.error || 'ID generation failed');
+        console.error('❌ Failed to set ID:', errorData);
+        throw new Error(errorData.error || 'Failed to set verification ID');
       }
       
       const result = await response.json();
-      console.log(`✅ Verification ID generated:`, result);
+      console.log(`✅ Verification ID assigned:`, result);
       
-      addPopup('✅ ID Generated!', `Verification ID: ${result.verification_id}`, 'success', 3000);
-      addToast(`✅ ID Generated! Ready to send WhatsApp`, 'success', 5000);
+      addPopup('✅ ID Assigned!', `Verification ID: ${manualVerificationId}`, 'success', 3000);
+      addToast(`✅ ID Assigned! Ready to send WhatsApp`, 'success', 5000);
+      
+      // Clear the input field
+      setVerificationIdInput(prev => {
+        const updated = { ...prev };
+        delete updated[registrationId];
+        return updated;
+      });
       
       setTimeout(() => {
         setFullRegistrationData({});
         loadData();
-        // CRITICAL: Refetch full registration details to show new verification_id
+        // Refetch full registration details to show new verification_id
         setTimeout(() => {
           fetchFullRegistrationDetails(registrationId);
         }, 500);
       }, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to generate ID:', errorMsg);
-      addPopup('❌ ID Generation Failed', errorMsg, 'error', 4000);
-      addToast(`Failed to generate ID: ${errorMsg}`, 'error', 5000);
+      console.error('❌ Failed to set ID:', errorMsg);
+      addPopup('❌ Failed to Assign ID', errorMsg, 'error', 4000);
+      addToast(`Failed to assign ID: ${errorMsg}`, 'error', 5000);
     } finally {
       setWorkflowInProgress(null);
       setConfirmAction({ action: null, registrationId: null, participantName: null });
@@ -1555,26 +1574,42 @@ Contact ARTIX Admin Team:
                       <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
                         darkMode ? 'text-blue-400' : 'text-blue-700'
                       }`}>
-                        🔐 Step 2: Generate Verification ID
+                        🔐 Step 2: Assign Verification ID
                       </h3>
                       <p className={`text-sm mb-4 ${
                         darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>Click to auto-generate a sequential verification ID (ARTIX2026-001, 002, etc.). You'll be able to preview and send the WhatsApp message in Step 3.</p>
-                      <button
-                        onClick={() => handleGenerateVerificationId(reg.registration_id, reg.full_name)}
-                        disabled={workflowInProgress === reg.registration_id}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
-                          workflowInProgress === reg.registration_id
-                            ? (darkMode
-                                ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
-                                : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
-                            : (darkMode
-                                ? 'bg-blue-600/40 text-blue-200 border-blue-500 hover:bg-blue-600/50 hover:scale-105'
-                                : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600 hover:scale-105')
-                        }`}
-                      >
-                        {workflowInProgress === reg.registration_id ? '⏳ Generating...' : '🔐 Generate Verification ID'}
-                      </button>
+                      }`}>Manually enter a verification ID (e.g., ARTIX2026-001, ARTIX2026-A1B2C, etc.). You'll be able to send the WhatsApp message in Step 3.</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter Verification ID"
+                          value={verificationIdInput[reg.registration_id] || ''}
+                          onChange={(e) => setVerificationIdInput({
+                            ...verificationIdInput,
+                            [reg.registration_id]: e.target.value.toUpperCase()
+                          })}
+                          className={`flex-1 px-4 py-3 rounded-lg border-2 font-bold transition focus:outline-none ${
+                            darkMode 
+                              ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-blue-400'
+                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500'
+                          }`}
+                        />
+                        <button
+                          onClick={() => handleGenerateVerificationId(reg.registration_id, reg.full_name)}
+                          disabled={workflowInProgress === reg.registration_id || !verificationIdInput[reg.registration_id]?.trim()}
+                          className={`flex items-center gap-2 px-8 py-3 rounded-lg transition font-bold border-2 ${
+                            workflowInProgress === reg.registration_id || !verificationIdInput[reg.registration_id]?.trim()
+                              ? (darkMode
+                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                              : (darkMode
+                                  ? 'bg-blue-600/40 text-blue-200 border-blue-500 hover:bg-blue-600/50 hover:scale-105'
+                                  : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600 hover:scale-105')
+                          }`}
+                        >
+                          {workflowInProgress === reg.registration_id ? '⏳ Assigning...' : '✓ Assign'}
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1744,11 +1779,34 @@ Contact ARTIX Admin Team:
 
               {/* Description */}
               <p className={`text-sm mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {confirmAction.action === 'approve' && 'This will mark the registration as approved. You\'ll then generate a Verification ID and send WhatsApp.'}
+                {confirmAction.action === 'approve' && 'This will mark the registration as approved. You\'ll then enter a Verification ID and send WhatsApp.'}
                 {confirmAction.action === 'reject' && 'This will mark the registration as rejected. No further action needed.'}
-                {confirmAction.action === 'generate-id' && 'This will generate a unique sequential Verification ID (ARTIX2026-###). You\'ll then send it via WhatsApp.'}
+                {confirmAction.action === 'generate-id' && 'Enter a unique Verification ID (e.g., ARTIX2026-001, ARTIX2026-A1B2C, etc.). You\'ll then send it via WhatsApp.'}
                 {confirmAction.action === 'mark-sent' && 'This will confirm the WhatsApp message has been sent to the participant.'}
               </p>
+
+              {/* Manual Verification ID Input */}
+              {confirmAction.action === 'generate-id' && (
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    placeholder="Enter Verification ID (e.g., ARTIX2026-001)"
+                    value={verificationIdInput[confirmAction.registrationId || ''] || ''}
+                    onChange={(e) => setVerificationIdInput({
+                      ...verificationIdInput,
+                      [confirmAction.registrationId || '']: e.target.value.toUpperCase()
+                    })}
+                    className={`w-full px-4 py-3 rounded-lg border-2 font-bold transition focus:outline-none ${
+                      darkMode 
+                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-blue-400'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500'
+                    }`}
+                  />
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Manually assigned - admin created ID
+                  </p>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-3">
@@ -1784,7 +1842,7 @@ Contact ARTIX Admin Team:
                   {workflowInProgress === confirmAction.registrationId ? '⏳ Processing...' : (
                     confirmAction.action === 'approve' ? 'Approve' :
                     confirmAction.action === 'reject' ? 'Reject' :
-                    confirmAction.action === 'generate-id' ? 'Generate ID' :
+                    confirmAction.action === 'generate-id' ? 'Assign ID' :
                     'Confirm Sent'
                   )}
                 </button>
