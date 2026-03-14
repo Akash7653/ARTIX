@@ -2824,7 +2824,7 @@ app.post('/api/admin/mark-whatsapp-sent', async (req, res) => {
 });
 
 // Reset registration workflow - Sets registration back to pending state
-app.post('/api/admin/reset-registration/:registrationId', async (req, res) => {
+app.post('/api/admin/reset-registration/:registrationId', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId } = req.params;
 
@@ -2841,24 +2841,62 @@ app.post('/api/admin/reset-registration/:registrationId', async (req, res) => {
     }
 
     // Reset the registration to pending state, clearing verification details
-    const resetResult = await registrationsCollection.findOneAndUpdate(
-      { registration_id: registrationId },
-      {
-        $set: {
-          approval_status: 'pending',
-          verification_id: null,
-          verification_id_set_at: null,
-          selected_for_event: false,
-          admin_viewed: false,
-          whatsapp_sent: false,
-          notification_sent: false
+    let resetResult = null;
+    
+    try {
+      resetResult = await registrationsCollection.findOneAndUpdate(
+        { registration_id: registrationId },
+        {
+          $set: {
+            approval_status: 'pending',
+            verification_id: null,
+            verification_id_set_at: null,
+            selected_for_event: false,
+            admin_viewed: false,
+            whatsapp_sent: false,
+            notification_sent: false
+          }
+        },
+        { returnDocument: 'after' }
+      );
+    } catch (updateErr) {
+      console.error('❌ findOneAndUpdate failed:', updateErr.message);
+      
+      // Fallback: Try updateOne
+      try {
+        const fallbackResult = await registrationsCollection.updateOne(
+          { registration_id: registrationId },
+          {
+            $set: {
+              approval_status: 'pending',
+              verification_id: null,
+              verification_id_set_at: null,
+              selected_for_event: false,
+              admin_viewed: false,
+              whatsapp_sent: false,
+              notification_sent: false
+            }
+          }
+        );
+        
+        if (fallbackResult.modifiedCount > 0) {
+          resetResult = { value: await registrationsCollection.findOne({ registration_id: registrationId }) };
+          console.log('✅ Fallback updateOne succeeded for reset');
+        } else {
+          console.log('❌ Fallback updateOne also failed - 0 documents modified');
+          throw updateErr;
         }
-      },
-      { returnDocument: 'after' }
-    );
+      } catch (fallbackErr) {
+        console.error('❌ Fallback updateOne also failed:', fallbackErr.message);
+        throw updateErr;
+      }
+    }
 
-    if (!resetResult.value) {
-      return res.status(500).json({ error: 'Failed to reset registration' });
+    if (!resetResult || !resetResult.value) {
+      return res.status(500).json({ 
+        error: 'Failed to reset registration',
+        details: 'Could not update registration document'
+      });
     }
 
     console.log(`✅ Registration reset to pending: ${registrationId}`);
