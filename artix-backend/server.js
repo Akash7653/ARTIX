@@ -1778,12 +1778,27 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
       return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
     }
 
-    // Use findOneAndUpdate to avoid multiple round-trips (find + update + verify)
+    // First, check if registration exists and is approved
+    const checkReg = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!checkReg) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (checkReg.approval_status !== 'approved') {
+      return res.status(400).json({ 
+        error: 'Registration must be approved first',
+        current_status: checkReg.approval_status
+      });
+    }
+
+    // Update verification ID (overwrite if it exists - allows fixing mistakes)
     const registration = await registrationsCollection.findOneAndUpdate(
       {
         registration_id: registrationId,
-        approval_status: 'approved',
-        verification_id: null  // Only update if not already set
+        approval_status: 'approved'
       },
       {
         $set: {
@@ -1795,24 +1810,7 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
     );
 
     if (!registration.value) {
-      // Check why update failed - use findOne for error diagnosis only
-      const checkReg = await registrationsCollection.findOne({
-        registration_id: registrationId
-      });
-
-      if (!checkReg) {
-        return res.status(404).json({ error: 'Registration not found' });
-      }
-
-      if (checkReg.approval_status !== 'approved') {
-        return res.status(400).json({ error: 'Registration must be approved first' });
-      }
-
-      if (checkReg.verification_id) {
-        return res.status(400).json({ error: 'Verification ID already assigned' });
-      }
-
-      return res.status(400).json({ error: 'Could not update registration' });
+      return res.status(500).json({ error: 'Could not update registration' });
     }
 
     const updatedReg = registration.value;
@@ -1931,16 +1929,46 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
       }
     };
 
-    const result = await registrationsCollection.findOneAndUpdate(
-      {
-        registration_id: registrationId,
-        approval_status: 'pending'  // Only update if still pending
-      },
-      updateData,
-      { returnDocument: 'after' }  // Get updated document
-    );
+    let registration = null;
+    
+    try {
+      const result = await registrationsCollection.findOneAndUpdate(
+        {
+          registration_id: registrationId,
+          approval_status: 'pending'  // Only update if still pending
+        },
+        updateData,
+        { returnDocument: 'after' }  // Get updated document
+      );
 
-    const registration = result.value;
+      registration = result.value;
+    } catch (updateErr) {
+      console.error('❌ findOneAndUpdate failed:', updateErr.message);
+      
+      // Fallback: Try simple updateOne
+      try {
+        const fallbackResult = await registrationsCollection.updateOne(
+          {
+            registration_id: registrationId,
+            approval_status: 'pending'
+          },
+          updateData
+        );
+        
+        if (fallbackResult.modifiedCount > 0) {
+          // Fetch the updated document
+          registration = await registrationsCollection.findOne({
+            registration_id: registrationId
+          });
+          console.log('✅ Fallback updateOne succeeded');
+        } else {
+          console.log('❌ Fallback updateOne also failed - 0 documents modified');
+        }
+      } catch (fallbackErr) {
+        console.error('❌ Fallback updateOne also failed:', fallbackErr.message);
+        throw updateErr;  // Throw original error
+      }
+    }
 
     if (!registration) {
       // This should rarely happen now since we pre-checked, but handle it gracefully
