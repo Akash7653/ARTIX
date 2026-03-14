@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { X, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
 export interface PopupMessage {
