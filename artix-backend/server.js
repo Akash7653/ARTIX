@@ -2795,6 +2795,70 @@ app.post('/api/admin/mark-whatsapp-sent', async (req, res) => {
   }
 });
 
+// Reset registration workflow - Sets registration back to pending state
+app.post('/api/admin/reset-registration/:registrationId', async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Registration ID is required' });
+    }
+
+    const registration = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    // Reset the registration to pending state, clearing verification details
+    const resetResult = await registrationsCollection.findOneAndUpdate(
+      { registration_id: registrationId },
+      {
+        $set: {
+          approval_status: 'pending',
+          verification_id: null,
+          verification_id_set_at: null,
+          selected_for_event: false,
+          admin_viewed: false,
+          whatsapp_sent: false,
+          notification_sent: false
+        }
+      },
+      { returnDocument: 'after' }
+    );
+
+    if (!resetResult.value) {
+      return res.status(500).json({ error: 'Failed to reset registration' });
+    }
+
+    console.log(`✅ Registration reset to pending: ${registrationId}`);
+    
+    logAdmin('Registration workflow reset', { 
+      registrationId, 
+      participantName: registration.full_name 
+    });
+
+    res.json({
+      success: true,
+      message: '✅ Registration reset to pending state. You can now approve it again.',
+      registration: {
+        registration_id: registrationId,
+        approval_status: 'pending',
+        verification_id: null,
+        full_name: registration.full_name
+      }
+    });
+  } catch (err) {
+    console.error('❌ Reset registration error:', err);
+    res.status(500).json({ 
+      error: 'Failed to reset registration', 
+      details: err.message 
+    });
+  }
+});
+
 // Diagnostic endpoint: Check Twilio configuration
 app.get('/api/admin/twilio-status', (req, res) => {
   try {

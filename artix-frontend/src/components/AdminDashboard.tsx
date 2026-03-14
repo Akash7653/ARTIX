@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send, ChevronUp, Sun, Moon } from 'lucide-react';
+import { LogOut, Download, CheckCircle2, XCircle, BarChart3, Clock, Eye, EyeOff, Mail, MessageCircle, Search, RefreshCw, Send, ChevronUp, Sun, Moon, RotateCcw } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
 import { PerformanceMonitoring } from './PerformanceMonitoring';
 import { ErrorViewer } from './ErrorViewer';
@@ -353,6 +353,50 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     }
   };
 
+  // Reset workflow for stuck registrations
+  const executeResetRegistration = async (registrationId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`🔄 Resetting registration: ${registrationId}`);
+      
+      setWorkflowInProgress(registrationId);
+      
+      const response = await fetch(`${baseUrl}/admin/reset-registration/${registrationId}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Reset failed:', errorData);
+        throw new Error(errorData.error || 'Failed to reset registration');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Registration reset:`, result);
+      
+      addPopup('✅ Reset Complete', 'Registration reset to pending. You can now approve it again.', 'success', 3000);
+      addToast('✅ Registration reset to pending', 'success', 5000);
+      
+      setTimeout(() => {
+        setFullRegistrationData({});
+        loadData();
+      }, 1000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to reset:', errorMsg);
+      addPopup('❌ Reset Failed', errorMsg, 'error', 4000);
+      addToast(`Failed to reset: ${errorMsg}`, 'error', 5000);
+    } finally {
+      setWorkflowInProgress(null);
+    }
+  };
+
   // Step 2: Execute MANUAL verification ID assignment (no auto-generation)
   const executeGenerateVerificationId = async (registrationId: string) => {
     try {
@@ -521,6 +565,59 @@ Contact ARTIX Admin Team:
       registrationId,
       participantName
     });
+  };
+
+  // Step 3c: Execute marking WhatsApp as sent
+  const executeMarkWhatsAppSent = async (registrationId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = localStorage.getItem('adminToken');
+      
+      console.log(`📱 Marking WhatsApp as sent for: ${registrationId}`);
+      
+      setWorkflowInProgress(registrationId);
+      
+      const response = await fetch(`${baseUrl}/admin/mark-whatsapp-sent`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ registrationId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Failed to mark as sent:', errorData);
+        throw new Error(errorData.error || 'Failed to mark WhatsApp as sent');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Marked as sent:`, result);
+      
+      addPopup('✅ Confirmed!', 'WhatsApp message recorded as sent', 'success', 3000);
+      addToast('✅ WhatsApp message confirmed as sent', 'success', 5000);
+      
+      // Clear pending state and reload
+      setPendingWhatsAppSend(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(registrationId);
+        return newSet;
+      });
+      
+      setTimeout(() => {
+        setFullRegistrationData({});
+        loadData();
+      }, 1000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to mark as sent:', errorMsg);
+      addPopup('❌ Failed to Confirm', errorMsg, 'error', 4000);
+      addToast(`Failed to mark as sent: ${errorMsg}`, 'error', 5000);
+    } finally {
+      setWorkflowInProgress(null);
+      setConfirmAction({ action: null, registrationId: null, participantName: null });
+    }
   };
 
   const handleSetVerificationId = async (registrationId: string) => {
@@ -1573,7 +1670,47 @@ Contact ARTIX Admin Team:
                           <XCircle className="w-6 h-6" />
                           Reject
                         </button>
+                        <button
+                          onClick={() => executeResetRegistration(reg.registration_id)}
+                          disabled={workflowInProgress === reg.registration_id}
+                          title="Reset this registration back to pending state (for troubleshooting)"
+                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition font-bold border-2 text-xs ${
+                            workflowInProgress === reg.registration_id
+                              ? (darkMode
+                                  ? 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-400 text-gray-600 border-gray-500 cursor-not-allowed')
+                              : (darkMode
+                                  ? 'bg-orange-600/40 text-orange-200 border-orange-500 hover:bg-orange-600/50'
+                                  : 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600')
+                          }`}
+                        >
+                          <RotateCcw className="w-5 h-5" />
+                          Reset
+                        </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Reset button for stuck approvals */}
+                  {(reg.approval_status === 'approved' || reg.approval_status === 'rejected') && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => executeResetRegistration(reg.registration_id)}
+                        disabled={workflowInProgress === reg.registration_id}
+                        title="Reset to pending if workflow is stuck"
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition font-semibold text-sm border ${
+                          workflowInProgress === reg.registration_id
+                            ? (darkMode
+                                ? 'bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed'
+                                : 'bg-gray-300 text-gray-600 border-gray-400 cursor-not-allowed')
+                            : (darkMode
+                                ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 hover:bg-orange-500/30'
+                                : 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200')
+                        }`}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reset Workflow
+                      </button>
                     </div>
                   )}
 
