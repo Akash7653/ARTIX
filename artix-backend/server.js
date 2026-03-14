@@ -1869,139 +1869,105 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
 app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConnection, async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { approved, rejected } = req.body;
+    const { approved } = req.body;  // Simplified: just use approved (true/false)
 
-    console.log(`🔐 Approval request for: ${registrationId}`, { approved, rejected });
+    console.log(`🔐 Approval request for: ${registrationId}`, { approved });
 
-    // Determine the approval status
-    let finalApprovalStatus = null;
-    if (approved === true) {
-      finalApprovalStatus = 'approved';
-    } else if (approved === false || rejected === true) {
-      finalApprovalStatus = 'rejected';
-    } else {
+    if (approved === undefined || approved === null) {
       return res.status(400).json({ error: 'Please specify approved: true or false' });
     }
 
-    // Pre-check: Get current registration status BEFORE attempting update
-    const preCheckReg = await registrationsCollection.findOne({
+    const finalApprovalStatus = approved ? 'approved' : 'rejected';
+
+    // Get current registration
+    const currentReg = await registrationsCollection.findOne({
       registration_id: registrationId
     });
 
-    if (!preCheckReg) {
+    if (!currentReg) {
       console.log(`❌ Registration not found: ${registrationId}`);
       return res.status(404).json({ error: 'Registration not found' });
     }
 
-    console.log(`📋 Pre-check registration status:`, {
-      registration_id: preCheckReg.registration_id,
-      current_approval_status: preCheckReg.approval_status,
-      full_name: preCheckReg.full_name,
-      admin_viewed: preCheckReg.admin_viewed,
-      selected_for_event: preCheckReg.selected_for_event
-    });
-
-    // If already in the desired final state, return success
-    if (preCheckReg.approval_status === finalApprovalStatus) {
-      console.log(`✅ Registration already in ${finalApprovalStatus} state`);
+    // If already in the desired state, return success (idempotent)
+    if (currentReg.approval_status === finalApprovalStatus) {
+      console.log(`✅ Already ${finalApprovalStatus}: ${registrationId}`);
       return res.json({
         success: true,
-        message: `This registration is already ${finalApprovalStatus}`,
+        message: `Registration is already ${finalApprovalStatus}`,
         registration: {
           registration_id: registrationId,
           approval_status: finalApprovalStatus,
           selected_for_event: finalApprovalStatus === 'approved',
-          verification_id: preCheckReg.verification_id || null
+          verification_id: currentReg.verification_id || null
         }
       });
     }
 
-    // If NOT in pending, reject (can only change from pending)
-    if (preCheckReg.approval_status !== 'pending') {
-      console.log(`❌ Cannot approve - not pending. Current status: ${preCheckReg.approval_status}`);
+    // Only allow approval/rejection of pending registrations
+    if (currentReg.approval_status !== 'pending') {
+      console.log(`❌ Cannot change - already ${currentReg.approval_status}`);
       return res.status(400).json({ 
         error: 'This entry has already been reviewed',
-        current_status: preCheckReg.approval_status,
-        message: `Cannot change status from "${preCheckReg.approval_status}" to "${finalApprovalStatus}". Only pending registrations can be approved/rejected.`
+        current_status: currentReg.approval_status
       });
     }
 
-    // Use atomic findOneAndUpdate to prevent race conditions
+    // Update the registration - simple updateOne
     const approvalDate = new Date();
-    
-    const updateData = {
-      $set: {
-        approval_status: finalApprovalStatus,
-        approval_date: approvalDate,
-        selected_for_event: finalApprovalStatus === 'approved',
-        admin_viewed: true  // Mark as viewed when admin approves/rejects
-      }
-    };
-
-    let registration = null;
-    
-    try {
-      const result = await registrationsCollection.findOneAndUpdate(
-        {
-          registration_id: registrationId,
-          approval_status: 'pending'  // Only update if still pending
-        },
-        updateData,
-        { returnDocument: 'after' }  // Get updated document
-      );
-
-      registration = result.value;
-    } catch (updateErr) {
-      console.error('❌ findOneAndUpdate failed:', updateErr.message);
-      
-      // Fallback: Try simple updateOne
-      try {
-        const fallbackResult = await registrationsCollection.updateOne(
-          {
-            registration_id: registrationId,
-            approval_status: 'pending'
-          },
-          updateData
-        );
-        
-        if (fallbackResult.modifiedCount > 0) {
-          // Fetch the updated document
-          registration = await registrationsCollection.findOne({
-            registration_id: registrationId
-          });
-          console.log('✅ Fallback updateOne succeeded');
-        } else {
-          console.log('❌ Fallback updateOne also failed - 0 documents modified');
+    const result = await registrationsCollection.updateOne(
+      {
+        registration_id: registrationId,
+        approval_status: 'pending'  // Only update if still pending
+      },
+      {
+        $set: {
+          approval_status: finalApprovalStatus,
+          approval_date: approvalDate,
+          selected_for_event: finalApprovalStatus === 'approved',
+          admin_viewed: true
         }
-      } catch (fallbackErr) {
-        console.error('❌ Fallback updateOne also failed:', fallbackErr.message);
-        throw updateErr;  // Throw original error
       }
-    }
+    );
 
-    if (!registration) {
-      // This should rarely happen now since we pre-checked, but handle it gracefully
-      console.log(`❌ Update failed - registration may have been modified by another process`);
-      const finalCheckReg = await registrationsCollection.findOne({
+    if (result.modifiedCount === 0) {
+      // Race condition: registry status changed between check and update
+      const recheckReg = await registrationsCollection.findOne({
         registration_id: registrationId
       });
       
-      return res.status(409).json({ 
-        error: 'Registration was modified by another process',
-        current_status: finalCheckReg?.approval_status || 'unknown',
-        message: 'Please refresh and try again'
-      });
+      if (recheckReg.approval_status !== 'pending') {
+        // Status changed, but that's okay - return success if it's what we wanted
+        if (recheckReg.approval_status === finalApprovalStatus) {
+          return res.json({
+            success: true,
+            message: `Registration is ${finalApprovalStatus}`,
+            registration: {
+              registration_id: registrationId,
+              approval_status: finalApprovalStatus,
+              selected_for_event: finalApprovalStatus === 'approved',
+              verification_id: recheckReg.verification_id || null
+            }
+          });
+        }
+        // Different status - conflict
+        return res.status(400).json({
+          error: 'Registration status changed. Please refresh and try again.',
+          current_status: recheckReg.approval_status
+        });
+      }
     }
 
-    console.log(`✅ Registration ${finalApprovalStatus}:`, {
-      registration_id: registrationId,
-      full_name: registration.full_name,
-      approval_status: registration.approval_status
+    // Fetch the updated registration
+    const updatedReg = await registrationsCollection.findOne({
+      registration_id: registrationId
     });
 
-    logAdmin(`Registration ${finalApprovalStatus === 'approved' ? 'approved' : 'rejected'}`, { 
+    console.log(`✅ ${finalApprovalStatus.toUpperCase()}: ${registrationId}`);
+
+    logAdmin(`Registration ${finalApprovalStatus}`, { 
       registrationId, 
-      participantName: registration.full_name 
+      participantName: updatedReg.full_name 
     });
 
     res.json({
@@ -2013,7 +1979,7 @@ app.post('/api/admin/registrations/:registrationId/approve', ensureDatabaseConne
         registration_id: registrationId,
         approval_status: finalApprovalStatus,
         selected_for_event: finalApprovalStatus === 'approved',
-        verification_id: registration.verification_id || null
+        verification_id: updatedReg.verification_id || null
       }
     });
 

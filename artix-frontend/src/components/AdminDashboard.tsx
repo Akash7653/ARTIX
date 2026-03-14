@@ -211,8 +211,6 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const token = localStorage.getItem('adminToken');
       
       console.log(`👤 Approving registration: ${registrationId}`);
-      
-      // NOTE: Do NOT call setExpandedId here - causes unintended side effects
       setWorkflowInProgress(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
@@ -224,49 +222,42 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         body: JSON.stringify({ approved: true })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Approval failed:', errorData);
+        const currentStatus = data.current_status || 'unknown';
+        console.error('❌ Approval failed:', data);
         
-        // Check if it's already reviewed or in a different state
-        if (errorData.error === 'This entry has already been reviewed' || errorData.current_status) {
-          const currentStatus = errorData.current_status || 'unknown';
-          addPopup(
-            '⚠️ Cannot Approve', 
-            `Registration is already ${currentStatus}. Only pending registrations can be approved.`,
-            'warning', 
-            4000
-          );
-          addToast(`Registration status: ${currentStatus}. Refreshing...`, 'info', 5000);
-          // Auto-refresh data to show current status
-          setTimeout(() => {
-            setFullRegistrationData({});
-            loadData();
-          }, 1000);
+        if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
+          addPopup('⚠️ Cannot Approve', `This registration is already ${currentStatus}.`, 'warning', 3000);
+          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 3000);
         } else {
-          throw new Error(errorData.error || errorData.message || 'Approval failed');
+          addPopup('❌ Approval Failed', data.error || 'Unknown error', 'error', 3000);
+          addToast(data.error || 'Failed to approve', 'error', 3000);
         }
-      } else {
-        const result = await response.json();
-        console.log(`✅ Approval successful:`, result);
-        
-        addPopup('✅ Approved!', 'Registration approved! Next: Assign Verification ID', 'success', 3000);
-        addToast(`✅ Approved! Next: Assign Verification ID`, 'success', 5000);
-        
+        // Refresh to show actual status
         setTimeout(() => {
           setFullRegistrationData({});
           loadData();
-          // CRITICAL: Refetch full registration details to show updated approval_status
-          setTimeout(() => {
-            fetchFullRegistrationDetails(registrationId);
-          }, 500);
-        }, 1000);
+        }, 500);
+        return;
       }
+
+      console.log(`✅ Approval successful:`, data);
+      addPopup('✅ Approved!', 'Next: Assign Verification ID', 'success', 2000);
+      addToast('✅ Approved! Assign Verification ID next', 'success', 2000);
+      
+      setTimeout(() => {
+        setFullRegistrationData({});
+        loadData();
+        fetchFullRegistrationDetails(registrationId);
+      }, 500);
+      
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to approve:', errorMsg);
-      addPopup('❌ Approval Failed', errorMsg, 'error', 4000);
-      addToast(`Failed to approve: ${errorMsg}`, 'error', 5000);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Approval error:', msg);
+      addPopup('❌ Error', msg, 'error', 3000);
+      addToast(`Error: ${msg}`, 'error', 3000);
     } finally {
       setWorkflowInProgress(null);
       setConfirmAction({ action: null, registrationId: null, participantName: null });
@@ -274,19 +265,11 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   };
 
   const handleApprove = (registrationId: string, participantName: string) => {
-    showApproveConfirm(registrationId, participantName);
+    setConfirmAction({ action: 'approve', registrationId, participantName });
   };
 
   const handleReject = (registrationId: string, participantName: string) => {
-    showRejectConfirm(registrationId, participantName);
-  };
-
-  const showRejectConfirm = (registrationId: string, participantName: string) => {
-    setConfirmAction({
-      action: 'reject',
-      registrationId,
-      participantName
-    });
+    setConfirmAction({ action: 'reject', registrationId, participantName });
   };
 
   const executeReject = async (registrationId: string) => {
@@ -295,7 +278,6 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const token = localStorage.getItem('adminToken');
       
       console.log(`❌ Rejecting registration: ${registrationId}`);
-      
       setWorkflowInProgress(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
@@ -307,55 +289,46 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         body: JSON.stringify({ approved: false })
       });
 
-      console.log(`📊 Response status: ${response.status} ${response.statusText}`)
+      const data = await response.json();
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Rejection error:', errorData);
+        const currentStatus = data.current_status || 'unknown';
+        console.error('❌ Rejection error:', data);
         
-        // Check if it's already reviewed
-        if (errorData.error === 'This entry has already been reviewed' || errorData.current_status) {
-          const currentStatus = errorData.current_status || 'unknown';
-          addPopup(
-            '⚠️ Cannot Reject', 
-            `Registration is already ${currentStatus}. Only pending registrations can be rejected.`,
-            'warning', 
-            4000
-          );
-          addToast(`Registration status: ${currentStatus}. Refreshing...`, 'info', 5000);
-          // Auto-refresh data to show current status
-          setTimeout(() => {
-            setFullRegistrationData({});
-            loadData();
-          }, 1000);
-          return;
+        if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
+          addPopup('⚠️ Cannot Reject', `This registration is already ${currentStatus}.`, 'warning', 3000);
+          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 3000);
+        } else {
+          addPopup('❌ Rejection Failed', data.error || 'Unknown error', 'error', 3000);
+          addToast(data.error || 'Failed to reject', 'error', 3000);
         }
-        
-        throw new Error(errorData.error || 'Rejection failed');
+        // Refresh to show actual status
+        setTimeout(() => {
+          setFullRegistrationData({});
+          loadData();
+        }, 500);
+        return;
       }
-      
-      const result = await response.json();
-      console.log(`✅ Rejection response:`, result);
-      
-      // Collapse view and reload - registration is now rejected
+
+      console.log(`✅ Rejection successful:`, data);
       setExpandedId(null);
-      addPopup('❌ Rejected', 'Participant has been rejected from the event', 'warning', 3000);
-      addToast('Participant Rejected', 'success', 3000, true);
+      addPopup('❌ Rejected', 'Participant rejected', 'warning', 2000);
+      addToast('Participant Rejected', 'success', 2000);
       
       setTimeout(() => {
         setFullRegistrationData({});
         loadData();
-        // Refetch full details after rejection
-        setTimeout(() => {
-          fetchFullRegistrationDetails(registrationId);
-        }, 500);
-      }, 1000);
+        fetchFullRegistrationDetails(registrationId);
+      }, 500);
+      
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to reject:', errorMsg);
-      addToast(`Failed to reject: ${errorMsg}`, 'error', 5000);
+      addPopup('❌ Rejection Failed', errorMsg, 'error', 3000);
+      addToast(`Failed to reject: ${errorMsg}`, 'error', 3000);
     } finally {
       setWorkflowInProgress(null);
+      setConfirmAction({ action: null, registrationId: null, participantName: null });
     }
   };
 
@@ -366,7 +339,6 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       const token = localStorage.getItem('adminToken');
       
       console.log(`🔄 Resetting registration: ${registrationId}`);
-      
       setWorkflowInProgress(registrationId);
       
       const response = await fetch(`${baseUrl}/admin/reset-registration/${registrationId}`, {
@@ -377,27 +349,32 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
         }
       });
 
+      const data = await response.json().catch(() => ({}));
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Reset failed:', errorData);
-        throw new Error(errorData.error || 'Failed to reset registration');
+        const errorMsg = data.error || `Server error: ${response.status}`;
+        console.error('❌ Reset failed:', errorMsg);
+        addPopup('❌ Reset Failed', errorMsg, 'error', 3000);
+        addToast(`Reset failed: ${errorMsg}`, 'error', 3000);
+        // Still refresh to show actual status
+        setTimeout(loadData, 500);
+        return;
       }
       
-      const result = await response.json();
-      console.log(`✅ Registration reset:`, result);
-      
-      addPopup('✅ Reset Complete', 'Registration reset to pending. You can now approve it again.', 'success', 3000);
-      addToast('✅ Registration reset to pending', 'success', 5000);
+      console.log(`✅ Registration reset:`, data);
+      addPopup('✅ Reset Complete', 'Reset to pending state. You can approve again.', 'success', 2000);
+      addToast('Registration reset to pending', 'success', 2000);
       
       setTimeout(() => {
         setFullRegistrationData({});
         loadData();
-      }, 1000);
+      }, 500);
+      
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Failed to reset:', errorMsg);
-      addPopup('❌ Reset Failed', errorMsg, 'error', 4000);
-      addToast(`Failed to reset: ${errorMsg}`, 'error', 5000);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Reset error:', msg);
+      addPopup('❌ Error', msg, 'error', 3000);
+      addToast(`Error: ${msg}`, 'error', 3000);
     } finally {
       setWorkflowInProgress(null);
     }
