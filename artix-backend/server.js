@@ -458,28 +458,73 @@ async function generateVerificationId() {
         value: checkCounter.sequence_value,
         type: typeof checkCounter.sequence_value,
         isNull: checkCounter.sequence_value === null,
-        isUndefined: checkCounter.sequence_value === undefined
+        isUndefined: checkCounter.sequence_value === undefined,
+        fullDoc: checkCounter
       });
       logger.warn('⚠️ Invalid counter state, resetting to valid value...');
-      // Reset the counter to a valid state
-      const resetResult = await counterCollection.findOneAndUpdate(
-        { _id: 'verification_id' },
-        { $set: { sequence_value: 100 } },
-        { returnDocument: 'after' }
-      );
-      console.log('Counter reset result:', resetResult.value);
+      
+      // Reset the counter to a valid state using updateOne
+      try {
+        const resetResult = await counterCollection.updateOne(
+          { _id: 'verification_id' },
+          { $set: { sequence_value: 100 } }
+        );
+        console.log('Counter reset result:', resetResult);
+        
+        if (resetResult.modifiedCount === 0) {
+          throw new Error('Could not reset counter');
+        }
+        
+        // Verify the reset
+        const verifyReset = await counterCollection.findOne({ _id: 'verification_id' });
+        console.log('Counter after reset:', verifyReset);
+      } catch (resetErr) {
+        console.error('❌ Counter reset failed:', resetErr.message);
+        throw resetErr;
+      }
+      
       return generateVerificationId(); // Retry after reset
     }
     
-    // Atomically increment counter
-    const result = await counterCollection.findOneAndUpdate(
-      { _id: 'verification_id' },
-      { $inc: { sequence_value: 1 } },
-      { returnDocument: 'after' }
-    );
+    // Atomically increment counter with improved error handling
+    console.log('🔄 Attempting to increment counter from:', checkCounter.sequence_value);
     
-    if (!result.value || typeof result.value.sequence_value !== 'number') {
-      logger.error('❌ Counter update failed: invalid counter state', result.value);
+    let result;
+    try {
+      result = await counterCollection.findOneAndUpdate(
+        { _id: 'verification_id' },
+        { $inc: { sequence_value: 1 } },
+        { returnDocument: 'after' }
+      );
+      console.log('Counter increment result:', result.value);
+    } catch (updateErr) {
+      console.error('❌ Counter increment findOneAndUpdate failed:', updateErr.message);
+      console.error('Update error details:', {
+        code: updateErr.code,
+        message: updateErr.message
+      });
+      
+      // Fallback: Try a direct update instead of findOneAndUpdate
+      console.log('🔄 Attempting fallback direct update...');
+      const newValue = checkCounter.sequence_value + 1;
+      const fallbackResult = await counterCollection.updateOne(
+        { _id: 'verification_id' },
+        { $set: { sequence_value: newValue } }
+      );
+      console.log('Fallback update result:', fallbackResult);
+      
+      if (fallbackResult.modifiedCount === 0) {
+        throw new Error('Counter update failed: could not increment with fallback');
+      }
+      
+      // Re-fetch to get the updated value
+      const updatedCounter = await counterCollection.findOne({ _id: 'verification_id' });
+      result = { value: updatedCounter };
+    }
+    
+    if (!result || !result.value || typeof result.value.sequence_value !== 'number') {
+      console.error('❌ Counter update result is invalid:', result);
+      logger.error('❌ Counter update failed: invalid result state');
       throw new Error('Counter update failed: invalid counter state');
     }
     
@@ -505,6 +550,52 @@ app.get('/api/status', (req, res) => {
     message: 'Backend is running',
     time: new Date().toISOString()
   });
+});
+
+// Counter maintenance endpoint - ensure counter is healthy
+app.post('/api/repair-counter', async (req, res) => {
+  try {
+    console.log('🔧 Attempting to repair counter...');
+    const counterCollection = db.collection('counters');
+    
+    // Check current counter
+    const counter = await counterCollection.findOne({ _id: 'verification_id' });
+    console.log('Current counter:', counter);
+    
+    if (!counter) {
+      // Create counter if missing
+      console.log('📝 Creating missing counter...');
+      await counterCollection.insertOne({ _id: 'verification_id', sequence_value: 100 });
+      return res.json({ success: true, message: 'Counter created', value: 100 });
+    }
+    
+    // If counter exists but is invalid, fix it
+    if (typeof counter.sequence_value !== 'number') {
+      console.log('🔄 Fixing invalid counter value...');
+      const result = await counterCollection.updateOne(
+        { _id: 'verification_id' },
+        { $set: { sequence_value: 100 } }
+      );
+      console.log('Update result:', result);
+      return res.json({ 
+        success: true, 
+        message: 'Counter fixed',
+        value: 100,
+        previous: counter.sequence_value
+      });
+    }
+    
+    // Counter is healthy
+    res.json({ 
+      success: true, 
+      message: 'Counter is healthy',
+      value: counter.sequence_value,
+      type: typeof counter.sequence_value
+    });
+  } catch (err) {
+    console.error('❌ Counter repair failed:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Fix endpoint - for registrations approved but missing verification ID
