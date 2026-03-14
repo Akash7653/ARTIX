@@ -2207,7 +2207,7 @@ app.get('/api/admin/registrations', async (req, res) => {
   try {
     // Get pagination parameters
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 50));
     
     // Get filter parameters
     const approvalStatus = req.query.approval_status;

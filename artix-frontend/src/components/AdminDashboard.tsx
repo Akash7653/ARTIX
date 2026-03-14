@@ -159,7 +159,7 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       
       const [statsRes, regsRes] = await Promise.all([
         fetch(`${baseUrl}/admin/stats`, { headers }),
-        fetch(`${baseUrl}/admin/registrations`, { headers })
+        fetch(`${baseUrl}/admin/registrations?limit=500`, { headers })
       ]);
       
       const statsData = await statsRes.json();
