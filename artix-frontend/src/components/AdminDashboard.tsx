@@ -686,19 +686,30 @@ Contact ARTIX Admin Team:
         ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
         : '';
       
-      addPopup(
-        '✅ Entry Verified',
-        `${participantName}${branch} verified for entry!${eventInfo ? ` Events: ${eventInfo}` : ''}`,
-        'success',
-        3000
-      );
-      addToast(`✅ Entry Verified! ${participantName}${branch}${eventInfo}`, 'success', 4000, true);
+      // Check if already approved/verified
+      if (result.participant?.entry_verified_at) {
+        // Special animation for already approved entry
+        addPopup(
+          '⭐ ALREADY APPROVED ⭐',
+          `✅ ${participantName}${branch} is already verified and approved!\n\n${eventInfo}`,
+          'success',
+          4000
+        );
+      } else {
+        // Normal entry verification
+        addPopup(
+          '✅ Entry Verified',
+          `${participantName}${branch} verified for entry!${eventInfo}`,
+          'success',
+          3000
+        );
+      }
       
       setEntryVerificationId('');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to verify entry:', errorMsg);
-      addToast(errorMsg, 'error', 4000);
+      addPopup('❌ Verification Failed', errorMsg, 'error', 3000);
     } finally {
       setVerifyingEntry(false);
     }
@@ -1045,12 +1056,12 @@ Contact ARTIX Admin Team:
           </div>
         </div>
 
-        {/* Toast Notifications */}
-        <Toast 
+        {/* Toast Notifications - DISABLED */}
+        {/* <Toast 
           toasts={toasts} 
           onRemove={removeToast}
           onRefresh={loadData}
-        />
+        /> */}
 
         {/* Popup Notifications */}
         <Popup

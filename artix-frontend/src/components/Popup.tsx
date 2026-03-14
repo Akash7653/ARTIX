@@ -47,7 +47,22 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
     }
   }, [popup, onClose]);
 
+  const isAlreadyApproved = popup.title.includes('ALREADY APPROVED');
+
   const getStyles = () => {
+    // Special styling for already approved entries
+    if (isAlreadyApproved) {
+      return {
+        bgColor: 'bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-yellow-500/20',
+        borderColor: 'border-yellow-500/70',
+        titleColor: 'text-yellow-600 dark:text-yellow-300 animate-bounce',
+        textColor: 'text-gray-700 dark:text-gray-300',
+        icon: <CheckCircle2 className="w-10 h-10 text-yellow-600 dark:text-yellow-400 animate-spin" />,
+        buttonColor: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 dark:from-purple-700 dark:to-pink-700 dark:hover:from-purple-800 dark:hover:to-pink-800',
+        containerClass: 'ring-2 ring-yellow-500/50 scale-105'
+      };
+    }
+
     switch (popup.type) {
       case 'success':
         return {
@@ -56,7 +71,8 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           titleColor: 'text-green-600 dark:text-green-400',
           textColor: 'text-gray-700 dark:text-gray-300',
           icon: <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />,
-          buttonColor: 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
+          buttonColor: 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800',
+          containerClass: ''
         };
       case 'error':
         return {
@@ -65,7 +81,8 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           titleColor: 'text-red-600 dark:text-red-400',
           textColor: 'text-gray-700 dark:text-gray-300',
           icon: <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />,
-          buttonColor: 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
+          buttonColor: 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800',
+          containerClass: ''
         };
       case 'warning':
         return {
@@ -74,7 +91,8 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           titleColor: 'text-yellow-600 dark:text-yellow-400',
           textColor: 'text-gray-700 dark:text-gray-300',
           icon: <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />,
-          buttonColor: 'bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800'
+          buttonColor: 'bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800',
+          containerClass: ''
         };
       default:
         return {
@@ -83,7 +101,8 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           titleColor: 'text-blue-600 dark:text-blue-400',
           textColor: 'text-gray-700 dark:text-gray-300',
           icon: <Info className="w-8 h-8 text-blue-600 dark:text-blue-400" />,
-          buttonColor: 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
+          buttonColor: 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800',
+          containerClass: ''
         };
     }
   };
@@ -100,7 +119,7 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
 
       {/* Popup */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-scale-in pointer-events-none">
-        <div className={`${styles.bgColor} border-2 ${styles.borderColor} rounded-2xl p-8 max-w-md w-full shadow-2xl pointer-events-auto transform transition-all`}>
+        <div className={`${styles.bgColor} border-2 ${styles.borderColor} rounded-2xl p-8 max-w-md w-full shadow-2xl pointer-events-auto transform transition-all ${styles.containerClass}`}>
           {/* Close Button */}
           <button
             onClick={onClose}
