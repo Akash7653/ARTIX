@@ -88,6 +88,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
   const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(25); // 25 registrations per page
 
   // Toast notification helpers
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success', duration: number = 5000, autoRefresh: boolean = false) => {
@@ -865,6 +867,16 @@ Contact ARTIX Admin Team:
     reg.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRegistrations.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRegistrations = filteredRegistrations.slice(startIndex, startIndex + pageSize);
+
+  // Reset to page 1 when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   if (!isAuthenticated) {
     return (
       <div className={`h-screen transition-colors duration-300 flex items-center justify-center p-4 ${
@@ -1324,7 +1336,7 @@ Contact ARTIX Admin Team:
                 </tr>
               </thead>
               <tbody>
-                {filteredRegistrations.map((reg) => (
+                {paginatedRegistrations.map((reg) => (
                   <tr key={reg._id} data-registration-id={reg.registration_id} className={`border-b transition ${
                     darkMode
                       ? 'border-gray-700/30 hover:bg-gray-800/30'
@@ -1431,6 +1443,59 @@ Contact ARTIX Admin Team:
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {filteredRegistrations.length > pageSize && (
+              <div className={`flex items-center justify-between p-6 border-t ${
+                darkMode ? 'border-gray-700/30 bg-gray-800/20' : 'border-gray-300'
+              }`}>
+                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Showing <span className="font-semibold">{startIndex + 1}</span> to <span className="font-semibold">{Math.min(startIndex + pageSize, filteredRegistrations.length)}</span> of <span className="font-semibold">{filteredRegistrations.length}</span> registrations
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 rounded-lg font-semibold transition ${
+                      currentPage === 1
+                        ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
+                        : (darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white')
+                    }`}
+                  >
+                    ← Previous
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 rounded-lg font-semibold transition ${
+                          page === currentPage
+                            ? (darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white')
+                            : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-300 hover:bg-gray-400 text-gray-800')
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-4 py-2 rounded-lg font-semibold transition ${
+                      currentPage === totalPages
+                        ? (darkMode ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
+                        : (darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white')
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {filteredRegistrations.length === 0 && (
