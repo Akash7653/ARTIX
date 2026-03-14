@@ -1778,6 +1778,8 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
       return res.status(400).json({ error: 'Registration ID and Verification ID are required' });
     }
 
+    console.log(`🔐 Setting verification ID for: ${registrationId}`);
+
     // First, check if registration exists and is approved
     const checkReg = await registrationsCollection.findOne({
       registration_id: registrationId
@@ -1794,27 +1796,35 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
       });
     }
 
-    // Update verification ID (overwrite if it exists - allows fixing mistakes)
-    const registration = await registrationsCollection.findOneAndUpdate(
-      {
-        registration_id: registrationId,
-        approval_status: 'approved'
-      },
+    // Simple updateOne for reliability
+    const trimmedVerifId = verificationId.trim();
+    const updateResult = await registrationsCollection.updateOne(
+      { registration_id: registrationId, approval_status: 'approved' },
       {
         $set: {
-          verification_id: verificationId.trim(),
+          verification_id: trimmedVerifId,
           verification_id_set_at: new Date()
         }
-      },
-      { returnDocument: 'after' }  // Get updated document
+      }
     );
 
-    if (!registration.value) {
-      return res.status(500).json({ error: 'Could not update registration' });
+    if (updateResult.matchedCount === 0) {
+      return res.status(400).json({ 
+        error: 'Could not update registration - it must be approved',
+        current_status: checkReg.approval_status
+      });
     }
 
-    const updatedReg = registration.value;
-    const trimmedVerifId = verificationId.trim();
+    // Fetch the updated registration
+    const updatedReg = await registrationsCollection.findOne({
+      registration_id: registrationId
+    });
+
+    if (!updatedReg) {
+      return res.status(500).json({ error: 'Could not retrieve updated registration' });
+    }
+
+    console.log(`✅ Verification ID set: ${registrationId} -> ${trimmedVerifId}`);
 
     // Generate formatted WhatsApp message
     const whatsappMessage = generateApprovalMessage(
@@ -1826,33 +1836,32 @@ app.post('/api/admin/set-verification-id', ensureDatabaseConnection, async (req,
       updatedReg.phone,
       updatedReg.selected_events,
       updatedReg.total_amount,
-      registrationId
+      updatedReg.registration_id
     );
 
+    // Generate WhatsApp link
+    const phoneNumber = updatedReg.phone.replace(/\D/g, '');
     const encodedMessage = encodeURIComponent(whatsappMessage);
-    const whatsappLink = `https://wa.me/${updatedReg.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
-
-    console.log(`✅ Verification ID set for ${registrationId}: ${trimmedVerifId}`);
-    console.log(`📱 WhatsApp link generated:`, whatsappLink);
+    const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
     res.json({
       success: true,
-      message: 'Verification ID set successfully! Click the WhatsApp link to send the message.',
+      message: '✅ Verification ID assigned! Ready to send WhatsApp message.',
       registration: {
         registration_id: registrationId,
         verification_id: trimmedVerifId,
+        full_name: updatedReg.full_name,
         phone: updatedReg.phone
       },
-      whatsapp: {
-        link: whatsappLink,
-        message: whatsappMessage,
-        manual: true
-      }
+      whatsappLink,
+      whatsappMessage
     });
-
   } catch (err) {
-    console.error('❌ Set Verification ID error:', err);
-    res.status(500).json({ error: 'Failed to set verification ID' });
+    console.error('❌ Set verification ID error:', err);
+    res.status(500).json({ 
+      error: 'Failed to set verification ID',
+      details: err.message
+    });
   }
 });
 
@@ -2832,71 +2841,45 @@ app.post('/api/admin/reset-registration/:registrationId', ensureDatabaseConnecti
       return res.status(400).json({ error: 'Registration ID is required' });
     }
 
+    console.log(`🔄 Resetting registration: ${registrationId}`);
+
+    // Simple updateOne approach - more reliable than findOneAndUpdate
+    const updateResult = await registrationsCollection.updateOne(
+      { registration_id: registrationId },
+      {
+        $set: {
+          approval_status: 'pending',
+          verification_id: null,
+          verification_id_set_at: null,
+          selected_for_event: false,
+          admin_viewed: false,
+          whatsapp_sent: false,
+          notification_sent: false
+        }
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (updateResult.modifiedCount === 0) {
+      // The document exists but wasn't modified - try fetching it to verify state
+      const checkReg = await registrationsCollection.findOne({ registration_id: registrationId });
+      if (!checkReg) {
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+      // If we get here, the document exists but update didn't modify it
+      // This could mean it's already in the desired state, which is fine
+    }
+
+    // Fetch the updated registration
     const registration = await registrationsCollection.findOne({
       registration_id: registrationId
     });
 
     if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    // Reset the registration to pending state, clearing verification details
-    let resetResult = null;
-    
-    try {
-      resetResult = await registrationsCollection.findOneAndUpdate(
-        { registration_id: registrationId },
-        {
-          $set: {
-            approval_status: 'pending',
-            verification_id: null,
-            verification_id_set_at: null,
-            selected_for_event: false,
-            admin_viewed: false,
-            whatsapp_sent: false,
-            notification_sent: false
-          }
-        },
-        { returnDocument: 'after' }
-      );
-    } catch (updateErr) {
-      console.error('❌ findOneAndUpdate failed:', updateErr.message);
-      
-      // Fallback: Try updateOne
-      try {
-        const fallbackResult = await registrationsCollection.updateOne(
-          { registration_id: registrationId },
-          {
-            $set: {
-              approval_status: 'pending',
-              verification_id: null,
-              verification_id_set_at: null,
-              selected_for_event: false,
-              admin_viewed: false,
-              whatsapp_sent: false,
-              notification_sent: false
-            }
-          }
-        );
-        
-        if (fallbackResult.modifiedCount > 0) {
-          resetResult = { value: await registrationsCollection.findOne({ registration_id: registrationId }) };
-          console.log('✅ Fallback updateOne succeeded for reset');
-        } else {
-          console.log('❌ Fallback updateOne also failed - 0 documents modified');
-          throw updateErr;
-        }
-      } catch (fallbackErr) {
-        console.error('❌ Fallback updateOne also failed:', fallbackErr.message);
-        throw updateErr;
-      }
-    }
-
-    if (!resetResult || !resetResult.value) {
-      return res.status(500).json({ 
-        error: 'Failed to reset registration',
-        details: 'Could not update registration document'
-      });
+      return res.status(500).json({ error: 'Could not retrieve updated registration' });
     }
 
     console.log(`✅ Registration reset to pending: ${registrationId}`);
@@ -2911,16 +2894,16 @@ app.post('/api/admin/reset-registration/:registrationId', ensureDatabaseConnecti
       message: '✅ Registration reset to pending state. You can now approve it again.',
       registration: {
         registration_id: registrationId,
-        approval_status: 'pending',
-        verification_id: null,
+        approval_status: registration.approval_status,
+        verification_id: registration.verification_id,
         full_name: registration.full_name
       }
     });
   } catch (err) {
     console.error('❌ Reset registration error:', err);
     res.status(500).json({ 
-      error: 'Failed to reset registration', 
-      details: err.message 
+      error: 'Failed to reset registration',
+      details: err.message
     });
   }
 });
