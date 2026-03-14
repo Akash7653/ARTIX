@@ -85,6 +85,8 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     registrationId: null,
     participantName: null,
   });
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const expandedDetailsRef = useRef<HTMLDivElement>(null);
 
   // Toast notification helpers
@@ -838,6 +840,31 @@ Contact ARTIX Admin Team:
     return () => clearInterval(autoRefreshInterval);
   }, [isAuthenticated, expandedId, workflowInProgress]);
 
+  // Manual auto-refresh every 2 seconds when enabled
+  useEffect(() => {
+    if (!autoRefresh) {
+      // Clear interval if auto-refresh is disabled
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+        autoRefreshIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Set up interval for 2-second refresh
+    autoRefreshIntervalRef.current = setInterval(() => {
+      loadData();
+    }, 2000);
+
+    // Cleanup interval on unmount or when auto-refresh is disabled
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+        autoRefreshIntervalRef.current = null;
+      }
+    };
+  }, [autoRefresh]);
+
   // Auto-scroll to expanded details
   useEffect(() => {
     if (expandedId && expandedDetailsRef.current) {
@@ -962,6 +989,13 @@ Contact ARTIX Admin Team:
           <div>
             <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
               Admin Dashboard
+              {autoRefresh && (
+                <span className={`ml-3 text-lg font-semibold animate-pulse ${
+                  darkMode ? 'text-green-400' : 'text-green-600'
+                }`}>
+                  🔄 Auto-Refresh 2s
+                </span>
+              )}
             </h1>
             <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>IoT esSENCE 2K26 Registration Management</p>
           </div>
@@ -986,6 +1020,21 @@ Contact ARTIX Admin Team:
               title="🔄 Refresh all data"
             >
               <RefreshCw className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
+            </button>
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`flex items-center justify-center w-12 h-12 rounded-lg transition-all transform hover:scale-110 ${
+                autoRefresh
+                  ? darkMode
+                    ? 'bg-green-500/40 border border-green-500/50 text-green-200 hover:bg-green-500/50 hover:shadow-lg hover:shadow-green-500/50 animate-pulse'
+                    : 'bg-green-500/40 border border-green-500/50 text-green-700 hover:bg-green-500/50 hover:shadow-lg hover:shadow-green-500/30 animate-pulse'
+                  : darkMode
+                    ? 'bg-gray-600 border border-gray-500/30 text-gray-400 hover:bg-gray-500 hover:shadow-lg hover:shadow-gray-500/30'
+                    : 'bg-gray-300 border border-gray-400/30 text-gray-600 hover:bg-gray-400 hover:shadow-lg hover:shadow-gray-400/30'
+              }`}
+              title={autoRefresh ? '⏸️ Auto-Refresh: ON (2s)' : '▶️ Auto-Refresh: OFF'}
+            >
+              <RefreshCw className={`w-5 h-5 transition-transform ${autoRefresh ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onDarkModeToggle}
