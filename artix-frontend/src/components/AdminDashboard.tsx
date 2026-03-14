@@ -215,6 +215,13 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       console.log(`👤 Approving registration: ${registrationId}`);
       setWorkflowInProgress(registrationId);
       
+      // OPTIMISTIC UPDATE - update local state immediately
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === registrationId 
+          ? { ...reg, approval_status: 'approved' }
+          : reg
+      ));
+      
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
         headers: { 
@@ -226,38 +233,44 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
       const data = await response.json();
       
-      // REFRESH IMMEDIATELY - don't wait, start loading right away
-      setFullRegistrationData({});
-      loadData();
-      
       if (!response.ok) {
+        // REVERT optimistic update on error
+        setRegistrations(prev => prev.map(reg => 
+          reg.registration_id === registrationId 
+            ? { ...reg, approval_status: 'pending' }
+            : reg
+        ));
+
         const currentStatus = data.current_status || 'unknown';
         console.error('❌ Approval failed:', data);
         
         if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
           addPopup('⚠️ Cannot Approve', `This registration is already ${currentStatus}.`, 'warning', 3000);
-          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 2000);
         } else {
           addPopup('❌ Approval Failed', data.error || 'Unknown error', 'error', 3000);
-          addToast(data.error || 'Failed to approve', 'error', 2000);
         }
         return;
       }
 
       console.log(`✅ Approval successful:`, data);
       addPopup('✅ Approved!', 'Next: Assign Verification ID', 'success', 2000);
-      addToast('✅ Approved! Assign Verification ID next', 'success', 2000);
       
-      // Fetch updated details
+      // Fetch updated details in background (don't block)
       setTimeout(() => {
         fetchFullRegistrationDetails(registrationId);
-      }, 500);
+      }, 300);
       
     } catch (err) {
+      // REVERT optimistic update on error
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === registrationId 
+          ? { ...reg, approval_status: 'pending' }
+          : reg
+      ));
+
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Approval error:', msg);
       addPopup('❌ Error', msg, 'error', 3000);
-      addToast(`Error: ${msg}`, 'error', 3000);
     } finally {
       setWorkflowInProgress(null);
       setConfirmAction({ action: null, registrationId: null, participantName: null });
@@ -280,6 +293,13 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       console.log(`❌ Rejecting registration: ${registrationId}`);
       setWorkflowInProgress(registrationId);
       
+      // OPTIMISTIC UPDATE - mark as rejected immediately
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === registrationId 
+          ? { ...reg, approval_status: 'pending' as const } // Will be marked as rejected on server
+          : reg
+      ));
+      
       const response = await fetch(`${baseUrl}/admin/registrations/${registrationId}/approve`, {
         method: 'POST',
         headers: { 
@@ -291,20 +311,21 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
 
       const data = await response.json();
       
-      // REFRESH IMMEDIATELY - don't wait, start loading right away
-      setFullRegistrationData({});
-      loadData();
-      
       if (!response.ok) {
+        // REVERT optimistic update on error
+        setRegistrations(prev => prev.map(reg => 
+          reg.registration_id === registrationId 
+            ? { ...reg, approval_status: 'pending' }
+            : reg
+        ));
+
         const currentStatus = data.current_status || 'unknown';
         console.error('❌ Rejection error:', data);
         
         if (data.error === 'This entry has already been reviewed' || currentStatus !== 'pending') {
           addPopup('⚠️ Cannot Reject', `This registration is already ${currentStatus}.`, 'warning', 3000);
-          addToast(`Status: ${currentStatus}. Refreshing...`, 'info', 2000);
         } else {
           addPopup('❌ Rejection Failed', data.error || 'Unknown error', 'error', 3000);
-          addToast(data.error || 'Failed to reject', 'error', 2000);
         }
         return;
       }
@@ -312,18 +333,23 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
       console.log(`✅ Rejection successful:`, data);
       setExpandedId(null);
       addPopup('❌ Rejected', 'Participant rejected', 'warning', 2000);
-      addToast('Participant Rejected', 'success', 2000);
       
-      // Fetch updated details
+      // Fetch updated details in background
       setTimeout(() => {
         fetchFullRegistrationDetails(registrationId);
-      }, 500);
+      }, 300);
       
     } catch (err) {
+      // REVERT optimistic update on error
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === registrationId 
+          ? { ...reg, approval_status: 'pending' }
+          : reg
+      ));
+
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Failed to reject:', errorMsg);
       addPopup('❌ Rejection Failed', errorMsg, 'error', 3000);
-      addToast(`Failed to reject: ${errorMsg}`, 'error', 3000);
     } finally {
       setWorkflowInProgress(null);
       setConfirmAction({ action: null, registrationId: null, participantName: null });
@@ -685,6 +711,13 @@ Contact ARTIX Admin Team:
       const eventInfo = result.participant?.selected_events?.length > 0 
         ? ` | Events: ${result.participant.selected_events.join(', ').toUpperCase()}`
         : '';
+      
+      // OPTIMISTIC UPDATE - mark entry as verified in local state
+      setRegistrations(prev => prev.map(reg => 
+        reg.registration_id === result.participant?.registration_id
+          ? { ...reg, entry_verified_at: new Date().toISOString() }
+          : reg
+      ));
       
       // Check if already approved/verified
       if (result.participant?.entry_verified_at) {
