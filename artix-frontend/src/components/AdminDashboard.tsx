@@ -275,6 +275,10 @@ export function AdminDashboard({ onLogout, darkMode = true, onDarkModeToggle }: 
     showApproveConfirm(registrationId, participantName);
   };
 
+  const handleReject = (registrationId: string, participantName: string) => {
+    showRejectConfirm(registrationId, participantName);
+  };
+
   const showRejectConfirm = (registrationId: string, participantName: string) => {
     setConfirmAction({
       action: 'reject',
