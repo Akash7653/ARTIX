@@ -884,7 +884,7 @@ Contact ARTIX Admin Team:
   const paginatedRegistrations = filteredRegistrations.slice(startIndex, startIndex + pageSize);
 
   // Reset to page 1 when search term changes
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 

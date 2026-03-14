@@ -49,13 +49,6 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
 
   const isAlreadyApproved = popup.title.includes('ALREADY APPROVED');
 
-  // Create icon elements separately to avoid JSX in object literals
-  const approvedIcon = <CheckCircle2 className="w-10 h-10 text-yellow-600 dark:text-yellow-400 animate-spin" />;
-  const successIcon = <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />;
-  const errorIcon = <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />;
-  const warningIcon = <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />;
-  const infoIcon = <Info className="w-8 h-8 text-blue-600 dark:text-blue-400" />;
-
   const getStyles = () => {
     // Special styling for already approved entries
     if (isAlreadyApproved) {
@@ -64,9 +57,9 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
         borderColor: 'border-yellow-500/70',
         titleColor: 'text-yellow-600 dark:text-yellow-300 animate-bounce',
         textColor: 'text-gray-700 dark:text-gray-300',
-        icon: approvedIcon,
         buttonColor: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 dark:from-purple-700 dark:to-pink-700 dark:hover:from-purple-800 dark:hover:to-pink-800',
-        containerClass: 'ring-2 ring-yellow-500/50 scale-105'
+        containerClass: 'ring-2 ring-yellow-500/50 scale-105',
+        iconType: 'approved'
       };
     }
 
@@ -77,9 +70,9 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           borderColor: 'border-green-500/50',
           titleColor: 'text-green-600 dark:text-green-400',
           textColor: 'text-gray-700 dark:text-gray-300',
-          icon: successIcon,
           buttonColor: 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800',
-          containerClass: ''
+          containerClass: '',
+          iconType: 'success'
         };
       case 'error':
         return {
@@ -87,9 +80,9 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           borderColor: 'border-red-500/50',
           titleColor: 'text-red-600 dark:text-red-400',
           textColor: 'text-gray-700 dark:text-gray-300',
-          icon: errorIcon,
           buttonColor: 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800',
-          containerClass: ''
+          containerClass: '',
+          iconType: 'error'
         };
       case 'warning':
         return {
@@ -97,9 +90,9 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           borderColor: 'border-yellow-500/50',
           titleColor: 'text-yellow-600 dark:text-yellow-400',
           textColor: 'text-gray-700 dark:text-gray-300',
-          icon: warningIcon,
           buttonColor: 'bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800',
-          containerClass: ''
+          containerClass: '',
+          iconType: 'warning'
         };
       default:
         return {
@@ -107,10 +100,25 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
           borderColor: 'border-blue-500/50',
           titleColor: 'text-blue-600 dark:text-blue-400',
           textColor: 'text-gray-700 dark:text-gray-300',
-          icon: infoIcon,
           buttonColor: 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800',
-          containerClass: ''
+          containerClass: '',
+          iconType: 'info'
         };
+    }
+  };
+
+  const renderIcon = (iconType: string) => {
+    switch (iconType) {
+      case 'approved':
+        return <CheckCircle2 className="w-10 h-10 text-yellow-600 dark:text-yellow-400 animate-spin" />;
+      case 'success':
+        return <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />;
+      case 'error':
+        return <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />;
+      case 'warning':
+        return <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />;
+      default:
+        return <Info className="w-8 h-8 text-blue-600 dark:text-blue-400" />;
     }
   };
 
@@ -137,7 +145,7 @@ function PopupNotification({ popup, onClose }: PopupNotificationProps) {
 
           {/* Icon */}
           <div className="flex justify-center mb-4">
-            {styles.icon}
+            {renderIcon(styles.iconType)}
           </div>
 
           {/* Title */}

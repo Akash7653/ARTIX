@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 
 /**
  * Accessible Form Input Component
@@ -252,7 +252,7 @@ export function AccessibleTooltip({
   tooltip,
   position = 'top'
 }: AccessibleTooltipProps) {
-  const [isVisible, setIsVisible] = React.useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const tooltipId = `tooltip-${Math.random().toString(36).substr(2, 9)}`;
 
   const positionClasses = {
